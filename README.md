@@ -1,1 +1,1 @@
-# exp-relation-extraction
+# This repository contains experiments using explainable semantic graphs for relation extraction
