@@ -48,5 +48,6 @@ def main():
         output, root = read_alto_output(fl)
         print(output.nodes)
 
+
 if __name__ == "__main__":
     main()

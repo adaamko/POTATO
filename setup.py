@@ -12,6 +12,11 @@ setup(
     author_email='adam.kovacs@tuwien.ac.at, gabor.recski@tuwien.ac.at',
     license='MIT',
     install_requires=[
+        "beautifulsoup4",
+        "tinydb",
+        "pandas",
+        "tqdm",
+        "sklearn"
     ],
     packages=find_packages(),
     zip_safe=False)
