@@ -16,7 +16,8 @@ setup(
         "tinydb",
         "pandas",
         "tqdm",
-        "sklearn"
+        "sklearn",
+        "eli5"
     ],
     packages=find_packages(),
     zip_safe=False)

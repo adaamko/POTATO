@@ -1,9 +1,9 @@
 from exprel.dataset.sample import Sample
 from bs4 import BeautifulSoup
-from exprel.database.db import Database
+
 
 class SemevalSample(Sample):
-    def __init__(self, sen_id, sentence, label, nlp):
+    def __init__(self, sen_id, sentence, label, nlp, db):
         super().__init__()
         self.sen_id = sen_id
         self.e1 = None
@@ -11,13 +11,13 @@ class SemevalSample(Sample):
         self.prepare_sentence(sentence)
         self.label = label
         self.nlp = nlp
-        self.db = Database()
+        self.db = db
         #self.prepare_doc()
 
     @property
     def sentence(self):
         return self._sentence
-    
+
     @sentence.setter
     def sentence(self, sen):
         self.prepare_sentence(sen)

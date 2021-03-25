@@ -4,9 +4,10 @@ import logging
 import json
 import sys
 import stanza
+import networkx as nx
 
 from tuw_nlp.grammar.ud_fl import UD_Fourlang
-from tuw_nlp.graph.utils import graph_to_isi, read_alto_output
+from tuw_nlp.graph.utils import graph_to_isi, pn_to_graph, graph_to_pn
 
 
 class FeatureExtractor():
@@ -28,6 +29,24 @@ class FeatureExtractor():
         fl = self.ud_fl.parse(sen, 'ud', 'fourlang', 'amr-sgraph-src')
         return fl
 
+    def parse_text(self, sentence):
+        doc = self.parse(sentence)
+        fl = self.get_fl(doc.sentences[0])
+
+        return fl
+
+    def extract(self, sen):
+        doc = self.parse(sen)
+        fl = self.get_fl(doc.sentences[0])
+
+        if fl:
+            output, root = pn_to_graph(fl)
+
+            return output, root
+
+        else:
+            return nx.DiGraph(), None
+
 
 def get_args():
     parser = argparse.ArgumentParser(description="")
@@ -45,7 +64,7 @@ def main():
     for sen in sys.stdin:
         doc = extractor.parse(sen)
         fl = extractor.get_fl(doc.sentences[0])
-        output, root = read_alto_output(fl)
+        output, root = pn_to_graph(fl)
         print(output.nodes)
 
 

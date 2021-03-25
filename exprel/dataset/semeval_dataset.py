@@ -1,6 +1,7 @@
 import itertools
 
 import pandas as pd
+from exprel.database.db import Database
 from exprel.dataset.dataset import Dataset
 from exprel.dataset.semeval_sample import SemevalSample
 from sklearn import preprocessing
@@ -10,8 +11,9 @@ from tqdm import tqdm
 class SemevalDataset(Dataset):
     def __init__(self, path, lang="en"):
         super().__init__(lang)
-        self._dataset = [sample for sample in self.read_dataset(path)]
         self.le = preprocessing.LabelEncoder()
+        self.db = Database()
+        self._dataset = [sample for sample in self.read_dataset(path)]
 
     @property
     def dataset(self):
@@ -26,7 +28,7 @@ class SemevalDataset(Dataset):
             for sample, label, _, _ in tqdm(itertools.zip_longest(*[f]*4)):
                 sen_id, sentence = sample.split("\t")
                 semeval_sample = SemevalSample(
-                    sen_id, sentence.strip("\n"), label.strip("\n"), self.nlp)
+                    sen_id, sentence.strip("\n"), label.strip("\n"), self.nlp, self.db)
                 yield semeval_sample
 
     def to_dataframe(self):
@@ -35,3 +37,12 @@ class SemevalDataset(Dataset):
                           sample.e2 for sample in self._dataset], "sentence": [sample.sentence for sample in self._dataset], "label": [sample.label for sample in self._dataset], "label_id": self.le.transform([sample.label for sample in self._dataset])})
 
         return df
+
+    def one_versus_rest(self, df, entity):
+        mapper = {entity: 1}
+
+        one_versus_rest_df = df.copy()
+        one_versus_rest_df["one_versus_rest"] = [
+            mapper[item] if item in mapper else 0 for item in df.label]
+
+        return one_versus_rest_df
