@@ -3,8 +3,11 @@ import json
 import logging
 import os
 import sys
+import eli5
 
 import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import precision_recall_fscore_support
 from tuw_nlp.common.vocabulary import Vocabulary
 from tuw_nlp.graph.lexical import LexGraphs
 from tuw_nlp.graph.utils import graph_to_pn
@@ -22,6 +25,11 @@ class GraphModel():
         self.vocab_size = 0
         self.relabel_dict = {}
         self.inverse_relabel = {}
+        self.random_state = 1234
+        self.model = self.init_model()
+
+    def init_model(self):
+        return LogisticRegression(random_state=self.random_state)
 
     def get_feature_graph_strings(self):
         return [graph_to_pn(G) for G in self.get_feature_graphs()]
@@ -35,6 +43,21 @@ class GraphModel():
             self.feature_vocab.get_word(i) for i in range(
                 len(self.feature_vocab))]
 
+    def fit(self, tr_data, tr_labels):
+        self.model.fit(tr_data, tr_labels)
+
+    def predict(self, tst_data, tst_labels):
+        lr_pred = self.model.predict(tst_data)
+
+        return lr_pred, precision_recall_fscore_support(tst_labels, lr_pred)
+
+    def select_top_features(self, feature_num):
+        weights_df = eli5.explain_weights_df(self.model)
+        top_features = weights_df.iloc[:feature_num].feature.str.strip(
+            "x").tolist()
+
+        return weights_df, top_features
+
     def featurize_sen_graph(self, sen_id, graph, attr, max_edge=1):
         feats = set()
         self.sen_ids.append(sen_id)
@@ -45,13 +68,14 @@ class GraphModel():
 
         self.labels[sen_id] = attr
         self.vocab_size = len(self.feature_vocab)
-    
+
     def select_n_best(self, max_features):
-        relabel_dict, feature_num = self.feature_vocab.select_n_best(max_features)
+        relabel_dict, feature_num = self.feature_vocab.select_n_best(
+            max_features)
         self.vocab_size = feature_num
         self.relabel_dict = relabel_dict
-        self.inverse_relabel = {relabel_dict[k] : k for k in relabel_dict}
-            
+        self.inverse_relabel = {relabel_dict[k]: k for k in relabel_dict}
+
     def get_x_y(self, attr):
         X = np.zeros((len(self.sen_ids), self.vocab_size))
         y = np.zeros(len(self.sen_ids))

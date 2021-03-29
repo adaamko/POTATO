@@ -14,7 +14,9 @@ class Database:
         self.db.insert({"doc_id": sen_id, "processed": document.to_dict()})
 
     def query_document(self, sen_id):
-        Document = Query()
-        documents = self.db.search(Document.doc_id == sen_id)
-        
+        documents = self.db.get(doc_id=sen_id)
+
         return documents
+
+    def get_all(self):
+        return self.db.all()
