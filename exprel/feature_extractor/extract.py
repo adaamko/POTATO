@@ -8,6 +8,7 @@ import networkx as nx
 
 from tuw_nlp.grammar.ud_fl import UD_Fourlang
 from tuw_nlp.graph.utils import graph_to_isi, pn_to_graph, graph_to_pn
+from tuw_nlp.graph.utils import GraphMatcher
 
 
 class FeatureExtractor():
@@ -15,9 +16,13 @@ class FeatureExtractor():
             self, cache_dir=None, ud_fl_cache_fn=None, fl_attr_cache_fn=None):
         self.ud_fl = UD_Fourlang(cache_dir=cache_dir, cache_fn=ud_fl_cache_fn)
         self.nlp = None
+        self.matcher = None
 
     def init_nlp(self):
         self.nlp = stanza.Pipeline('en')
+
+    def set_matcher(self, patterns):
+        self.matcher = GraphMatcher(patterns)
 
     def parse(self, text):
         if self.nlp is None:

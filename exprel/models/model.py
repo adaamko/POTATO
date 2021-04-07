@@ -6,7 +6,7 @@ import sys
 import eli5
 
 import numpy as np
-from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import precision_recall_fscore_support
 from tuw_nlp.common.vocabulary import Vocabulary
 from tuw_nlp.graph.lexical import LexGraphs
@@ -29,7 +29,7 @@ class GraphModel():
         self.model = self.init_model()
 
     def init_model(self):
-        return LogisticRegression(random_state=self.random_state)
+        return DecisionTreeClassifier(random_state=self.random_state)
 
     def get_feature_graph_strings(self):
         return [graph_to_pn(G) for G in self.get_feature_graphs()]

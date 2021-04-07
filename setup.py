@@ -17,7 +17,8 @@ setup(
         "pandas",
         "tqdm",
         "sklearn",
-        "eli5"
+        "eli5",
+        "matplotlib"
     ],
     packages=find_packages(),
     zip_safe=False)
