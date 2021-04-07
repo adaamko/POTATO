@@ -39,7 +39,7 @@ Then we generated all the subgraphs for the sentences up to three edges. The voc
 | **Fscore**          |    0.8   |
 
 Then we selected the best features from the model and converted them into rules. The top three rules:
-|           
+|           |
 | --------- |
 | **'(u_29 / to  :2 (u_4 / entity2))'** |
 | **'(u_26 / into  :2 (u_4 / entity2))'** |
