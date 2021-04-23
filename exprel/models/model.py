@@ -8,6 +8,7 @@ import eli5
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import precision_recall_fscore_support
+from collections import defaultdict
 from tuw_nlp.common.vocabulary import Vocabulary
 from tuw_nlp.graph.lexical import LexGraphs
 from tuw_nlp.graph.utils import graph_to_pn
@@ -72,6 +73,17 @@ class GraphModel():
     def select_n_best(self, max_features):
         relabel_dict, feature_num = self.feature_vocab.select_n_best(
             max_features)
+        self.vocab_size = feature_num
+        self.relabel_dict = relabel_dict
+        self.inverse_relabel = {relabel_dict[k]: k for k in relabel_dict}
+
+    def select_n_best_from_each_class(self, max_features, feature_graphs):
+        edge_to_ind = defaultdict(list)
+        for i, graph in enumerate(feature_graphs):
+            edge_to_ind[len(graph.edges(data=True))].append(i) 
+
+        relabel_dict, feature_num = self.feature_vocab.select_n_best_from_each_class(
+            max_features, edge_to_ind, up_to=3)
         self.vocab_size = feature_num
         self.relabel_dict = relabel_dict
         self.inverse_relabel = {relabel_dict[k]: k for k in relabel_dict}
