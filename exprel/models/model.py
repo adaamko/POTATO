@@ -63,7 +63,7 @@ class GraphModel():
         feats = set()
         self.sen_ids.append(sen_id)
         for sg_tuple, sg in self.lexgraphs.gen_lex_subgraphs(graph, max_edge):
-            feats.add(self.feature_vocab.get_id(sg_tuple))
+            feats.add(self.feature_vocab.get_id(sg_tuple, allow_new=True))
 
         self.feats_by_sen[sen_id] = feats
 
@@ -98,6 +98,6 @@ class GraphModel():
                         X[i][self.relabel_dict[j]] = 1
                 else:
                     X[i][j] = 1
-            y[i] = self.label_vocab.get_id(attr[i])
+            y[i] = self.label_vocab.get_id(attr[i], allow_new=True)
 
         return X, y

@@ -11,14 +11,14 @@ import penman as pn
 import requests
 import streamlit as st
 import streamlit.components.v1 as components
-from tuw_nlp.graph.utils import GraphMatcher, pn_to_graph, read_alto_output
+from tuw_nlp.graph.utils import GraphFormulaMatcher, pn_to_graph, read_alto_output
 from feature_evaluator import evaluate_feature
 
 # SessionState module from https://gist.github.com/tvst/036da038ab3e999a64497f42de966a92
 import SessionState
 
 ruleset = SessionState.get(
-    graph_number=0, rewritten_rules=[], dataframe=pd.DataFrame)
+    false_graph_number=0, true_graph_number=0, false_neg_number=0, whole_accuracy = [], rewritten_rules=[], negated_rules=[], dataframe=pd.DataFrame)
 
 
 def d_clean(string):
@@ -120,27 +120,31 @@ def main():
 
     col1.header("Rule to apply")
 
-    col2.header("False positive graphs generated")
+    col2.header("Graphs and results")
 
-    val_data = pd.read_pickle("validation_dataset")
+    data = pd.read_pickle("train_dataset")
 
     with col1:
         classes = st.selectbox("Choose label", list(features.keys()))
-        sens = [feat[0] for feat in features[classes]]
+        sens = [";".join(feat[0]) for feat in features[classes]]
         option = "Rules to add here"
         option = st.selectbox(
             'Choose from the rules', sens)
-        G, _ = read_alto_output(option)
+        G, _ = read_alto_output(option.split(";")[0])
         nodes = [d_clean(n.split("_")[0]) for n in G.nodes()]
 
         text = st.text_area("You can modify the rule here", option)
 
+        negated_features = ";".join(features[classes][sens.index(option)][1])
+
+        negated_text = st.text_area("You can modify the negated features here", negated_features)
+
         evaluate = st.button("Evaluate ruleset")
         if evaluate:
-            ruleset.dataframe = evaluate_feature(
-                classes, features[classes], val_data)
+            ruleset.dataframe, ruleset.whole_accuracy = evaluate_feature(
+                classes, features[classes], data)
 
-        text_G, _ = pn_to_graph(text)
+        text_G, _ = pn_to_graph(text.split(";")[0])
         st.graphviz_chart(
             to_dot(text_G), use_container_width=True)
         nodes = [d_clean(n[1]["name"].split("_")[0])
@@ -148,34 +152,57 @@ def main():
 
         agree = st.button("Add rewritten rule to the ruleset")
         if agree:
-            ruleset.rewritten_rules.append(text)
+            ruleset.rewritten_rules.append(text.split(";"))
+            neg_rules = []
+            for n in negated_text.split(";"):
+                if n:
+                    neg_rules.append(n)
+            ruleset.negated_rules.append(neg_rules)
 
         if st.button('Remove the last rule from the set'):
             ruleset.rewritten_rules.pop()
+            ruleset.negated_rules.pop()
 
         if st.button('Clear rules'):
             ruleset.rewritten_rules.clear()
+            ruleset.negated_rules.clear()
 
         if st.button("Save rules"):
-            features[classes] = [[rule, classes]
-                                 for rule in ruleset.rewritten_rules]
+            features[classes] = [[rule, ruleset.negated_rules[i], classes]
+                                 for i, rule in enumerate(ruleset.rewritten_rules)]
             save_ruleset("features.json", features)
             ruleset.rewritten_rules.clear()
+            ruleset.negated_rules.clear()
 
         ruleset_expander = st.beta_expander(
             "Show the ruleset:", expanded=False)
 
         with ruleset_expander:
-            rules = ", ".join(ruleset.rewritten_rules)
-            st.markdown(
-                f'<span style="color:red"><b>{rules}</b></span>', unsafe_allow_html=True)
+            if ruleset.rewritten_rules:
+                for i, rule in enumerate(ruleset.rewritten_rules):
+                    st.markdown(
+                        f'<span style="color:red"><b>{rule}</b>; Negated rules: <b>{ruleset.negated_rules[i]}</b><br></span>', unsafe_allow_html=True)
 
     with col2:
         if not ruleset.dataframe.empty:
-            graphs = ruleset.dataframe.iloc[sens.index(
+            st.markdown(
+                f"<span>Result of using all the rules: Precision: <b>{ruleset.whole_accuracy[0]:.3f}</b>, Recall: <b>{ruleset.whole_accuracy[1]:.3f}</b>, Fscore: <b>{ruleset.whole_accuracy[2]:.3f}</b>, Support: <b>{ruleset.whole_accuracy[3]}</b></span>", unsafe_allow_html=True)
+
+            fp_graphs = ruleset.dataframe.iloc[sens.index(
                 option)].False_positive_graphs
-            sentences = ruleset.dataframe.iloc[sens.index(
+            fp_sentences = ruleset.dataframe.iloc[sens.index(
                 option)].False_positive_sens
+
+            tp_graphs = ruleset.dataframe.iloc[sens.index(
+                option)].True_positive_graphs
+            tp_sentences = ruleset.dataframe.iloc[sens.index(
+                option)].True_positive_sens
+
+            fn_graphs = ruleset.dataframe.iloc[sens.index(
+                option)].False_negative_graphs
+            fn_sentences = ruleset.dataframe.iloc[sens.index(
+                option)].False_negative_sens
+
             prec = ruleset.dataframe.iloc[sens.index(option)].Precision
             recall = ruleset.dataframe.iloc[sens.index(option)].Recall
             fscore = ruleset.dataframe.iloc[sens.index(option)].Fscore
@@ -184,27 +211,89 @@ def main():
             st.markdown(
                 f"<span>The rule's result: Precision: <b>{prec:.3f}</b>, Recall: <b>{recall:.3f}</b>, Fscore: <b>{fscore:.3f}</b>, Support: <b>{support}</b></span>", unsafe_allow_html=True)
 
-            if graphs:
-                if st.button("Previous"):
-                    ruleset.graph_number = max(0, ruleset.graph_number-1)
-                if st.button("Next"):
-                    ruleset.graph_number = min(
-                        ruleset.graph_number + 1, len(graphs)-1)
+            tp_fp_fn_choice = ("True Positive graphs", "False Positive graphs", "False Negative graphs")
+            tp_fp_fn = st.selectbox(
+                'Select the graphs you want to view', tp_fp_fn_choice)
 
-                if ruleset.graph_number > len(graphs)-1:
-                    ruleset.graph_number = 0
+            if tp_fp_fn == "False Positive graphs":
+                if fp_graphs:
+                    if st.button("Previous FP"):
+                        ruleset.false_graph_number = max(
+                            0, ruleset.false_graph_number-1)
+                    if st.button("Next FP"):
+                        ruleset.false_graph_number = min(
+                            ruleset.false_graph_number + 1, len(fp_graphs)-1)
 
-                graphs[ruleset.graph_number].remove_nodes_from(
-                    list(nx.isolates(graphs[ruleset.graph_number])))
+                    if ruleset.false_graph_number > len(fp_graphs)-1:
+                        ruleset.false_graph_number = 0
 
-                st.markdown(
-                    f"<span><b>Sentence:</b> {sentences[ruleset.graph_number][0]}</span>", unsafe_allow_html=True)
-                st.markdown(
-                    f"<span><b>Entity1:</b> {sentences[ruleset.graph_number][1]}</span>", unsafe_allow_html=True)
-                st.markdown(
-                    f"<span><b>Entity2:</b> {sentences[ruleset.graph_number][2]}</span>", unsafe_allow_html=True)
-                st.graphviz_chart(
-                    to_dot(graphs[ruleset.graph_number], marked_nodes=set(nodes)), use_container_width=True)
+                    fp_graphs[ruleset.false_graph_number].remove_nodes_from(
+                        list(nx.isolates(fp_graphs[ruleset.false_graph_number])))
+
+                    st.markdown(
+                        f"<span><b>Sentence:</b> {fp_sentences[ruleset.false_graph_number][0]}</span>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<span><b>Entity1:</b> {fp_sentences[ruleset.false_graph_number][1]}</span>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<span><b>Entity2:</b> {fp_sentences[ruleset.false_graph_number][2]}</span>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<span><b>Gold label:</b> {fp_sentences[ruleset.false_graph_number][3]}</span>", unsafe_allow_html=True)
+                    st.text(f"False positives: {len(fp_graphs)}")
+                    st.graphviz_chart(
+                        to_dot(fp_graphs[ruleset.false_graph_number], marked_nodes=set(nodes)), use_container_width=True)
+
+            elif tp_fp_fn == "True Positive graphs":
+                if tp_graphs:
+                    if st.button("Previous TP"):
+                        ruleset.true_graph_number = max(
+                            0, ruleset.true_graph_number-1)
+                    if st.button("Next TP"):
+                        ruleset.true_graph_number = min(
+                            ruleset.true_graph_number + 1, len(tp_graphs)-1)
+
+                    if ruleset.true_graph_number > len(tp_graphs)-1:
+                        ruleset.true_graph_number = 0
+
+                    tp_graphs[ruleset.true_graph_number].remove_nodes_from(
+                        list(nx.isolates(tp_graphs[ruleset.true_graph_number])))
+
+                    st.markdown(
+                        f"<span><b>Sentence:</b> {tp_sentences[ruleset.true_graph_number][0]}</span>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<span><b>Entity1:</b> {tp_sentences[ruleset.true_graph_number][1]}</span>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<span><b>Entity2:</b> {tp_sentences[ruleset.true_graph_number][2]}</span>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<span><b>Gold label:</b> {tp_sentences[ruleset.true_graph_number][3]}</span>", unsafe_allow_html=True)
+                    st.text(f"True positives: {len(tp_graphs)}")
+                    st.graphviz_chart(
+                        to_dot(tp_graphs[ruleset.true_graph_number], marked_nodes=set(nodes)), use_container_width=True)
+            elif tp_fp_fn == "False Negative graphs":
+                if fn_graphs:
+                    if st.button("Previous FN"):
+                        ruleset.false_neg_number = max(
+                            0, ruleset.false_neg_number-1)
+                    if st.button("Next FN"):
+                        ruleset.false_neg_number = min(
+                            ruleset.false_neg_number + 1, len(fn_graphs)-1)
+
+                    if ruleset.false_neg_number > len(fn_graphs)-1:
+                        ruleset.false_neg_number = 0
+
+                    tp_graphs[ruleset.false_neg_number].remove_nodes_from(
+                        list(nx.isolates(fn_graphs[ruleset.false_neg_number])))
+
+                    st.markdown(
+                        f"<span><b>Sentence:</b> {fn_sentences[ruleset.false_neg_number][0]}</span>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<span><b>Entity1:</b> {fn_sentences[ruleset.false_neg_number][1]}</span>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<span><b>Entity2:</b> {fn_sentences[ruleset.false_neg_number][2]}</span>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<span><b>Gold label:</b> {fn_sentences[ruleset.false_neg_number][3]}</span>", unsafe_allow_html=True)
+                    st.text(f"False negatives: {len(fn_graphs)}")
+                    st.graphviz_chart(
+                        to_dot(fn_graphs[ruleset.false_neg_number], marked_nodes=set(nodes)), use_container_width=True)
 
 
 if __name__ == "__main__":
