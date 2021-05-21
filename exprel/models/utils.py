@@ -1,5 +1,33 @@
 import re
 
+import numpy as np
+from sklearn.tree import _tree
+
+
+def tree_to_code(tree, feature_graph_strings, inverse_relabel):
+    tree_ = tree.tree_
+    feature_name = [
+        feature_graph_strings[inverse_relabel[int(i)]] if i != _tree.TREE_UNDEFINED else "undefined!"
+        for i in tree_.feature
+    ]
+    
+    def recurse(node, depth):
+        indent = "  " * depth
+        if tree_.feature[node] != _tree.TREE_UNDEFINED:
+            name = feature_name[node]
+            threshold = tree_.threshold[node]
+            print("{}if {} <= {}:".format(indent, name, threshold))
+            for path in recurse(tree_.children_left[node], depth + 1):
+                yield [path[0], path[1] + [name], path[2]]
+            print("{}else:  # if {} > {}".format(indent, name, threshold))
+            for path in recurse(tree_.children_right[node], depth + 1):
+                yield [path[0] + [name], path[1], path[2]]
+        else:
+            yield [[], [], np.argmax(tree_.value[node])]
+            print("{}return {}".format(indent, np.argmax(tree_.value[node])))
+
+    return recurse(0, 1)
+
 def d_clean(string):
     s = string
     for c in '\\=@-,\'".!:;<>/{}[]()#^?':

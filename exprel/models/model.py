@@ -6,6 +6,7 @@ import sys
 import eli5
 
 import numpy as np
+from collections import defaultdict
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import precision_recall_fscore_support
 from collections import defaultdict
@@ -13,6 +14,7 @@ from tuw_nlp.common.vocabulary import Vocabulary
 from tuw_nlp.graph.lexical import LexGraphs
 from tuw_nlp.graph.utils import graph_to_pn
 from tuw_nlp.text.utils import load_parsed, save_parsed
+from exprel.models.utils import tree_to_code
 
 
 class GraphModel():
@@ -51,6 +53,16 @@ class GraphModel():
         lr_pred = self.model.predict(tst_data)
 
         return lr_pred, precision_recall_fscore_support(tst_labels, lr_pred)
+
+    def convert_tree_to_features(self, clf, feature_graph_strings):
+        features = defaultdict(list)
+
+        for j, est in enumerate(clf.estimators_):
+            paths = [i for i in list(tree_to_code(est, feature_graph_strings, self.inverse_relabel)) if i[2]]
+            for path in paths:
+                features[list(self.label_vocab.word_to_id.keys())[j]].append((path[0], path[1], self.label_vocab.id_to_word[j]))
+
+        return features
 
     def select_top_features(self, feature_num):
         weights_df = eli5.explain_weights_df(self.model)

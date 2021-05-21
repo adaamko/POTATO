@@ -1,5 +1,6 @@
 from sklearn.metrics import precision_recall_fscore_support
 from tuw_nlp.graph.utils import GraphFormulaMatcher
+from collections import defaultdict
 import pandas as pd
 
 
@@ -18,9 +19,23 @@ def evaluate_feature(cl, features, data):
     graphs = data.graph.tolist()
     labels = one_versus_rest(data, cl).one_versus_rest.tolist()
 
+    whole_predicted = []
+    matched = defaultdict(list)
+    matcher = GraphFormulaMatcher(features)
+    for i, g in enumerate(graphs):
+        feats = matcher.match(g)
+        label = 0
+        for key, feature in feats:
+            matched[i].append(features[feature][0])
+            label = 1
+        whole_predicted.append(label)
+
+    accuracy = []
+    for pcf in precision_recall_fscore_support(labels, whole_predicted, average=None):
+        accuracy.append(pcf[1])
+
     for feat in features:
         measure = [feat[0]]
-        matcher = GraphFormulaMatcher([feat])
         false_pos_g = []
         false_pos_s = []
         true_pos_g = []
@@ -29,10 +44,8 @@ def evaluate_feature(cl, features, data):
         false_neg_s = []
         predicted = []
         for i, g in enumerate(graphs):
-            feats = matcher.match(g)
-            label = 0
-            for feat in feats:
-                label = 1
+            feats = matched[i]
+            label = 1 if feat[0] in feats else 0
             if label == 1 and labels[i] == 0:
                 false_pos_g.append(g)
                 sen = data.iloc[i].sentence
@@ -64,19 +77,6 @@ def evaluate_feature(cl, features, data):
         measure.append(false_neg_g)
         measure.append(false_neg_s)
         measure_features.append(measure)
-
-    predicted = []
-    matcher = GraphFormulaMatcher(features)
-    for i, g in enumerate(graphs):
-        feats = matcher.match(g)
-        label = 0
-        for feat in feats:
-            label = 1
-        predicted.append(label)
-
-    accuracy = []
-    for pcf in precision_recall_fscore_support(labels, predicted, average=None):
-        accuracy.append(pcf[1])
 
     df = pd.DataFrame(measure_features, columns=[
                       'Feature', 'Precision', 'Recall', "Fscore", "Support", "False_positive_graphs", "False_positive_sens", "True_positive_graphs", "True_positive_sens", "False_negative_graphs", "False_negative_sens"])
