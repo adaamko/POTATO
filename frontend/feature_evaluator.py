@@ -1,7 +1,11 @@
-from sklearn.metrics import precision_recall_fscore_support
-from tuw_nlp.graph.utils import GraphFormulaMatcher
+import json
 from collections import defaultdict
+from graphviz import Source
+import networkx as nx
 import pandas as pd
+from networkx.algorithms.isomorphism import DiGraphMatcher
+from sklearn.metrics import precision_recall_fscore_support
+from tuw_nlp.graph.utils import GraphFormulaMatcher, pn_to_graph
 
 
 def one_versus_rest(df, entity):
@@ -13,6 +17,95 @@ def one_versus_rest(df, entity):
 
     return one_versus_rest_df
 
+
+def train_feature(cl, feature, data):
+    feature_graph = pn_to_graph(feature)[0]
+    graphs = data.graph.tolist()
+    labels = one_versus_rest(data, cl).one_versus_rest.tolist()
+    path = "trained_features.tsv"
+    with open(path, "w+") as f:
+        for i, g in enumerate(graphs):
+            matcher = DiGraphMatcher(
+                g, feature_graph, node_match=GraphFormulaMatcher.node_matcher, edge_match=GraphFormulaMatcher.edge_matcher)
+            if matcher.subgraph_is_isomorphic():
+                for iso_pairs in matcher.subgraph_isomorphisms_iter():
+                    nodes = []
+                    for k in iso_pairs:
+                        if feature_graph.nodes[iso_pairs[k]]["name"] == ".*":
+                            nodes.append(g.nodes[k]["name"])
+                    nodes_str = ",".join(nodes)
+                    label = labels[i]
+                    sentence = data.iloc[i].sentence
+                    f.write(
+                        f"{feature}\t{nodes_str}\t{sentence}\t{label}\n")
+
+    return path
+
+
+def cluster_feature(path):
+
+    def to_dot(graph, feature):
+        lines = [u'digraph finite_state_machine {']
+        lines.append('\tdpi=70;label=' + '"' + feature + '"')
+        # lines.append('\tordering=out;')
+        # sorting everything to make the process deterministic
+        node_lines = []
+        node_to_name = {}
+        for node, n_data in graph.nodes(data=True):
+            printname = node
+            if 'color' in n_data and n_data['color'] == "red":
+                node_line = u'\t{0} [shape = circle, label = "{1}", \
+                        style=filled, fillcolor=red];'.format(
+                    printname, printname.split("_")[0]).replace('-', '_')
+            if 'color' in n_data and n_data['color'] == "green":
+                node_line = u'\t{0} [shape = circle, label = "{1}", \
+                        style="filled", fillcolor=green];'.format(
+                    printname, printname.split("_")[0]).replace('-', '_')
+            node_lines.append(node_line)
+        lines += sorted(node_lines)
+
+        edge_lines = []
+        for u, v, edata in graph.edges(data=True):
+            if 'color' in edata:
+                edge_lines.append(
+                    u'\t{0} -> {1} [ label = "{2}" ];'.format(u, v, edata['color']))
+
+        lines += sorted(edge_lines)
+        lines.append('}')
+        return u'\n'.join(lines)
+
+    with open("longman_zero_paths_one_exp.json") as f:
+        graphs = json.load(f)
+
+    words = {}
+    with open("trained_features.tsv") as f:
+        for line in f:
+            fields = line.strip("\n").split("\t")
+            words[fields[1] + "_" + fields[3]] = int(fields[3])
+            feature = fields[0]
+    graph = nx.MultiDiGraph()
+
+    color_map = []
+    for word in words:
+        if words[word] == 1:
+            color = "green"
+        else:
+            color = "red"
+        graph.add_node(word, color=color)
+        word_clean = word.split("_")[0]
+        if word_clean in graphs:
+            hypernyms = graphs[word_clean]
+            for hypernym in hypernyms:
+                hypernym_words = hypernyms[hypernym]
+                for w in hypernym_words:
+                    if hypernym == "1":
+                        graph.add_edge(word, w, color=hypernym)
+
+    d = Source(to_dot(graph, feature))
+    d.engine = "circo"
+    d.format = "png"
+    
+    return d.render(view=True)
 
 def evaluate_feature(cl, features, data):
     measure_features = []

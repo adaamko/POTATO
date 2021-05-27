@@ -18,7 +18,8 @@ setup(
         "tqdm",
         "sklearn",
         "eli5",
-        "matplotlib"
+        "matplotlib",
+        "graphviz"
     ],
     packages=find_packages(),
     zip_safe=False)
