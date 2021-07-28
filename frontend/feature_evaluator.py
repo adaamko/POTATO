@@ -78,7 +78,7 @@ def cluster_feature(path):
         graphs = json.load(f)
 
     words = {}
-    with open("trained_features.tsv") as f:
+    with open(path) as f:
         for line in f:
             fields = line.strip("\n").split("\t")
             words[fields[1] + "_" + fields[3]] = int(fields[3])
@@ -104,8 +104,58 @@ def cluster_feature(path):
     d = Source(to_dot(graph, feature))
     d.engine = "circo"
     d.format = "png"
-    
-    return d.render(view=True)
+
+    selected_words = select_words(path)
+
+    word_features = []
+
+    word_features.append(feature.replace(".*", "|".join(selected_words)))
+
+    return d.render(view=True), word_features
+
+
+def select_words(path):
+    features = []
+    labels = []
+
+    with open(path) as f:
+        for line in f:
+            fields = line.strip("\n").split("\t")
+            features.append(fields[1])
+            labels.append(int(fields[3]))
+    words_to_measures = {word: {"TP": 0, "FP": 0, "TN": 0, "FN": 0}
+                         for word in set(features)}
+    for word in words_to_measures:
+        for i, label in enumerate(labels):
+            if label and features[i] == word:
+                words_to_measures[word]["TP"] += 1
+            if label and features[i] != word:
+                words_to_measures[word]["FN"] += 1
+            if not label and features[i] == word:
+                words_to_measures[word]["FP"] += 1
+            if not label and features[i] != word:
+                words_to_measures[word]["TN"] += 1
+
+    for word in words_to_measures:
+        TP = words_to_measures[word]["TP"]
+        FP = words_to_measures[word]["FP"]
+        TN = words_to_measures[word]["TN"]
+        FN = words_to_measures[word]["FN"]
+
+        precision = TP / (TP + FP)
+        recall = TP / (TP + FN)
+
+        words_to_measures[word]["precision"] = precision
+        words_to_measures[word]["recall"] = recall
+
+    selected_words = set()
+
+    for word in words_to_measures:
+        if words_to_measures[word]["precision"] > 0.8 and words_to_measures[word]["recall"] > 0.01:
+            selected_words.add(word)
+
+    return selected_words
+
 
 def evaluate_feature(cl, features, data):
     measure_features = []

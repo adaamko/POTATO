@@ -54,6 +54,10 @@ class SemevalDataset(Dataset):
 
         return one_versus_rest_df
 
+    def parse_graphs(self, extractor):
+        graphs = list(extractor.parse_iterable([sample.sentence for sample in self._dataset]))
+        return graphs
+
     def load_graphs(self, path):
         PIK = path
 

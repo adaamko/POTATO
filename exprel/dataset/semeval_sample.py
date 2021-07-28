@@ -32,15 +32,23 @@ class SemevalSample(Sample):
     def prepare_sentence(self, sen):
         soup = BeautifulSoup(sen)
         self._sentence = soup.text.strip('"')
-        self.e1 = soup.e1.text
-        self.e2 = soup.e2.text
+        self.e1 = soup.e1.text.split()[-1]
+        self.e2 = soup.e2.text.split()[-1]
 
     def _postprocess(self, graph):
         for node, attr in graph.nodes(data=True):
-            if attr["name"] == self.e1_lemma:
-                attr["name"] = "entity1"
-            if attr["name"] == self.e2_lemma:
-                attr["name"] = "entity2"
+            if self.e1_lemma:
+                if attr["name"] == self.e1_lemma or attr["name"] == self.e1_lemma.split()[-1]:
+                    attr["name"] = "entity1"
+            else:
+                if attr["name"] == self.e1 or attr["name"] == self.e1.split()[-1]:
+                    attr["name"] = "entity1"
+            if self.e2_lemma:
+                if attr["name"] == self.e2_lemma or attr["name"] == self.e2_lemma.split()[-1]:
+                    attr["name"] = "entity2"
+            else:
+                if attr["name"] == self.e2 or attr["name"] == self.e2.split()[-1]:
+                    attr["name"] = "entity2"
         
         return graph
 

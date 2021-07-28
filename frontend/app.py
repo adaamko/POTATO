@@ -3,6 +3,7 @@ import json
 import os
 import random
 import re
+import configparser
 from collections import defaultdict
 
 import networkx as nx
@@ -50,7 +51,7 @@ def to_dot(graph, marked_nodes=set(), integ=False):
         if integ:
             d_node = d_clean(str(node))
         else:
-            d_node = d_clean(n_data["name"])
+            d_node = n_data["name"]
         printname = d_node
         node_to_name[node] = printname
         if 'expanded' in n_data and n_data['expanded'] and printname in marked_nodes:
@@ -122,8 +123,10 @@ def main():
     st.markdown("<h1 style='text-align: center; color: black;'>Rule extraction framework</h1>",
                 unsafe_allow_html=True)
     col1, col2 = st.beta_columns(2)
-
-    with open("features.json") as f:
+    config = configparser.ConfigParser()
+    config.read("app_config.ini")
+    feature_path = config["DEFAULT"]["features_path"]
+    with open(feature_path) as f:
         features = json.load(f)
 
     col1.header("Rule to apply")
@@ -135,6 +138,7 @@ def main():
     tfl = load_text_to_4lang()
 
     with col1:
+        st.error("Impossible combination")
         classes = st.selectbox("Choose label", list(features.keys()))
         sens = [";".join(feat[0]) for feat in features[classes]]
         option = "Rules to add here"
@@ -161,9 +165,12 @@ def main():
                 st.text("Only single and underspecified rules can be trained!")
             else:
                 trained_feature = train_feature(classes, text, data)
-                ruleset.clustered_words_path = cluster_feature(trained_feature)
+                ruleset.clustered_words_path, selected_words = cluster_feature(trained_feature)
+                for f in selected_words:
+                    ruleset.rewritten_rules.append([f])
+                    ruleset.negated_rules.append([])
 
-        text_G, _ = pn_to_graph(text.split(";")[0])
+        text_G, _ = pn_to_graph(option.split(";")[0])
         st.graphviz_chart(
             to_dot(text_G), use_container_width=True)
         nodes = [d_clean(n[1]["name"].split("_")[0])
@@ -189,9 +196,10 @@ def main():
         if st.button("Save rules"):
             features[classes] = [[rule, ruleset.negated_rules[i], classes]
                                  for i, rule in enumerate(ruleset.rewritten_rules)]
-            save_ruleset("features.json", features)
-            ruleset.rewritten_rules.clear()
-            ruleset.negated_rules.clear()
+            if features[classes]:
+                save_ruleset(feature_path, features)
+                ruleset.rewritten_rules.clear()
+                ruleset.negated_rules.clear()
 
         ruleset_expander = st.beta_expander(
             "Show the ruleset:", expanded=False)
