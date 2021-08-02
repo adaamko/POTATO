@@ -19,7 +19,8 @@ setup(
         "sklearn",
         "eli5",
         "matplotlib",
-        "graphviz"
+        "graphviz",
+        "openpyxl"
     ],
     packages=find_packages(),
     zip_safe=False)

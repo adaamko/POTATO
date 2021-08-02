@@ -1,0 +1,96 @@
+import itertools
+import pickle
+
+import pandas as pd
+from exprel.database.db import Database
+from exprel.dataset.dataset import Dataset
+from exprel.dataset.hasoc_sample import HasocSample
+from sklearn import preprocessing
+from tqdm import tqdm
+import logging
+import openpyxl
+
+
+class HasocDataset(Dataset):
+    def __init__(self, path, lang="en", graph="amr"):
+        super().__init__(lang)
+        self.graph_format = graph
+        if graph == "amr":
+            import spacy
+            import amrlib
+            amrlib.setup_spacy_extension()
+            self.nlp = spacy.load('en_core_web_md')
+        self.le1 = preprocessing.LabelEncoder()
+        self.le2 = preprocessing.LabelEncoder()
+        self._dataset = [sample for sample in self.read_dataset(path)]
+
+    @property
+    def dataset(self):
+        return self._dataset
+
+    @dataset.setter
+    def dataset(self, value):
+        self._dataset = [sample for sample in self.read_dataset(value)]
+
+    def set_graphs(self, graphs):
+        for sample, graph in zip(self._dataset, graphs):
+            sample.set_graph(graph)
+
+    def read_dataset(self, path):
+        wb_obj = openpyxl.load_workbook(path)
+        sheet_obj = wb_obj.active
+        data = sheet_obj.values
+        cols = next(data)
+        data = list(data)
+        df = pd.DataFrame(data, columns=cols)
+        for row in tqdm(df.iterrows()):
+            print("hello")
+            data = row[1]
+            tweet_id = data.tweet_id
+            text = data.text
+            task1 = data.task1
+            task2 = data.task2
+            tweet_id = data.tweet_id
+            ind = data.ID
+            hasoc_sample = HasocSample(
+                tweet_id, text, task1, task2, ind, self.nlp)
+            yield semeval_sample
+
+    def to_dataframe(self):
+        self.le1.fit([sample.task1 for sample in self._dataset])
+        self.le2.fit([sample.task2 for sample in self._dataset])
+        df = pd.DataFrame({"hasoc_id": [sample.hasoc_id for sample in self._dataset], "tweet_id": [sample.tweet_id for sample in self._dataset], "original_text": [
+                          sample.original_text for sample in self._dataset],  "preprocessed_text": [sample.preprocessed_text for sample in self._dataset], "task1": [
+            sample.task1 for sample in self._dataset], "task2": [sample.task2 for sample in self._dataset], "task1_id": self.le1.transform([sample.task1 for sample in self._dataset]), "task2_id": self.le2.transform([sample.task2 for sample in self._dataset]), "graph": [sample.graph for sample in self._dataset]})
+
+        return df
+
+    def one_versus_rest(self, df, entity):
+        mapper = {entity: 1}
+
+        one_versus_rest_df = df.copy()
+        one_versus_rest_df["one_versus_rest"] = [
+            mapper[item] if item in mapper else 0 for item in df.label]
+
+        return one_versus_rest_df
+
+    def parse_graphs(self, extractor, format="amr"):
+        if format == "fourlang":
+            graphs = list(extractor.parse_iterable(
+                [sample.sentence for sample in self._dataset]))
+            return graphs
+        elif format == "amr":
+            graphs = [sample.graph for sample in self._dataset]
+
+    def load_graphs(self, path):
+        PIK = path
+
+        with open(PIK, "rb") as f:
+            self.graphs = pickle.load(f)
+
+        self.set_graphs(self.graphs)
+
+    def save_graphs(self, path):
+        PIK = path
+        with open(PIK, "wb") as f:
+            pickle.dump(self.graphs, f)
