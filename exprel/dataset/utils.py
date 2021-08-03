@@ -22,13 +22,14 @@ def amr_pn_to_graph(raw_dl, edge_attr='color'):
             next_id += 1
 
         elif trip[1] == ":instance":
-            if "-" in trip[2]:
-                name = "-".join(trip[2].split("-")[:-1])
-            else:
-                name = trip[2]
-            G.add_node(next_id, name=name)
-            char_to_id[trip[0]] = next_id
-            next_id += 1
+            if trip[2]:
+                if "-" in trip[2]:
+                    name = "-".join(trip[2].split("-")[:-1])
+                else:
+                    name = trip[2]
+                G.add_node(next_id, name=name)
+                char_to_id[trip[0]] = next_id
+                next_id += 1
 
     for trip in g.triples:
         if trip[1] != ":instance":
