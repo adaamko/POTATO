@@ -13,13 +13,20 @@ def amr_pn_to_graph(raw_dl, edge_attr='color'):
     for i, trip in enumerate(g.triples):
         if i == 0:
             root_id = next_id
-            name = trip[2].split("-")[0]
+            if "-" in trip[2]:
+                name = "-".join(trip[2].split("-")[:-1])
+            else:
+                name = trip[2]
             G.add_node(root_id, name=name)
             char_to_id[trip[0]] = next_id
             next_id += 1
 
         elif trip[1] == ":instance":
-            G.add_node(next_id, name=trip[2].split("-")[0])
+            if "-" in trip[2]:
+                name = "-".join(trip[2].split("-")[:-1])
+            else:
+                name = trip[2]
+            G.add_node(next_id, name=name)
             char_to_id[trip[0]] = next_id
             next_id += 1
 
@@ -30,11 +37,19 @@ def amr_pn_to_graph(raw_dl, edge_attr='color'):
             tgt = trip[2]
             if src not in char_to_id:
                 char_to_id[src] = next_id
-                G.add_node(next_id, name=src.split("-")[0])
+                if "-" in src:
+                    name = "-".join(src.split("-")[:-1])
+                else:
+                    name = src
+                G.add_node(next_id, name=name)
                 next_id += 1
             if tgt not in char_to_id:
                 char_to_id[tgt] = next_id
-                G.add_node(next_id, name=tgt.split("-")[0])
+                if "-" in tgt:
+                    name = "-".join(tgt.split("-")[:-1])
+                else:
+                    name = tgt
+                G.add_node(next_id, name=name)
                 next_id += 1
 
             G.add_edge(char_to_id[src], char_to_id[tgt])

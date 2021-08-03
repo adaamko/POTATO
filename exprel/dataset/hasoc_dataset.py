@@ -1,14 +1,15 @@
 import itertools
+import logging
 import pickle
 
+import openpyxl
 import pandas as pd
 from exprel.database.db import Database
 from exprel.dataset.dataset import Dataset
 from exprel.dataset.hasoc_sample import HasocSample
+from exprel.dataset.utils import amr_pn_to_graph
 from sklearn import preprocessing
 from tqdm import tqdm
-import logging
-import openpyxl
 
 
 class HasocDataset(Dataset):
@@ -16,9 +17,10 @@ class HasocDataset(Dataset):
         super().__init__(lang)
         self.graph_format = graph
         if graph == "amr":
-            import spacy
             import amrlib
-            amrlib.setup_spacy_extension()
+            import spacy
+            self.stog = amrlib.load_stog_model()
+            #amrlib.setup_spacy_extension()
             self.nlp = spacy.load('en_core_web_md')
         self.le1 = preprocessing.LabelEncoder()
         self.le2 = preprocessing.LabelEncoder()
@@ -44,7 +46,6 @@ class HasocDataset(Dataset):
         data = list(data)
         df = pd.DataFrame(data, columns=cols)
         for row in tqdm(df.iterrows()):
-            print("hello")
             data = row[1]
             tweet_id = data.tweet_id
             text = data.text
@@ -54,7 +55,7 @@ class HasocDataset(Dataset):
             ind = data.ID
             hasoc_sample = HasocSample(
                 tweet_id, text, task1, task2, ind, self.nlp)
-            yield semeval_sample
+            yield hasoc_sample
 
     def to_dataframe(self):
         self.le1.fit([sample.task1 for sample in self._dataset])
@@ -77,10 +78,17 @@ class HasocDataset(Dataset):
     def parse_graphs(self, extractor, format="amr"):
         if format == "fourlang":
             graphs = list(extractor.parse_iterable(
-                [sample.sentence for sample in self._dataset]))
+                [sample.preprocessed_text for sample in self._dataset]))
             return graphs
         elif format == "amr":
-            graphs = [sample.graph for sample in self._dataset]
+            sens = [sample.preprocessed_text for sample in self._dataset]
+            amr_graphs = []
+            for sen in tqdm(sens):
+                graphs = self.stog.parse_sents(sens)
+                G, _ = amr_pn_to_graph(graphs[0])
+                amr_graphs.append(G)
+
+            return amr_graphs
 
     def load_graphs(self, path):
         PIK = path

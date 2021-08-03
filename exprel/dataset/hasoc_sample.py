@@ -18,7 +18,7 @@ class HasocSample(Sample):
         self.graph = None
         self.doc = None
         self.graph_format = graph_format
-        self.prepare_doc()
+        #self.prepare_doc()
 
     def prepare_sentence(self, tweet):
         return preprocess_tweet(tweet, keep_hashtag=False, keep_username=False)
@@ -32,7 +32,7 @@ class HasocSample(Sample):
     def prepare_doc(self):
         self.doc = self.nlp(self.preprocessed_text)
         if self.graph_format == "amr":
-            graphs = self.doc._.to_amr()
+            stog = amrlib.load_stog_model()
             G = None
             for graph in graphs:
                 G, _ = amr_pn_to_graph(graph)
