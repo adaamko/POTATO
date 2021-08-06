@@ -2,6 +2,26 @@ from collections import defaultdict
 
 import networkx as nx
 import penman as pn
+import re
+
+
+def d_clean(string):
+    s = string
+    for c in '\\=@-,\'".!:;<>/{}[]()#^?':
+        s = s.replace(c, '_')
+    s = s.replace('$', '_dollars')
+    s = s.replace('%', '_percent')
+    s = s.replace('|', ' ')
+    s = s.replace('*', ' ')
+    if s == '#':
+        s = '_number'
+    keywords = ("graph", "node", "strict", "edge")
+    if re.match('^[0-9]', s) or s in keywords:
+        s = "X" + s
+
+    if not s:
+        return "None"
+    return s
 
 
 def amr_pn_to_graph(raw_dl, edge_attr='color'):
@@ -17,7 +37,7 @@ def amr_pn_to_graph(raw_dl, edge_attr='color'):
                 name = "-".join(trip[2].split("-")[:-1])
             else:
                 name = trip[2]
-            G.add_node(root_id, name=name)
+            G.add_node(root_id, name=d_clean(name))
             char_to_id[trip[0]] = next_id
             next_id += 1
 
@@ -27,7 +47,7 @@ def amr_pn_to_graph(raw_dl, edge_attr='color'):
                     name = "-".join(trip[2].split("-")[:-1])
                 else:
                     name = trip[2]
-                G.add_node(next_id, name=name)
+                G.add_node(next_id, name=d_clean(name))
                 char_to_id[trip[0]] = next_id
                 next_id += 1
 
@@ -42,7 +62,7 @@ def amr_pn_to_graph(raw_dl, edge_attr='color'):
                     name = "-".join(src.split("-")[:-1])
                 else:
                     name = src
-                G.add_node(next_id, name=name)
+                G.add_node(next_id, name=d_clean(name))
                 next_id += 1
             if tgt not in char_to_id:
                 char_to_id[tgt] = next_id
@@ -50,7 +70,7 @@ def amr_pn_to_graph(raw_dl, edge_attr='color'):
                     name = "-".join(tgt.split("-")[:-1])
                 else:
                     name = tgt
-                G.add_node(next_id, name=name)
+                G.add_node(next_id, name=d_clean(name))
                 next_id += 1
 
             G.add_edge(char_to_id[src], char_to_id[tgt])
