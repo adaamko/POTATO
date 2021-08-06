@@ -17,6 +17,7 @@ from tuw_nlp.graph.fourlang import FourLang
 from tuw_nlp.grammar.text_to_4lang import TextTo4lang
 from tuw_nlp.graph.utils import (GraphFormulaMatcher, pn_to_graph,
                                  read_alto_output)
+from exprel.dataset.utils import amr_pn_to_graph
 
 # SessionState module from https://gist.github.com/tvst/036da038ab3e999a64497f42de966a92
 import SessionState
@@ -34,12 +35,14 @@ def d_clean(string):
     s = s.replace('%', '_percent')
     s = s.replace('|', ' ')
     s = s.replace('*', ' ')
+    s = s.replace('"', '')
     if s == '#':
         s = '_number'
     keywords = ("graph", "node", "strict", "edge")
     if re.match('^[0-9]', s) or s in keywords:
         s = "X" + s
     return s
+
 
 def to_dot(graph, marked_nodes=set(), integ=False):
     lines = [u'digraph finite_state_machine {', '\tdpi=70;']
@@ -51,7 +54,7 @@ def to_dot(graph, marked_nodes=set(), integ=False):
         if integ:
             d_node = d_clean(str(node))
         else:
-            d_node = n_data["name"]
+            d_node = d_clean(n_data["name"]) if n_data["name"] else "None"
         printname = d_node
         node_to_name[node] = printname
         if 'expanded' in n_data and n_data['expanded'] and printname in marked_nodes:
@@ -82,8 +85,8 @@ def to_dot(graph, marked_nodes=set(), integ=False):
     edge_lines = []
     for u, v, edata in graph.edges(data=True):
         if 'color' in edata:
-            d_node1 = node_to_name[u]
-            d_node2 = node_to_name[v]
+            d_node1 = node_to_name[u].replace('-', '_')
+            d_node2 = node_to_name[v].replace('-', '_')
             edge_lines.append(
                 u'\t{0} -> {1} [ label = "{2}" ];'.format(d_node1, d_node2, edata['color']))
 
@@ -118,14 +121,17 @@ def load_text_to_4lang():
     tfl = TextTo4lang("en", "en_nlp_cache")
     return tfl
 
+
 def main():
     st.set_page_config(layout="wide")
     st.markdown("<h1 style='text-align: center; color: black;'>Rule extraction framework</h1>",
                 unsafe_allow_html=True)
-    col1, col2 = st.beta_columns(2)
+    col1, col2 = st.columns(2)
     config = configparser.ConfigParser()
     config.read("app_config.ini")
     feature_path = config["DEFAULT"]["features_path"]
+    train_path = config["DEFAULT"]["train_path"]
+    graph_format = config["DEFAULT"]["graph_format"]
     with open(feature_path) as f:
         features = json.load(f)
 
@@ -133,19 +139,21 @@ def main():
 
     col2.header("Graphs and results")
 
-    data = pd.read_pickle("train_dataset")
+    data = pd.read_pickle(train_path)
 
     tfl = load_text_to_4lang()
 
     with col1:
-        st.error("Impossible combination")
         classes = st.selectbox("Choose label", list(features.keys()))
         sens = [";".join(feat[0]) for feat in features[classes]]
         option = "Rules to add here"
         option = st.selectbox(
             'Choose from the rules', sens)
-        G, _ = read_alto_output(option.split(";")[0])
-        nodes = [d_clean(n.split("_")[0]) for n in G.nodes()]
+        
+        if graph_format == "amr":
+            G, _ = amr_pn_to_graph(option.split(";")[0])
+        else:
+            G, _ = read_alto_output(option.split(";")[0])
 
         text = st.text_area("You can modify the rule here", option)
 
@@ -157,20 +165,25 @@ def main():
         evaluate = st.button("Evaluate ruleset")
         if evaluate:
             ruleset.dataframe, ruleset.whole_accuracy = evaluate_feature(
-                classes, features[classes], data)
+                classes, features[classes], data, graph_format)
 
         train_rule = st.button("Train rule")
         if train_rule:
             if ";" in text or ".*" not in text:
                 st.text("Only single and underspecified rules can be trained!")
             else:
-                trained_feature = train_feature(classes, text, data)
-                ruleset.clustered_words_path, selected_words = cluster_feature(trained_feature)
+                trained_feature = train_feature(classes, text, data, graph_format)
+                ruleset.clustered_words_path, selected_words = cluster_feature(
+                    trained_feature)
                 for f in selected_words:
                     ruleset.rewritten_rules.append([f])
                     ruleset.negated_rules.append([])
 
-        text_G, _ = pn_to_graph(option.split(";")[0])
+        if graph_format == "amr":
+            text_G, _ = amr_pn_to_graph(option.split(";")[0])
+        else:
+            text_G, _ = pn_to_graph(option.split(";")[0])
+            
         st.graphviz_chart(
             to_dot(text_G), use_container_width=True)
         nodes = [d_clean(n[1]["name"].split("_")[0])
@@ -201,7 +214,7 @@ def main():
                 ruleset.rewritten_rules.clear()
                 ruleset.negated_rules.clear()
 
-        ruleset_expander = st.beta_expander(
+        ruleset_expander = st.expander(
             "Show the ruleset:", expanded=False)
 
         with ruleset_expander:
@@ -256,17 +269,10 @@ def main():
                     if ruleset.false_graph_number > len(fp_graphs)-1:
                         ruleset.false_graph_number = 0
 
-                    fp_graphs[ruleset.false_graph_number].remove_nodes_from(
-                        list(nx.isolates(fp_graphs[ruleset.false_graph_number])))
-
                     st.markdown(
                         f"<span><b>Sentence:</b> {fp_sentences[ruleset.false_graph_number][0]}</span>", unsafe_allow_html=True)
                     st.markdown(
-                        f"<span><b>Entity1:</b> {fp_sentences[ruleset.false_graph_number][1]}</span>", unsafe_allow_html=True)
-                    st.markdown(
-                        f"<span><b>Entity2:</b> {fp_sentences[ruleset.false_graph_number][2]}</span>", unsafe_allow_html=True)
-                    st.markdown(
-                        f"<span><b>Gold label:</b> {fp_sentences[ruleset.false_graph_number][3]}</span>", unsafe_allow_html=True)
+                        f"<span><b>Gold label:</b> {fp_sentences[ruleset.false_graph_number][1]}</span>", unsafe_allow_html=True)
                     st.text(f"False positives: {len(fp_graphs)}")
                     current_graph = fp_graphs[ruleset.false_graph_number]
                     st.graphviz_chart(
@@ -284,17 +290,13 @@ def main():
                     if ruleset.true_graph_number > len(tp_graphs)-1:
                         ruleset.true_graph_number = 0
 
-                    tp_graphs[ruleset.true_graph_number].remove_nodes_from(
-                        list(nx.isolates(tp_graphs[ruleset.true_graph_number])))
+                    with open("graph.dot", "w+") as f:
+                        f.write(to_dot(tp_graphs[ruleset.true_graph_number], marked_nodes=set(nodes)))
 
                     st.markdown(
                         f"<span><b>Sentence:</b> {tp_sentences[ruleset.true_graph_number][0]}</span>", unsafe_allow_html=True)
                     st.markdown(
-                        f"<span><b>Entity1:</b> {tp_sentences[ruleset.true_graph_number][1]}</span>", unsafe_allow_html=True)
-                    st.markdown(
-                        f"<span><b>Entity2:</b> {tp_sentences[ruleset.true_graph_number][2]}</span>", unsafe_allow_html=True)
-                    st.markdown(
-                        f"<span><b>Gold label:</b> {tp_sentences[ruleset.true_graph_number][3]}</span>", unsafe_allow_html=True)
+                        f"<span><b>Gold label:</b> {tp_sentences[ruleset.true_graph_number][1]}</span>", unsafe_allow_html=True)
                     st.text(f"True positives: {len(tp_graphs)}")
                     current_graph = tp_graphs[ruleset.true_graph_number]
                     st.graphviz_chart(
@@ -311,45 +313,41 @@ def main():
                     if ruleset.false_neg_number > len(fn_graphs)-1:
                         ruleset.false_neg_number = 0
 
-                    tp_graphs[ruleset.false_neg_number].remove_nodes_from(
-                        list(nx.isolates(fn_graphs[ruleset.false_neg_number])))
-
                     st.markdown(
                         f"<span><b>Sentence:</b> {fn_sentences[ruleset.false_neg_number][0]}</span>", unsafe_allow_html=True)
                     st.markdown(
-                        f"<span><b>Entity1:</b> {fn_sentences[ruleset.false_neg_number][1]}</span>", unsafe_allow_html=True)
-                    st.markdown(
-                        f"<span><b>Entity2:</b> {fn_sentences[ruleset.false_neg_number][2]}</span>", unsafe_allow_html=True)
-                    st.markdown(
-                        f"<span><b>Gold label:</b> {fn_sentences[ruleset.false_neg_number][3]}</span>", unsafe_allow_html=True)
+                        f"<span><b>Gold label:</b> {fn_sentences[ruleset.false_neg_number][1]}</span>", unsafe_allow_html=True)
                     st.text(f"False negatives: {len(fn_graphs)}")
                     current_graph = fn_graphs[ruleset.false_neg_number]
                     st.graphviz_chart(
                         to_dot(fn_graphs[ruleset.false_neg_number], marked_nodes=set(nodes)), use_container_width=True)
 
-            fl = FourLang(current_graph, 0)
-            expand_node = st.text_input("Expand node", None)
-            append_zero_path = st.button("Expand node and append zero paths to the graph")
-            if append_zero_path:
-                tfl.expand(fl, depth=1, expand_set={expand_node}, strategy="whitelisting")
-                fl.append_zero_paths()
+            if graph_format == "fourlang":
+                fl = FourLang(current_graph, 0)
+                expand_node = st.text_input("Expand node", None)
+                append_zero_path = st.button(
+                    "Expand node and append zero paths to the graph")
+                if append_zero_path:
+                    tfl.expand(fl, depth=1, expand_set={
+                               expand_node}, strategy="whitelisting")
+                    fl.append_zero_paths()
 
-            show_graph = st.beta_expander(
-                 "Show graph", expanded=False)
+                show_graph = st.expander(
+                    "Show graph", expanded=False)
 
-            with show_graph:
-                 if current_graph:
-                     st.graphviz_chart(
-                             to_dot(fl.G, marked_nodes=set(nodes)), use_container_width=True)
-            
-            clustered_words = st.beta_expander(
-                "Show clustered words:", expanded=False)
+                with show_graph:
+                    if current_graph:
+                        st.graphviz_chart(
+                            to_dot(fl.G, marked_nodes=set(nodes)), use_container_width=True)
 
-            with clustered_words:
-                if ruleset.clustered_words_path:
-                    image = Image.open(ruleset.clustered_words_path)
-                    st.image(image, caption='trained_feature',
-                             use_column_width=True)
+                clustered_words = st.expander(
+                    "Show clustered words:", expanded=False)
+
+                with clustered_words:
+                    if ruleset.clustered_words_path:
+                        image = Image.open(ruleset.clustered_words_path)
+                        st.image(image, caption='trained_feature',
+                                 use_column_width=True)
 
 
 if __name__ == "__main__":

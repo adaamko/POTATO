@@ -6,6 +6,7 @@ import pandas as pd
 from networkx.algorithms.isomorphism import DiGraphMatcher
 from sklearn.metrics import precision_recall_fscore_support
 from tuw_nlp.graph.utils import GraphFormulaMatcher, pn_to_graph
+from exprel.dataset.utils import amr_pn_to_graph
 
 
 def one_versus_rest(df, entity):
@@ -18,8 +19,11 @@ def one_versus_rest(df, entity):
     return one_versus_rest_df
 
 
-def train_feature(cl, feature, data):
-    feature_graph = pn_to_graph(feature)[0]
+def train_feature(cl, feature, data, graph_format="fourlang"):
+    if graph_format == "amr":
+        feature_graph = amr_pn_to_graph(feature)[0]
+    else:
+        feature_graph = pn_to_graph(feature)[0]
     graphs = data.graph.tolist()
     labels = one_versus_rest(data, cl).one_versus_rest.tolist()
     path = "trained_features.tsv"
@@ -157,14 +161,17 @@ def select_words(path):
     return selected_words
 
 
-def evaluate_feature(cl, features, data):
+def evaluate_feature(cl, features, data, graph_format="fourlang"):
     measure_features = []
     graphs = data.graph.tolist()
     labels = one_versus_rest(data, cl).one_versus_rest.tolist()
 
     whole_predicted = []
     matched = defaultdict(list)
-    matcher = GraphFormulaMatcher(features)
+    if graph_format == "amr":
+        matcher = GraphFormulaMatcher(features, converter=amr_pn_to_graph)
+    else:
+        matcher = GraphFormulaMatcher(features, converter=pn_to_graph)
     for i, g in enumerate(graphs):
         feats = matcher.match(g)
         label = 0
@@ -192,24 +199,18 @@ def evaluate_feature(cl, features, data):
             if label == 1 and labels[i] == 0:
                 false_pos_g.append(g)
                 sen = data.iloc[i].sentence
-                e1 = data.iloc[i].e1
-                e2 = data.iloc[i].e2
                 lab = data.iloc[i].label
-                false_pos_s.append((sen, e1, e2, lab))
+                false_pos_s.append((sen, lab))
             if label == 1 and labels[i] == 1:
                 true_pos_g.append(g)
                 sen = data.iloc[i].sentence
-                e1 = data.iloc[i].e1
-                e2 = data.iloc[i].e2
                 lab = data.iloc[i].label
-                true_pos_s.append((sen, e1, e2, lab))
+                true_pos_s.append((sen, lab))
             if label == 0 and labels[i] == 1:
                 false_neg_g.append(g)
                 sen = data.iloc[i].sentence
-                e1 = data.iloc[i].e1
-                e2 = data.iloc[i].e2
                 lab = data.iloc[i].label
-                false_neg_s.append((sen, e1, e2, lab))
+                false_neg_s.append((sen, lab))
             predicted.append(label)
         for pcf in precision_recall_fscore_support(labels, predicted, average=None):
             measure.append(pcf[1])
