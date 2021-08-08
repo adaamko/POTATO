@@ -27,23 +27,6 @@ ruleset = SessionState.get(
     false_graph_number=0, true_graph_number=0, false_neg_number=0, whole_accuracy=[], rewritten_rules=[], negated_rules=[], dataframe=pd.DataFrame, clustered_words_path=None)
 
 
-def d_clean(string):
-    s = string
-    for c in '\\=@-,\'".!:;<>/{}[]()#^?':
-        s = s.replace(c, '_')
-    s = s.replace('$', '_dollars')
-    s = s.replace('%', '_percent')
-    s = s.replace('|', ' ')
-    s = s.replace('*', ' ')
-    s = s.replace('"', '')
-    if s == '#':
-        s = '_number'
-    keywords = ("graph", "node", "strict", "edge")
-    if re.match('^[0-9]', s) or s in keywords:
-        s = "X" + s
-    return s
-
-
 def to_dot(graph, marked_nodes=set(), integ=False):
     lines = [u'digraph finite_state_machine {', '\tdpi=70;']
     # lines.append('\tordering=out;')
@@ -141,7 +124,8 @@ def main():
 
     data = pd.read_pickle(train_path)
 
-    tfl = load_text_to_4lang()
+    if graph_format == "fourlang":
+        tfl = load_text_to_4lang()
 
     with col1:
         classes = st.selectbox("Choose label", list(features.keys()))
@@ -319,6 +303,8 @@ def main():
                         f"<span><b>Gold label:</b> {fn_sentences[ruleset.false_neg_number][1]}</span>", unsafe_allow_html=True)
                     st.text(f"False negatives: {len(fn_graphs)}")
                     current_graph = fn_graphs[ruleset.false_neg_number]
+                    with open("graph.dot", "w+") as f:
+                        f.write(to_dot(current_graph, marked_nodes=set(nodes)))
                     st.graphviz_chart(
                         to_dot(fn_graphs[ruleset.false_neg_number], marked_nodes=set(nodes)), use_container_width=True)
 
