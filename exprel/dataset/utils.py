@@ -20,7 +20,10 @@ def amr_pn_to_graph(raw_dl, edge_attr='color', clean_nodes=True):
             else:
                 name = trip[2]
             if clean_nodes:
-                name = preprocess_node_alto(name)
+                if name:
+                    name = preprocess_node_alto(name)
+                else:
+                    name = "None"
             G.add_node(root_id, name=name)
             char_to_id[trip[0]] = next_id
             next_id += 1
@@ -32,7 +35,10 @@ def amr_pn_to_graph(raw_dl, edge_attr='color', clean_nodes=True):
                 else:
                     name = trip[2]
                 if clean_nodes:
-                    name = preprocess_node_alto(name)
+                    if name:
+                        name = preprocess_node_alto(name)
+                    else:
+                        name = "None"
                 G.add_node(next_id, name=name)
                 char_to_id[trip[0]] = next_id
                 next_id += 1
@@ -49,7 +55,10 @@ def amr_pn_to_graph(raw_dl, edge_attr='color', clean_nodes=True):
                 else:
                     name = src
                 if clean_nodes:
-                    name = preprocess_node_alto(name)
+                    if name:
+                        name = preprocess_node_alto(name)
+                    else:
+                        name = "None"
                 G.add_node(next_id, name=name)
                 next_id += 1
             if tgt not in char_to_id:
@@ -59,7 +68,10 @@ def amr_pn_to_graph(raw_dl, edge_attr='color', clean_nodes=True):
                 else:
                     name = tgt
                 if clean_nodes:
-                    name = preprocess_node_alto(name)
+                    if name:
+                        name = preprocess_node_alto(name)
+                    else:
+                        name = "None"
                 G.add_node(next_id, name=name)
                 next_id += 1
 
