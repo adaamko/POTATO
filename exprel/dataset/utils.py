@@ -39,7 +39,7 @@ def amr_pn_to_graph(raw_dl, edge_attr='color', clean_nodes=True):
 
     for trip in g.triples:
         if trip[1] != ":instance":
-            edge = trip[1].split(":")[1]
+            edge = "".join(trip[1].split(":")[1].split("-"))
             src = trip[0]
             tgt = trip[2]
             if src not in char_to_id:
