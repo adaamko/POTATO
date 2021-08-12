@@ -6,7 +6,7 @@ from exprel.dataset.utils import amr_pn_to_graph
 
 
 class HasocSample(Sample):
-    def __init__(self, tweet_id, text, task1, task2, ID, nlp, graph_format="amr"):
+    def __init__(self, text, task1, task2, ID, nlp, graph_format="amr"):
         super().__init__()
         self.hasoc_id = ID
         self.original_text = text

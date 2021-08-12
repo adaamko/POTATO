@@ -51,7 +51,7 @@ class HasocDataset(Dataset):
     def to_dataframe(self):
         self.le1.fit([sample.task1 for sample in self._dataset])
         self.le2.fit([sample.task2 for sample in self._dataset])
-        df = pd.DataFrame({"hasoc_id": [sample.hasoc_id for sample in self._dataset], "tweet_id": [sample.tweet_id for sample in self._dataset], "original_text": [
+        df = pd.DataFrame({"hasoc_id": [sample.hasoc_id for sample in self._dataset], "original_text": [
                           sample.original_text for sample in self._dataset],  "preprocessed_text": [sample.preprocessed_text for sample in self._dataset], "task1": [
             sample.task1 for sample in self._dataset], "task2": [sample.task2 for sample in self._dataset], "task1_id": self.le1.transform([sample.task1 for sample in self._dataset]), "task2_id": self.le2.transform([sample.task2 for sample in self._dataset]), "graph": [sample.graph for sample in self._dataset]})
 
