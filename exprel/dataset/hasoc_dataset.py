@@ -20,7 +20,7 @@ class HasocDataset(Dataset):
             import amrlib
             import spacy
             self.stog = amrlib.load_stog_model()
-            #amrlib.setup_spacy_extension()
+            # amrlib.setup_spacy_extension()
             self.nlp = spacy.load('en_core_web_md')
         self.le1 = preprocessing.LabelEncoder()
         self.le2 = preprocessing.LabelEncoder()
@@ -38,23 +38,14 @@ class HasocDataset(Dataset):
         for sample, graph in zip(self._dataset, graphs):
             sample.set_graph(graph)
 
-    def read_dataset(self, path):
-        wb_obj = openpyxl.load_workbook(path)
-        sheet_obj = wb_obj.active
-        data = sheet_obj.values
-        cols = next(data)
-        data = list(data)
-        df = pd.DataFrame(data, columns=cols)
-        for row in tqdm(df.iterrows()):
+    def read_dataset(self, df):
+        for i, row in tqdm(enumerate(df.iterrows())):
             data = row[1]
-            tweet_id = data.tweet_id
             text = data.text
-            task1 = data.task1
-            task2 = data.task2
-            tweet_id = data.tweet_id
-            ind = data.ID
-            hasoc_sample = HasocSample(
-                tweet_id, text, task1, task2, ind, self.nlp)
+            task1 = data.task_1
+            task2 = data.task_2
+            ind = df.index[i]
+            hasoc_sample = HasocSample(text, task1, task2, ind, self.nlp)
             yield hasoc_sample
 
     def to_dataframe(self):
