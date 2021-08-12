@@ -4,6 +4,7 @@ import pickle
 
 import openpyxl
 import pandas as pd
+import networkx as nx
 from exprel.database.db import Database
 from exprel.dataset.dataset import Dataset
 from exprel.dataset.hasoc_sample import HasocSample
@@ -76,7 +77,11 @@ class HasocDataset(Dataset):
             amr_graphs = []
             for sen in tqdm(sens):
                 graphs = self.stog.parse_sents([sen])
-                G, _ = amr_pn_to_graph(graphs[0], clean_nodes=True)
+                try:
+                    G, _ = amr_pn_to_graph(graphs[0], clean_nodes=True)
+                except Exception as e:
+                    print(e)
+                    G = nx.DiGraph()
                 amr_graphs.append(G)
 
             return amr_graphs
