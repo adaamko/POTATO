@@ -6,7 +6,7 @@ import re
 from tuw_nlp.graph.utils import preprocess_node_alto
 
 
-def amr_pn_to_graph(raw_dl, edge_attr='color', clean_nodes=True):
+def amr_pn_to_graph(raw_dl, edge_attr='color', clean_nodes=False):
     g = pn.decode(raw_dl)
     G = nx.DiGraph()
 

@@ -5,6 +5,7 @@ import random
 import re
 import configparser
 from collections import defaultdict
+import copy
 
 import networkx as nx
 import pandas as pd
@@ -20,11 +21,31 @@ from tuw_nlp.graph.utils import (GraphFormulaMatcher, pn_to_graph,
 from exprel.dataset.utils import amr_pn_to_graph
 
 # SessionState module from https://gist.github.com/tvst/036da038ab3e999a64497f42de966a92
-import SessionState
 from feature_evaluator import cluster_feature, evaluate_feature, train_feature
+from st_aggrid import GridOptionsBuilder, AgGrid, GridUpdateMode, DataReturnMode, JsCode
 
-ruleset = SessionState.get(
-    false_graph_number=0, true_graph_number=0, false_neg_number=0, whole_accuracy=[], rewritten_rules=[], negated_rules=[], dataframe=pd.DataFrame, clustered_words_path=None)
+if "false_graph_number" not in st.session_state:
+    st.session_state.false_graph_number = 0
+if "true_graph_number" not in st.session_state:
+    st.session_state.true_graph_number = 0
+if "false_neg_number" not in st.session_state:
+    st.session_state.false_neg_number = 0
+if "whole_accuracy" not in st.session_state:
+    st.session_state.whole_accuracy = []
+if "dataframe" not in st.session_state:
+    st.session_state.dataframe = pd.DataFrame
+if "val_dataframe" not in st.session_state:
+    st.session_state.val_dataframe = pd.DataFrame
+if "whole_accuracy_val" not in st.session_state:
+    st.session_state.whole_accuracy_val = []
+if "feature_df" not in st.session_state:
+    st.session_state.feature_df = pd.DataFrame
+if "clustered_words_path" not in st.session_state:
+    st.session_state.clustered_words_path = None
+
+
+def rerun():
+    raise st.experimental_rerun()
 
 
 def to_dot(graph, marked_nodes=set(), integ=False):
@@ -99,10 +120,28 @@ def d_clean(string):
     return s
 
 
+def get_df_from_rules(rules, negated_rules):
+    data = {'rules': rules, 'negated_rules': negated_rules}
+    # Create DataFrame.
+    df = pd.DataFrame(data)
+
+    return df
+
+
 @st.cache(allow_output_mutation=True)
 def load_text_to_4lang():
     tfl = TextTo4lang("en", "en_nlp_cache")
     return tfl
+
+
+@st.cache(allow_output_mutation=True)
+def read_train(path):
+    return pd.read_pickle(path)
+
+
+@st.cache(allow_output_mutation=True)
+def read_val(path):
+    return pd.read_pickle(path)
 
 
 def main():
@@ -114,6 +153,7 @@ def main():
     config.read("app_config.ini")
     feature_path = config["DEFAULT"]["features_path"]
     train_path = config["DEFAULT"]["train_path"]
+    val_path = config["DEFAULT"]["validation_path"]
     graph_format = config["DEFAULT"]["graph_format"]
     with open(feature_path) as f:
         features = json.load(f)
@@ -122,118 +162,160 @@ def main():
 
     col2.header("Graphs and results")
 
-    data = pd.read_pickle(train_path)
+    data = read_train(train_path)
+    val_data = read_val(val_path)
 
     if graph_format == "fourlang":
         tfl = load_text_to_4lang()
 
     with col1:
-        classes = st.selectbox("Choose label", list(features.keys()))
+        classes = st.selectbox("Choose class", list(features.keys()))
         sens = [";".join(feat[0]) for feat in features[classes]]
         option = "Rules to add here"
         option = st.selectbox(
             'Choose from the rules', sens)
-        
+
         if graph_format == "amr":
             G, _ = amr_pn_to_graph(option.split(";")[0])
         else:
             G, _ = read_alto_output(option.split(";")[0])
 
-        text = st.text_area("You can modify the rule here", option)
-
-        negated_features = ";".join(features[classes][sens.index(option)][1])
-
-        negated_text = st.text_area(
-            "You can modify the negated features here", negated_features)
-
-        evaluate = st.button("Evaluate ruleset")
-        if evaluate:
-            ruleset.dataframe, ruleset.whole_accuracy = evaluate_feature(
-                classes, features[classes], data, graph_format)
-
-        train_rule = st.button("Train rule")
-        if train_rule:
-            if ";" in text or ".*" not in text:
-                st.text("Only single and underspecified rules can be trained!")
-            else:
-                trained_feature = train_feature(classes, text, data, graph_format)
-                ruleset.clustered_words_path, selected_words = cluster_feature(
-                    trained_feature)
-                for f in selected_words:
-                    ruleset.rewritten_rules.append([f])
-                    ruleset.negated_rules.append([])
-
         if graph_format == "amr":
             text_G, _ = amr_pn_to_graph(option.split(";")[0])
         else:
             text_G, _ = pn_to_graph(option.split(";")[0])
-            
+
         st.graphviz_chart(
             to_dot(text_G), use_container_width=True)
         nodes = [d_clean(n[1]["name"].split("_")[0])
                  for n in text_G.nodes(data=True)]
 
-        agree = st.button("Add rewritten rule to the ruleset")
+        text = st.text_area("You can add a new rule here")
+
+        negated_text = st.text_area(
+            "You can modify the negated features here")
+
+        agree = st.button("Add rule to the ruleset")
         if agree:
-            ruleset.rewritten_rules.append(text.split(";"))
-            neg_rules = []
-            for n in negated_text.split(";"):
-                if n:
-                    neg_rules.append(n)
-            ruleset.negated_rules.append(neg_rules)
-
-        if st.button('Remove the last rule from the set'):
-            ruleset.rewritten_rules.pop()
-            ruleset.negated_rules.pop()
-
-        if st.button('Clear rules'):
-            ruleset.rewritten_rules.clear()
-            ruleset.negated_rules.clear()
-
-        if st.button("Save rules"):
-            features[classes] = [[rule, ruleset.negated_rules[i], classes]
-                                 for i, rule in enumerate(ruleset.rewritten_rules)]
+            if not negated_text.strip():
+                negated_features = []
+            else:
+                negated_features = negated_text.split(";")
+            features[classes].append([[text], negated_features, classes])
             if features[classes]:
+                st.session_state.feature_df = get_df_from_rules(
+                    [";".join(feat[0]) for feat in features[classes]], [";".join(feat[1]) for feat in features[classes]])
                 save_ruleset(feature_path, features)
-                ruleset.rewritten_rules.clear()
-                ruleset.negated_rules.clear()
+                rerun()
+        st.session_state.feature_df = get_df_from_rules(
+            [";".join(feat[0]) for feat in features[classes]], [";".join(feat[1]) for feat in features[classes]])
+        with st.form('example form') as f:
+            gb = GridOptionsBuilder.from_dataframe(st.session_state.feature_df)
+            # make all columns editable
+            gb.configure_columns(["rules", "negated_rules"], editable=True)
+            gb.configure_selection(
+                "multiple", use_checkbox=True, groupSelectsChildren=True, groupSelectsFiltered=True)
+            go = gb.build()
+            ag = AgGrid(st.session_state.feature_df, gridOptions=go, key='grid1', allow_unsafe_jscode=True, reload_data=True, update_mode=GridUpdateMode.MODEL_CHANGED,
+                        width='100%', fit_columns_on_grid_load=True)
+            delete_or_train = st.radio(
+                "Delete or Train selected rules", ('none', 'delete', 'train'))
+            submit = st.form_submit_button(label="save updates")
 
-        ruleset_expander = st.expander(
-            "Show the ruleset:", expanded=False)
+        if submit:
+            delete = delete_or_train == "delete"
+            train = delete_or_train == "train"
 
-        with ruleset_expander:
-            if ruleset.rewritten_rules:
-                for i, rule in enumerate(ruleset.rewritten_rules):
-                    st.markdown(
-                        f'<span style="color:red"><b>{rule}</b>; Negated rules: <b>{ruleset.negated_rules[i]}</b><br></span>', unsafe_allow_html=True)
+            rows_to_delete = [r["rules"] for r in ag["selected_rows"]]
+            rls_after_delete = []
+
+            negated_list = ag["data"]["negated_rules"].tolist()
+            feature_list = []
+            for i, rule in enumerate(ag["data"]["rules"].tolist()):
+                if not negated_list[i].strip():
+                    feature_list.append([rule.split(";"), [], classes])
+                else:
+                    feature_list.append(
+                        [rule.split(";"), negated_list[i].strip().split(";"), classes])
+            if rows_to_delete and delete:
+                for r in feature_list:
+                    if ";".join(r[0]) not in rows_to_delete:
+                        st.write(r)
+                        rls_after_delete.append(r)
+            elif rows_to_delete and train:
+                rls_after_delete = copy.deepcopy(feature_list)
+                rule_to_train = rows_to_delete[0]
+                if ";" in rule_to_train or ".*" not in rule_to_train:
+                    st.text("Only single and underspecified rules can be trained!")
+                else:
+                    trained_feature = train_feature(
+                        classes, rule_to_train, data, graph_format)
+                    st.session_state.clustered_words_path, selected_words = cluster_feature(
+                        trained_feature)
+                    for f in selected_words:
+                        rls_after_delete.append([[f], [], classes])
+            else:
+                rls_after_delete = copy.deepcopy(feature_list)
+
+            if rls_after_delete:
+                features[classes] = copy.deepcopy(rls_after_delete)
+                st.session_state.feature_df = get_df_from_rules(
+                    [";".join(feat[0]) for feat in features[classes]], [";".join(feat[1]) for feat in features[classes]])
+                save_ruleset(feature_path, features)
+                rerun()
+
+        evaluate = st.button("Evaluate ruleset")
+        if evaluate:
+            with st.spinner("Evaluating rules..."):
+                st.session_state.dataframe, st.session_state.whole_accuracy = evaluate_feature(
+                    classes, features[classes], data, graph_format)
+                st.session_state.val_dataframe, st.session_state.whole_accuracy_val = evaluate_feature(
+                    classes, features[classes], val_data, graph_format)
+            st.success('Done!')
 
     with col2:
-        if not ruleset.dataframe.empty:
+        if not st.session_state.dataframe.empty:
             st.markdown(
-                f"<span>Result of using all the rules: Precision: <b>{ruleset.whole_accuracy[0]:.3f}</b>, Recall: <b>{ruleset.whole_accuracy[1]:.3f}</b>, Fscore: <b>{ruleset.whole_accuracy[2]:.3f}</b>, Support: <b>{ruleset.whole_accuracy[3]}</b></span>", unsafe_allow_html=True)
+                f"<span>Result of using all the rules: Precision: <b>{st.session_state.whole_accuracy[0]:.3f}</b>, Recall: <b>{st.session_state.whole_accuracy[1]:.3f}</b>, Fscore: <b>{st.session_state.whole_accuracy[2]:.3f}</b>, Support: <b>{st.session_state.whole_accuracy[3]}</b></span>", unsafe_allow_html=True)
 
-            fp_graphs = ruleset.dataframe.iloc[sens.index(
+            fp_graphs = st.session_state.dataframe.iloc[sens.index(
                 option)].False_positive_graphs
-            fp_sentences = ruleset.dataframe.iloc[sens.index(
+            fp_sentences = st.session_state.dataframe.iloc[sens.index(
                 option)].False_positive_sens
 
-            tp_graphs = ruleset.dataframe.iloc[sens.index(
+            tp_graphs = st.session_state.dataframe.iloc[sens.index(
                 option)].True_positive_graphs
-            tp_sentences = ruleset.dataframe.iloc[sens.index(
+            tp_sentences = st.session_state.dataframe.iloc[sens.index(
                 option)].True_positive_sens
 
-            fn_graphs = ruleset.dataframe.iloc[sens.index(
+            fn_graphs = st.session_state.dataframe.iloc[sens.index(
                 option)].False_negative_graphs
-            fn_sentences = ruleset.dataframe.iloc[sens.index(
+            fn_sentences = st.session_state.dataframe.iloc[sens.index(
                 option)].False_negative_sens
 
-            prec = ruleset.dataframe.iloc[sens.index(option)].Precision
-            recall = ruleset.dataframe.iloc[sens.index(option)].Recall
-            fscore = ruleset.dataframe.iloc[sens.index(option)].Fscore
-            support = ruleset.dataframe.iloc[sens.index(option)].Support
+            prec = st.session_state.dataframe.iloc[sens.index(
+                option)].Precision
+            recall = st.session_state.dataframe.iloc[sens.index(option)].Recall
+            fscore = st.session_state.dataframe.iloc[sens.index(option)].Fscore
+            support = st.session_state.dataframe.iloc[sens.index(
+                option)].Support
 
             st.markdown(
                 f"<span>The rule's result: Precision: <b>{prec:.3f}</b>, Recall: <b>{recall:.3f}</b>, Fscore: <b>{fscore:.3f}</b>, Support: <b>{support}</b></span>", unsafe_allow_html=True)
+
+            with st.expander("Show validation data", expanded=False):
+                val_prec = st.session_state.val_dataframe.iloc[sens.index(
+                    option)].Precision
+                val_recall = st.session_state.val_dataframe.iloc[sens.index(
+                    option)].Recall
+                val_fscore = st.session_state.val_dataframe.iloc[sens.index(
+                    option)].Fscore
+                val_support = st.session_state.val_dataframe.iloc[sens.index(
+                    option)].Support
+                st.markdown(
+                    f"<span>Result of using all the rules on the validation data: Precision: <b>{st.session_state.whole_accuracy_val[0]:.3f}</b>, Recall: <b>{st.session_state.whole_accuracy_val[1]:.3f}</b>, Fscore: <b>{st.session_state.whole_accuracy_val[2]:.3f}</b>, Support: <b>{st.session_state.whole_accuracy_val[3]}</b></span>", unsafe_allow_html=True)
+                st.markdown(
+                    f"<span>The rule's result on the validation data: Precision: <b>{val_prec:.3f}</b>, Recall: <b>{val_recall:.3f}</b>, Fscore: <b>{val_fscore:.3f}</b>, Support: <b>{val_support}</b></span>", unsafe_allow_html=True)
 
             tp_fp_fn_choice = ("True Positive graphs",
                                "False Positive graphs", "False Negative graphs")
@@ -244,69 +326,70 @@ def main():
             if tp_fp_fn == "False Positive graphs":
                 if fp_graphs:
                     if st.button("Previous FP"):
-                        ruleset.false_graph_number = max(
-                            0, ruleset.false_graph_number-1)
+                        st.session_state.false_graph_number = max(
+                            0, st.session_state.false_graph_number-1)
                     if st.button("Next FP"):
-                        ruleset.false_graph_number = min(
-                            ruleset.false_graph_number + 1, len(fp_graphs)-1)
+                        st.session_state.false_graph_number = min(
+                            st.session_state.false_graph_number + 1, len(fp_graphs)-1)
 
-                    if ruleset.false_graph_number > len(fp_graphs)-1:
-                        ruleset.false_graph_number = 0
+                    if st.session_state.false_graph_number > len(fp_graphs)-1:
+                        st.session_state.false_graph_number = 0
 
                     st.markdown(
-                        f"<span><b>Sentence:</b> {fp_sentences[ruleset.false_graph_number][0]}</span>", unsafe_allow_html=True)
+                        f"<span><b>Sentence:</b> {fp_sentences[st.session_state.false_graph_number][0]}</span>", unsafe_allow_html=True)
                     st.markdown(
-                        f"<span><b>Gold label:</b> {fp_sentences[ruleset.false_graph_number][1]}</span>", unsafe_allow_html=True)
+                        f"<span><b>Gold label:</b> {fp_sentences[st.session_state.false_graph_number][1]}</span>", unsafe_allow_html=True)
                     st.text(f"False positives: {len(fp_graphs)}")
-                    current_graph = fp_graphs[ruleset.false_graph_number]
+                    current_graph = fp_graphs[st.session_state.false_graph_number]
                     st.graphviz_chart(
-                        to_dot(fp_graphs[ruleset.false_graph_number], marked_nodes=set(nodes)), use_container_width=True)
+                        to_dot(fp_graphs[st.session_state.false_graph_number], marked_nodes=set(nodes)), use_container_width=True)
 
             elif tp_fp_fn == "True Positive graphs":
                 if tp_graphs:
                     if st.button("Previous TP"):
-                        ruleset.true_graph_number = max(
-                            0, ruleset.true_graph_number-1)
+                        st.session_state.true_graph_number = max(
+                            0, st.session_state.true_graph_number-1)
                     if st.button("Next TP"):
-                        ruleset.true_graph_number = min(
-                            ruleset.true_graph_number + 1, len(tp_graphs)-1)
+                        st.session_state.true_graph_number = min(
+                            st.session_state.true_graph_number + 1, len(tp_graphs)-1)
 
-                    if ruleset.true_graph_number > len(tp_graphs)-1:
-                        ruleset.true_graph_number = 0
+                    if st.session_state.true_graph_number > len(tp_graphs)-1:
+                        st.session_state.true_graph_number = 0
 
                     with open("graph.dot", "w+") as f:
-                        f.write(to_dot(tp_graphs[ruleset.true_graph_number], marked_nodes=set(nodes)))
+                        f.write(
+                            to_dot(tp_graphs[st.session_state.true_graph_number], marked_nodes=set(nodes)))
 
                     st.markdown(
-                        f"<span><b>Sentence:</b> {tp_sentences[ruleset.true_graph_number][0]}</span>", unsafe_allow_html=True)
+                        f"<span><b>Sentence:</b> {tp_sentences[st.session_state.true_graph_number][0]}</span>", unsafe_allow_html=True)
                     st.markdown(
-                        f"<span><b>Gold label:</b> {tp_sentences[ruleset.true_graph_number][1]}</span>", unsafe_allow_html=True)
+                        f"<span><b>Gold label:</b> {tp_sentences[st.session_state.true_graph_number][1]}</span>", unsafe_allow_html=True)
                     st.text(f"True positives: {len(tp_graphs)}")
-                    current_graph = tp_graphs[ruleset.true_graph_number]
+                    current_graph = tp_graphs[st.session_state.true_graph_number]
                     st.graphviz_chart(
-                        to_dot(tp_graphs[ruleset.true_graph_number], marked_nodes=set(nodes)), use_container_width=True)
+                        to_dot(tp_graphs[st.session_state.true_graph_number], marked_nodes=set(nodes)), use_container_width=True)
             elif tp_fp_fn == "False Negative graphs":
                 if fn_graphs:
                     if st.button("Previous FN"):
-                        ruleset.false_neg_number = max(
-                            0, ruleset.false_neg_number-1)
+                        st.session_state.false_neg_number = max(
+                            0, st.session_state.false_neg_number-1)
                     if st.button("Next FN"):
-                        ruleset.false_neg_number = min(
-                            ruleset.false_neg_number + 1, len(fn_graphs)-1)
+                        st.session_state.false_neg_number = min(
+                            st.session_state.false_neg_number + 1, len(fn_graphs)-1)
 
-                    if ruleset.false_neg_number > len(fn_graphs)-1:
-                        ruleset.false_neg_number = 0
+                    if st.session_state.false_neg_number > len(fn_graphs)-1:
+                        st.session_state.false_neg_number = 0
 
                     st.markdown(
-                        f"<span><b>Sentence:</b> {fn_sentences[ruleset.false_neg_number][0]}</span>", unsafe_allow_html=True)
+                        f"<span><b>Sentence:</b> {fn_sentences[st.session_state.false_neg_number][0]}</span>", unsafe_allow_html=True)
                     st.markdown(
-                        f"<span><b>Gold label:</b> {fn_sentences[ruleset.false_neg_number][1]}</span>", unsafe_allow_html=True)
+                        f"<span><b>Gold label:</b> {fn_sentences[st.session_state.false_neg_number][1]}</span>", unsafe_allow_html=True)
                     st.text(f"False negatives: {len(fn_graphs)}")
-                    current_graph = fn_graphs[ruleset.false_neg_number]
+                    current_graph = fn_graphs[st.session_state.false_neg_number]
                     with open("graph.dot", "w+") as f:
                         f.write(to_dot(current_graph, marked_nodes=set(nodes)))
                     st.graphviz_chart(
-                        to_dot(fn_graphs[ruleset.false_neg_number], marked_nodes=set(nodes)), use_container_width=True)
+                        to_dot(fn_graphs[st.session_state.false_neg_number], marked_nodes=set(nodes)), use_container_width=True)
 
             if graph_format == "fourlang":
                 fl = FourLang(current_graph, 0)
@@ -330,8 +413,9 @@ def main():
                     "Show clustered words:", expanded=False)
 
                 with clustered_words:
-                    if ruleset.clustered_words_path:
-                        image = Image.open(ruleset.clustered_words_path)
+                    if st.session_state.clustered_words_path:
+                        image = Image.open(
+                            st.session_state.clustered_words_path)
                         st.image(image, caption='trained_feature',
                                  use_column_width=True)
 

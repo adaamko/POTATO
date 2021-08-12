@@ -85,7 +85,7 @@ class HasocDataset(Dataset):
             amr_graphs = []
             for sen in tqdm(sens):
                 graphs = self.stog.parse_sents([sen])
-                G, _ = amr_pn_to_graph(graphs[0])
+                G, _ = amr_pn_to_graph(graphs[0], clean_nodes=True)
                 amr_graphs.append(G)
 
             return amr_graphs

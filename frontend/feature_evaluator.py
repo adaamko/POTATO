@@ -168,6 +168,10 @@ def evaluate_feature(cl, features, data, graph_format="fourlang"):
 
     whole_predicted = []
     matched = defaultdict(list)
+
+    # We want to view false negative examples for all rules, not rule specific
+    false_neg_g = []
+    false_neg_s = []
     if graph_format == "amr":
         matcher = GraphFormulaMatcher(features, converter=amr_pn_to_graph)
     else:
@@ -180,6 +184,12 @@ def evaluate_feature(cl, features, data, graph_format="fourlang"):
             label = 1
         whole_predicted.append(label)
 
+        if label == 0 and labels[i] == 1:
+            false_neg_g.append(g)
+            sen = data.iloc[i].sentence
+            lab = data.iloc[i].label
+            false_neg_s.append((sen, lab))
+
     accuracy = []
     for pcf in precision_recall_fscore_support(labels, whole_predicted, average=None):
         accuracy.append(pcf[1])
@@ -190,8 +200,6 @@ def evaluate_feature(cl, features, data, graph_format="fourlang"):
         false_pos_s = []
         true_pos_g = []
         true_pos_s = []
-        false_neg_g = []
-        false_neg_s = []
         predicted = []
         for i, g in enumerate(graphs):
             feats = matched[i]
@@ -206,11 +214,6 @@ def evaluate_feature(cl, features, data, graph_format="fourlang"):
                 sen = data.iloc[i].sentence
                 lab = data.iloc[i].label
                 true_pos_s.append((sen, lab))
-            if label == 0 and labels[i] == 1:
-                false_neg_g.append(g)
-                sen = data.iloc[i].sentence
-                lab = data.iloc[i].label
-                false_neg_s.append((sen, lab))
             predicted.append(label)
         for pcf in precision_recall_fscore_support(labels, predicted, average=None):
             measure.append(pcf[1])
