@@ -10,7 +10,7 @@ from exprel.models.model import GraphModel
 
 def load_hasoc(path, output_graphs):
     df = pd.read_csv(path, delimiter="\t")
-    data = HasocDataset(path)
+    data = HasocDataset(df)
     extractor = FeatureExtractor(lang="en", cache_fn="en_nlp_cache")
     model = GraphModel()
     graphs = data.parse_graphs(extractor)
