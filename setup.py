@@ -16,7 +16,11 @@ setup(
         "tinydb",
         "pandas",
         "tqdm",
-        "sklearn"
+        "sklearn",
+        "eli5",
+        "matplotlib",
+        "graphviz",
+        "openpyxl"
     ],
     packages=find_packages(),
     zip_safe=False)
