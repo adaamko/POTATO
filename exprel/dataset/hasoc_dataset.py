@@ -43,8 +43,8 @@ class HasocDataset(Dataset):
         for i, row in tqdm(enumerate(df.iterrows())):
             data = row[1]
             text = data.text
-            task1 = data.task_1
-            task2 = data.task_2
+            task1 = data.task_1 if "task_1" in data else None
+            task2 = data.task_2 if "task_2" in data else None
             ind = df.index[i]
             hasoc_sample = HasocSample(text, task1, task2, ind, self.nlp)
             yield hasoc_sample
