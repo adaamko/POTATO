@@ -58,9 +58,11 @@ class GraphModel():
         features = defaultdict(list)
 
         for j, est in enumerate(clf.estimators_):
-            paths = [i for i in list(tree_to_code(est, feature_graph_strings, self.inverse_relabel)) if i[2]]
+            paths = [i for i in list(tree_to_code(
+                est, feature_graph_strings, self.inverse_relabel)) if i[2]]
             for path in paths:
-                features[list(self.label_vocab.word_to_id.keys())[j]].append((path[0], path[1], self.label_vocab.id_to_word[j]))
+                features[list(self.label_vocab.word_to_id.keys())[j]].append(
+                    (path[0], path[1], self.label_vocab.id_to_word[j]))
 
         return features
 
@@ -92,7 +94,7 @@ class GraphModel():
     def select_n_best_from_each_class(self, max_features, feature_graphs):
         edge_to_ind = defaultdict(list)
         for i, graph in enumerate(feature_graphs):
-            edge_to_ind[len(graph.edges(data=True))].append(i) 
+            edge_to_ind[len(graph.edges(data=True))].append(i)
 
         relabel_dict, feature_num = self.feature_vocab.select_n_best_from_each_class(
             max_features, edge_to_ind, up_to=3)
@@ -100,7 +102,7 @@ class GraphModel():
         self.relabel_dict = relabel_dict
         self.inverse_relabel = {relabel_dict[k]: k for k in relabel_dict}
 
-    def get_x_y(self, attr):
+    def get_x_y(self, attr, label_vocab=None):
         X = np.zeros((len(self.sen_ids), self.vocab_size))
         y = np.zeros(len(self.sen_ids))
         for i, sen_id in enumerate(self.sen_ids):
@@ -110,6 +112,6 @@ class GraphModel():
                         X[i][self.relabel_dict[j]] = 1
                 else:
                     X[i][j] = 1
-            y[i] = self.label_vocab.get_id(attr[i], allow_new=True)
+            y[i] = label_vocab[attr[i]] if label_vocab else self.label_vocab.get_id(attr[i], allow_new=True)
 
         return X, y

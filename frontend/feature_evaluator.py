@@ -192,6 +192,7 @@ def evaluate_feature(cl, features, data, graph_format="fourlang"):
 
     accuracy = []
     for pcf in precision_recall_fscore_support(labels, whole_predicted, average=None):
+        print(accuracy)
         accuracy.append(pcf[1])
 
     for feat in features:
