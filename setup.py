@@ -20,7 +20,8 @@ setup(
         "eli5",
         "matplotlib",
         "graphviz",
-        "openpyxl"
+        "openpyxl",
+        "streamlit"
     ],
     packages=find_packages(),
     zip_safe=False)

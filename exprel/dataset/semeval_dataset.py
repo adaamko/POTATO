@@ -2,7 +2,6 @@ import itertools
 import pickle
 
 import pandas as pd
-from exprel.database.db import Database
 from exprel.dataset.dataset import Dataset
 from exprel.dataset.semeval_sample import SemevalSample
 from sklearn import preprocessing
@@ -13,8 +12,6 @@ class SemevalDataset(Dataset):
     def __init__(self, path, lang="en"):
         super().__init__(lang)
         self.le = preprocessing.LabelEncoder()
-        self.db = Database()
-        self.docs = self.db.get_all()
         self._dataset = [sample for sample in self.read_dataset(path)]
 
     @property
@@ -34,7 +31,7 @@ class SemevalDataset(Dataset):
             for sample, label, _, _ in tqdm(itertools.zip_longest(*[f]*4)):
                 sen_id, sentence = sample.split("\t")
                 semeval_sample = SemevalSample(
-                    sen_id, sentence.strip("\n"), label.strip("\n"), self.nlp, self.db, self.docs)
+                    sen_id, sentence.strip("\n"), label.strip("\n"), self.nlp, self.docs)
                 yield semeval_sample
 
     def to_dataframe(self):

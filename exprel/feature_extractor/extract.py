@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 
 class FeatureExtractor():
+
     def __init__(
             self, cache_dir=None, cache_fn=None, lang=None):
         self.cache_dir = cache_dir
