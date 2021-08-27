@@ -2,91 +2,101 @@
     "HOF": [
         [
             [
-                "(u_85 / rape :manner(u_1 / .*))"
+                "(u_211 / fucking)"
             ],
             [],
             "HOF"
         ],
         [
             [
-                "(u_12 / stupid)"
+                "(u_1663 / trait :ARG1 (u_1 / person))"
             ],
             [],
             "HOF"
         ],
         [
             [
-                "(u_12 / bitch)"
+                "(u_495 / ass)"
             ],
             [],
             "HOF"
         ],
         [
             [
-                "(u_12 / moron)"
+                "(u_167 / lie  :ARG0 (u_49 / you))"
             ],
             [],
             "HOF"
         ],
         [
             [
-                "(u_12 / hoe)"
+                "(u_1 / bastard)"
             ],
             [],
             "HOF"
         ],
         [
             [
-                "(u_12 / damn)"
+                "(u_2 / rape)"
             ],
             [],
             "HOF"
         ],
         [
             [
-                "(u_85 / rape :ARG0 (u_1 / .*))"
+                "(u_1 / fuck)"
+            ],
+            [
+                "(u_2 / QUOTETrumpQUOTE)"
+            ],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / fuck)",
+                "(u_2 / QUOTETrumpQUOTE)"
             ],
             [],
             "HOF"
         ],
         [
             [
-                "(u_85 / rape :ARG1 (u_1 / .*))"
+                "(u_1 / vagina)"
             ],
             [],
             "HOF"
         ],
         [
             [
-                "(u_12 / fuck)"
+                "(u_1 / QUOTEDickheadQUOTE)"
             ],
             [],
             "HOF"
         ],
         [
             [
-                "(u_46 / shit)"
+                "(u_1 / shitgibbon)"
             ],
             [],
             "HOF"
         ],
         [
             [
-                "(u_94 / ass)"
+                "(u_1 / QUOTEFatOrangeFuckQUOTE)"
             ],
             [],
             "HOF"
         ],
         [
             [
-                "(u_85 / fucking)"
+                "(u_1 / disgrace)"
             ],
             [],
             "HOF"
         ],
         [
             [
-                "(u_1 / animal)"
+                "(u_1 / shit)"
             ],
             [],
             "HOF"

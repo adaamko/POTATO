@@ -168,3 +168,86 @@ False positives:
 
     Gold label: OFFN
 
+
+# HASOC 2019 training data
+
+## TASK1
+
+### ass:
+
+    Sentence: [USER] FutzPuck warmongeringAss dickhead ZEROCredibility WouldNotKnowTheTruthIfIfWereSlappedUpsideYourStupidFace HaHaHaTrumpPickedAWomanForAirForceSecretary NOTYOULOL YouSuck VoteBlueNotYou lol [USER] Knows You Are A PUTZ! BarbaraBennetNotYouFutzpuck [URL]
+
+    Gold label: NOT
+
+## shit:
+
+    Sentence: Now he's trying to walk back what he said. Now he's saying of course you give it to the FBI. He's such a lying piece of shit. HappyJohnMcCainDay JohnMcCainDayJune14th TrumpIsATraitor TrumpLiesEveryTimeHeSpeaks
+
+    Gold label: NOT
+
+
+    Sentence: Tell someone who gives a shit. Murderer [URL]
+
+    Gold label: NOT
+
+
+    Sentence: [USER] [USER] [USER] talking shit tweet at end off tournament when were holding the trophy dickhead
+
+    Gold label: NOT
+
+
+    Sentence: [USER] FuckTrump who gives a shit what he does! June14thJohnMcCainDay
+
+    Gold label: NOT
+
+    Sentence: it's a sure bet that trump jr. has not read muellerreport, thus has no idea the size of the pile of shit he'll have to dig himself out from.under during senate intel hearing today. fucktrump
+
+    Gold label: NOT
+
+## rape:
+
+    Sentence: [USER] Literally just called the majority of our population losers. SenileAF StableGenius racist rapist pervert treason Resist UnstablePresident 25thAmendmentNow
+
+    Gold label: NOT
+
+    Sentence: Where are all liberals? Liberals rapist [URL]
+
+    Gold label: NOT
+
+## fucktrump
+
+There are lots of weird annotations regarding the #fucktrump hashtag.
+
+False positives (there are around 50 of them):
+
+    Sentence: Homophobia and transphobia are CRIMES in 43 countries. Yet here in America, under the Trump administration, it's seemingly encouraged. We need CHANGE. VOTE BLUE FOR 2020. FuckTrump
+
+    Gold label: NOT
+
+    Sentence: Trump and Bibi Are Evil Twinsies. Both are Autocratic Dictator wannabes who only care about themselves!! FuckTrump ImprisonTrumpNow [URL]
+
+    Gold label: NOT
+
+    Sentence: [USER] It's so satisfying yet horrifying.fuckTrump
+
+    Gold label: NOT
+
+    False positives: 47
+
+    Sentence: [USER] This comment section is filled with Russian bots and NASCAR fans FuckTrump
+
+    Gold label: NOT
+
+There are also lots of true positives
+
+    Sentence: Trump's Electoral Shenanigans Are Getting Worse Resist ResistTrump FuckTrump [URL]
+
+    Gold label: HOF
+
+    Sentence: FuckTrump And retired porn star Melania too. [URL]
+
+    Gold label: HOF
+
+    Sentence: Wasn't Nixon guilty of 'opposition research', I mean along with everything else? FuckTrump ImpeachTrump ImpeachTheMF ImpeachTrumpNow ImpeachTheMF
+
+    Gold label: HOF
