@@ -22,10 +22,6 @@ class SemevalDataset(Dataset):
     def dataset(self, value):
         self._dataset = [sample for sample in self.read_dataset(value)]
 
-    def set_graphs(self, graphs):
-        for sample, graph in zip(self._dataset, graphs):
-            sample.set_graph(graph)
-
     def read_dataset(self, path):
         with open(path, "r+") as f:
             for sample, label, _, _ in tqdm(itertools.zip_longest(*[f]*4)):
@@ -50,20 +46,3 @@ class SemevalDataset(Dataset):
             mapper[item] if item in mapper else 0 for item in df.label]
 
         return one_versus_rest_df
-
-    def parse_graphs(self, extractor):
-        graphs = list(extractor.parse_iterable([sample.sentence for sample in self._dataset]))
-        return graphs
-
-    def load_graphs(self, path):
-        PIK = path
-
-        with open(PIK, "rb") as f:
-            self.graphs = pickle.load(f)
-
-        self.set_graphs(self.graphs)
-
-    def save_graphs(self, path):
-        PIK = path
-        with open(PIK, "wb") as f:
-            pickle.dump(self.graphs, f)

@@ -34,10 +34,6 @@ class HasocDataset(Dataset):
     def dataset(self, value):
         self._dataset = [sample for sample in self.read_dataset(value)]
 
-    def set_graphs(self, graphs):
-        for sample, graph in zip(self._dataset, graphs):
-            sample.set_graph(graph)
-
     def read_dataset(self, df):
         for i, row in tqdm(enumerate(df.iterrows())):
             data = row[1]
@@ -84,16 +80,3 @@ class HasocDataset(Dataset):
                 amr_graphs.append(G)
 
             return amr_graphs
-
-    def load_graphs(self, path):
-        PIK = path
-
-        with open(PIK, "rb") as f:
-            self.graphs = pickle.load(f)
-
-        self.set_graphs(self.graphs)
-
-    def save_graphs(self, path):
-        PIK = path
-        with open(PIK, "wb") as f:
-            pickle.dump(self.graphs, f)
