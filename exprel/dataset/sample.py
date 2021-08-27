@@ -1,4 +1,6 @@
 
 class Sample:
-    def __init__(self):
-        pass
+    def __init__(self, example):
+        self.text = example[0]
+        self.label = example[1]
+        

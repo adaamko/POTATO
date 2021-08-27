@@ -5,7 +5,6 @@ import pickle
 import openpyxl
 import pandas as pd
 import networkx as nx
-from exprel.database.db import Database
 from exprel.dataset.dataset import Dataset
 from exprel.dataset.hasoc_sample import HasocSample
 from exprel.dataset.utils import amr_pn_to_graph
