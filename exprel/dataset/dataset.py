@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 import pandas as pd
 import networkx as nx
