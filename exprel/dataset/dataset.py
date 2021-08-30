@@ -5,12 +5,13 @@ import networkx as nx
 import stanza
 import pickle
 from exprel.dataset.sample import Sample
-from exprel.feature_extractor.extract import FeatureExtractor
+from exprel.graph_extractor.extract import GraphExtractor
 
 
 class Dataset:
-    def __init__(self, examples: List[Tuple[str, str]], lang="en") -> None:
+    def __init__(self, examples: List[Tuple[str, str]], label_vocab: Dict[str, int], lang="en") -> None:
         self.nlp = stanza.Pipeline(lang)
+        self.label_vocab = label_vocab
         self._dataset = self.read_dataset(examples)
 
     def read_dataset(self, examples: List[Tuple[str, str]]) -> List[Sample]:
@@ -18,10 +19,11 @@ class Dataset:
 
     def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame({"text": [sample.text for sample in self._dataset], "label": [
-                          sample.label for sample in self._dataset]})
+                          sample.label for sample in self._dataset], "label_id": [
+                          self.label_vocab[sample.label] for sample in self._dataset] })
         return df
 
-    def parse_graphs(self, extractor: FeatureExtractor) -> List[nx.DiGraph]:
+    def parse_graphs(self, extractor: GraphExtractor) -> List[nx.DiGraph]:
         graphs = list(extractor.parse_iterable(
             [sample.text for sample in self._dataset]))
 

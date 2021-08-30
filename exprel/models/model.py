@@ -112,6 +112,7 @@ class GraphModel():
                         X[i][self.relabel_dict[j]] = 1
                 else:
                     X[i][j] = 1
-            y[i] = label_vocab[attr[i]] if label_vocab else self.label_vocab.get_id(attr[i], allow_new=True)
+            y[i] = label_vocab[attr[i]] if label_vocab else self.label_vocab.get_id(
+                attr[i], allow_new=True)
 
         return X, y

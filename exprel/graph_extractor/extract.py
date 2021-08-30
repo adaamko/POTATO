@@ -13,7 +13,7 @@ from tuw_nlp.graph.utils import GraphMatcher
 from tqdm import tqdm
 
 
-class FeatureExtractor():
+class GraphExtractor():
 
     def __init__(
             self, cache_dir=None, cache_fn=None, lang=None):

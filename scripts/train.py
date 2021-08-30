@@ -5,13 +5,13 @@ import logging
 
 from exprel.dataset.hasoc_dataset import HasocDataset
 from exprel.dataset.semeval_dataset import SemevalDataset
-from exprel.feature_extractor.extract import FeatureExtractor
+from exprel.graph_extractor.extract import GraphExtractor
 from exprel.models.model import GraphModel
 
 def load_hasoc(path, output_graphs):
     df = pd.read_csv(path, delimiter="\t")
     data = HasocDataset(df)
-    extractor = FeatureExtractor(lang="en", cache_fn="en_nlp_cache")
+    extractor = GraphExtractor(lang="en", cache_fn="en_nlp_cache")
     model = GraphModel()
     graphs = data.parse_graphs(extractor)
     data.set_graphs(graphs)

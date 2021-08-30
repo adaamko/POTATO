@@ -6,7 +6,7 @@ import pandas as pd
 from networkx.algorithms.isomorphism import DiGraphMatcher
 from sklearn.metrics import precision_recall_fscore_support
 from tuw_nlp.graph.utils import GraphFormulaMatcher, pn_to_graph
-from exprel.dataset.utils import amr_pn_to_graph
+from exprel.dataset.utils import default_pn_to_graph
 
 
 def one_versus_rest(df, entity):
@@ -20,13 +20,11 @@ def one_versus_rest(df, entity):
 
 
 def train_feature(cl, feature, data, graph_format="fourlang"):
-    if graph_format == "amr":
-        feature_graph = amr_pn_to_graph(feature)[0]
-    else:
-        feature_graph = pn_to_graph(feature)[0]
+    feature_graph = default_pn_to_graph(feature)[0]
+
     graphs = data.graph.tolist()
     labels = one_versus_rest(data, cl).one_versus_rest.tolist()
-    path = "trained_features.tsv"
+    path = "trained_features.tsv"       
     with open(path, "w+") as f:
         for i, g in enumerate(graphs):
             matcher = DiGraphMatcher(
@@ -172,10 +170,7 @@ def evaluate_feature(cl, features, data, graph_format="fourlang"):
     # We want to view false negative examples for all rules, not rule specific
     false_neg_g = []
     false_neg_s = []
-    if graph_format == "amr":
-        matcher = GraphFormulaMatcher(features, converter=amr_pn_to_graph)
-    else:
-        matcher = GraphFormulaMatcher(features, converter=pn_to_graph)
+    matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph)
     for i, g in enumerate(graphs):
         feats = matcher.match(g)
         label = 0
