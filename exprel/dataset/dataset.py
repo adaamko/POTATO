@@ -23,9 +23,9 @@ class Dataset:
                           self.label_vocab[sample.label] for sample in self._dataset] })
         return df
 
-    def parse_graphs(self, extractor: GraphExtractor) -> List[nx.DiGraph]:
+    def parse_graphs(self, extractor: GraphExtractor, graph_format: str = "fourlang") -> List[nx.DiGraph]:
         graphs = list(extractor.parse_iterable(
-            [sample.text for sample in self._dataset]))
+            [sample.text for sample in self._dataset], graph_format))
 
         self.graphs = graphs
         return graphs

@@ -24,16 +24,17 @@ class GraphExtractor():
         self.matcher = None
 
     def init_nlp(self):
-        self.nlp = stanza.Pipeline('en')
+        self.nlp = stanza.Pipeline(self.lang)
 
     def set_matcher(self, patterns):
         self.matcher = GraphMatcher(patterns)
 
-    def parse_iterable(self, iterable):
-        with TextTo4lang(lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir) as tfl:
-            for sen in tqdm(iterable):
-                fl_graphs = list(tfl(sen))
-                g = fl_graphs[0]
-                for n in fl_graphs[1:]:
-                    g = nx.compose(g, n)
-                yield g
+    def parse_iterable(self, iterable, graph_type="fourlang"):
+        if graph_type == "fourlang":
+            with TextTo4lang(lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir) as tfl:
+                for sen in tqdm(iterable):
+                    fl_graphs = list(tfl(sen))
+                    g = fl_graphs[0]
+                    for n in fl_graphs[1:]:
+                        g = nx.compose(g, n)
+                    yield g

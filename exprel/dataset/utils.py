@@ -37,7 +37,7 @@ def default_pn_to_graph(raw_dl, edge_attr='color'):
 
     for trip in g.triples:
         if trip[1] != ":instance":
-            edge = preprocess_node_alto(preprocess_edge_alto(trip[1]))
+            edge = preprocess_edge_alto(trip[1])
             src = trip[0]
             tgt = trip[2]
             if src not in char_to_id:
