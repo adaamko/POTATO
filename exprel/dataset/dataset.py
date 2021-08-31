@@ -13,6 +13,7 @@ class Dataset:
         self.nlp = stanza.Pipeline(lang)
         self.label_vocab = label_vocab
         self._dataset = self.read_dataset(examples)
+        self.extractor = GraphExtractor(lang=lang, cache_fn="en_nlp_cache")
 
     def read_dataset(self, examples: List[Tuple[str, str]]) -> List[Sample]:
         return [Sample(example) for example in examples]
@@ -20,11 +21,11 @@ class Dataset:
     def to_dataframe(self) -> pd.DataFrame:
         df = pd.DataFrame({"text": [sample.text for sample in self._dataset], "label": [
                           sample.label for sample in self._dataset], "label_id": [
-                          self.label_vocab[sample.label] for sample in self._dataset] })
+                              self.label_vocab[sample.label] for sample in self._dataset], "graph": [sample.graph for sample in self._dataset] })
         return df
 
-    def parse_graphs(self, extractor: GraphExtractor, graph_format: str = "fourlang") -> List[nx.DiGraph]:
-        graphs = list(extractor.parse_iterable(
+    def parse_graphs(self, graph_format: str = "fourlang") -> List[nx.DiGraph]:
+        graphs = list(self.extractor.parse_iterable(
             [sample.text for sample in self._dataset], graph_format))
 
         self.graphs = graphs

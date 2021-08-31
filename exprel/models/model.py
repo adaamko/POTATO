@@ -29,10 +29,6 @@ class GraphModel():
         self.relabel_dict = {}
         self.inverse_relabel = {}
         self.random_state = 1234
-        self.model = self.init_model()
-
-    def init_model(self):
-        return DecisionTreeClassifier(random_state=self.random_state)
 
     def get_feature_graph_strings(self):
         return [graph_to_pn(G) for G in self.get_feature_graphs()]
@@ -46,14 +42,6 @@ class GraphModel():
             self.feature_vocab.get_word(i) for i in range(
                 len(self.feature_vocab))]
 
-    def fit(self, tr_data, tr_labels):
-        self.model.fit(tr_data, tr_labels)
-
-    def predict(self, tst_data, tst_labels):
-        lr_pred = self.model.predict(tst_data)
-
-        return lr_pred, precision_recall_fscore_support(tst_labels, lr_pred)
-
     def convert_tree_to_features(self, clf, feature_graph_strings):
         features = defaultdict(list)
 
@@ -65,13 +53,6 @@ class GraphModel():
                     (path[0], path[1], self.label_vocab.id_to_word[j]))
 
         return features
-
-    def select_top_features(self, feature_num):
-        weights_df = eli5.explain_weights_df(self.model)
-        top_features = weights_df.iloc[:feature_num].feature.str.strip(
-            "x").tolist()
-
-        return weights_df, top_features
 
     def featurize_sen_graph(self, sen_id, graph, attr, max_edge=1):
         feats = set()
