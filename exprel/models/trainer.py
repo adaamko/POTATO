@@ -42,15 +42,13 @@ class GraphTrainer():
                                               label].iloc[0].label_id
 
         inv_vocab = {v: k for k, v in label_vocab.items()}
+
         print("Generating training data...")
         train_X, train_Y = self.graph_model.get_x_y(
-            self.dataset.label, label_vocab=label_vocab)
-
-        tr_data, val_data, tr_labels, val_labels = split(
-            train_X, train_Y, test_size=0.2, random_state=1234)
+            self.dataset.label.tolist(), label_vocab=label_vocab)
 
         print("Training...")
-        self.model.fit(tr_data, tr_labels)
+        self.model.fit(train_X, train_Y)
         weights_df = eli5.explain_weights_df(self.model)
         features = defaultdict(list)
 
@@ -71,4 +69,4 @@ class GraphTrainer():
                         ([g], [], inv_vocab[int(target)]))
 
 
-        return features, weights_df
+        return features

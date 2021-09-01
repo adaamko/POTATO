@@ -1,29 +1,35 @@
+import argparse
+import configparser
+import copy
 import datetime
 import json
 import os
 import random
 import re
-import configparser
-from collections import defaultdict
-import copy
-
+import sys
 import time
+from collections import Counter, defaultdict
+from contextlib import contextmanager
+from io import StringIO
+from threading import current_thread
+
 import networkx as nx
 import pandas as pd
 import penman as pn
 import requests
 import streamlit as st
 import streamlit.components.v1 as components
+from exprel.dataset.utils import default_pn_to_graph
+from exprel.graph_extractor.extract import FeatureEvaluator
+from exprel.models.trainer import GraphTrainer
 from PIL import Image
-from tuw_nlp.graph.fourlang import FourLang
+from st_aggrid import (AgGrid, DataReturnMode, GridOptionsBuilder,
+                       GridUpdateMode, JsCode)
+from streamlit.report_thread import REPORT_CONTEXT_ATTR_NAME
 from tuw_nlp.grammar.text_to_4lang import TextTo4lang
+from tuw_nlp.graph.fourlang import FourLang
 from tuw_nlp.graph.utils import (GraphFormulaMatcher, pn_to_graph,
                                  read_alto_output)
-from exprel.dataset.utils import default_pn_to_graph
-
-# SessionState module from https://gist.github.com/tvst/036da038ab3e999a64497f42de966a92
-from feature_evaluator import cluster_feature, evaluate_feature, train_feature
-from st_aggrid import GridOptionsBuilder, AgGrid, GridUpdateMode, DataReturnMode, JsCode
 
 if "false_graph_number" not in st.session_state:
     st.session_state.false_graph_number = 0
@@ -43,10 +49,44 @@ if "feature_df" not in st.session_state:
     st.session_state.feature_df = pd.DataFrame
 if "clustered_words_path" not in st.session_state:
     st.session_state.clustered_words_path = None
+if "features" not in st.session_state:
+    st.session_state.features = {}
+if "suggested_features" not in st.session_state:
+    st.session_state.suggested_features = {}
+if "trained" not in st.session_state:
+    st.session_state.trained = False
 
 
 def rerun():
     raise st.experimental_rerun()
+
+
+@contextmanager
+def st_redirect(src, dst):
+    placeholder = st.empty()
+    output_func = getattr(placeholder, dst)
+
+    with StringIO() as buffer:
+        old_write = src.write
+
+        def new_write(b):
+            if getattr(current_thread(), REPORT_CONTEXT_ATTR_NAME, None):
+                buffer.write(b)
+                output_func(buffer.getvalue())
+            else:
+                old_write(b)
+
+        try:
+            src.write = new_write
+            yield
+        finally:
+            src.write = old_write
+
+
+@contextmanager
+def st_stdout(dst):
+    with st_redirect(sys.stdout, dst):
+        yield
 
 
 def to_dot(graph, marked_nodes=set(), integ=False):
@@ -135,6 +175,11 @@ def load_text_to_4lang():
     return tfl
 
 
+@st.cache()
+def init_evaluator():
+    return FeatureEvaluator()
+
+
 @st.cache(allow_output_mutation=True)
 def read_train(path):
     return pd.read_pickle(path)
@@ -145,44 +190,84 @@ def read_val(path):
     return pd.read_pickle(path)
 
 
-def main():
+def train_df(df):
+    with st_stdout("code"):
+        trainer = GraphTrainer(df)
+        features = trainer.train()
+
+        return features
+
+
+def get_args():
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument("-t", "--train-data", type=str, required=True)
+    parser.add_argument("-v", "--val-data", type=str, required=True)
+    parser.add_argument("-r", "--rule-ext", default=None, type=str)
+    parser.add_argument("-g", "--graph-format", default="fourlang", type=str)
+    return parser.parse_args()
+
+
+def main(args):
     st.set_page_config(layout="wide")
     st.markdown("<h1 style='text-align: center; color: black;'>Rule extraction framework</h1>",
+                unsafe_allow_html=True)
+
+    evaluator = init_evaluator()
+    data = read_train(args.train_data)
+    val_data = read_val(args.val_data)
+    graph_format = args.graph_format
+    feature_path = args.rule_ext
+
+    if not feature_path and not st.session_state.trained:
+        st.sidebar.title("Train your dataset!")
+        show_app = st.sidebar.button('Train')
+        if show_app:
+            st.session_state.suggested_features = train_df(data)
+            st.session_state.trained = True
+            with st_stdout("success"):
+                print("Success, your dataset is trained, wait for the app to load..")
+                time.sleep(3)   
+                rerun()
+        st.markdown("<h3 style='text-align: center; color: black;'>Your dataset is shown below, click the train button to train your dataset!</h3>",
                     unsafe_allow_html=True)
-    show_app = st.button('show app')
-    
-    my_bar = st.progress(0)
+        sample_df = AgGrid(data, width='100%', fit_columns_on_grid_load=True)
 
-    for percent_complete in range(100):
-        time.sleep(0.1)
-        my_bar.progress(percent_complete + 1)
+        st.write("label distribution:")
+        st.bar_chart(data.groupby("label").size())
 
-    with st.spinner('Wait for it...'):
-        time.sleep(5)
-    if show_app:
+        st.write("sentence lenghts:")
+        st.bar_chart(data.text.str.len())
+
+        st.write("common words:")
+        st.bar_chart(
+            pd.Series(' '.join(data['text']).lower().split()).value_counts()[:100])
+
+    if st.session_state.trained or args.rule_ext:
         col1, col2 = st.columns(2)
-        config = configparser.ConfigParser()
-        config.read("app_config.ini")
-        feature_path = config["DEFAULT"]["features_path"]
-        train_path = config["DEFAULT"]["train_path"]
-        val_path = config["DEFAULT"]["validation_path"]
-        graph_format = config["DEFAULT"]["graph_format"]
-        with open(feature_path) as f:
-            features = json.load(f)
+
+        if feature_path and os.path.exists(feature_path):
+            with open(feature_path) as f:
+                st.session_state.suggested_features = json.load(f)
+
+        if not st.session_state.features:
+            for key in st.session_state.suggested_features:
+                pop_len = 5 if len(st.session_state.suggested_features[key]) > 5 else len(
+                    st.session_state.suggested_features[key]) - 1
+                st.session_state.features[key] = [
+                    st.session_state.suggested_features[key].pop(0) for _ in range(pop_len)]
 
         col1.header("Rule to apply")
 
         col2.header("Graphs and results")
 
-        data = read_train(train_path)
-        val_data = read_val(val_path)
-
         if graph_format == "fourlang":
             tfl = load_text_to_4lang()
 
         with col1:
-            classes = st.selectbox("Choose class", list(features.keys()))
-            sens = [";".join(feat[0]) for feat in features[classes]]
+            classes = st.selectbox("Choose class", list(
+                st.session_state.features.keys()))
+            sens = [";".join(feat[0])
+                    for feat in st.session_state.features[classes]]
             option = "Rules to add here"
             option = st.selectbox(
                 'Choose from the rules', sens)
@@ -207,16 +292,19 @@ def main():
                     negated_features = []
                 else:
                     negated_features = negated_text.split(";")
-                features[classes].append([[text], negated_features, classes])
-                if features[classes]:
+                st.session_state.features[classes].append(
+                    [[text], negated_features, classes])
+                if st.session_state.features[classes]:
                     st.session_state.feature_df = get_df_from_rules(
-                        [";".join(feat[0]) for feat in features[classes]], [";".join(feat[1]) for feat in features[classes]])
-                    save_ruleset(feature_path, features)
+                        [";".join(feat[0]) for feat in st.session_state.features[classes]], [";".join(feat[1]) for feat in st.session_state.features[classes]])
+                    save_ruleset("saved_features.json",
+                                 st.session_state.features)
                     rerun()
             st.session_state.feature_df = get_df_from_rules(
-                [";".join(feat[0]) for feat in features[classes]], [";".join(feat[1]) for feat in features[classes]])
+                [";".join(feat[0]) for feat in st.session_state.features[classes]], [";".join(feat[1]) for feat in st.session_state.features[classes]])
             with st.form('example form') as f:
-                gb = GridOptionsBuilder.from_dataframe(st.session_state.feature_df)
+                gb = GridOptionsBuilder.from_dataframe(
+                    st.session_state.feature_df)
                 # make all columns editable
                 gb.configure_columns(["rules", "negated_rules"], editable=True)
                 gb.configure_selection(
@@ -252,11 +340,12 @@ def main():
                     rls_after_delete = copy.deepcopy(feature_list)
                     rule_to_train = rows_to_delete[0]
                     if ";" in rule_to_train or ".*" not in rule_to_train:
-                        st.text("Only single and underspecified rules can be trained!")
+                        st.text(
+                            "Only single and underspecified rules can be trained!")
                     else:
-                        trained_feature = train_feature(
+                        trained_feature = evaluator.train_feature(
                             classes, rule_to_train, data, graph_format)
-                        st.session_state.clustered_words_path, selected_words = cluster_feature(
+                        st.session_state.clustered_words_path, selected_words = evaluator.cluster_feature(
                             trained_feature)
                         for f in selected_words:
                             rls_after_delete.append([[f], [], classes])
@@ -264,19 +353,21 @@ def main():
                     rls_after_delete = copy.deepcopy(feature_list)
 
                 if rls_after_delete:
-                    features[classes] = copy.deepcopy(rls_after_delete)
+                    st.session_state.features[classes] = copy.deepcopy(
+                        rls_after_delete)
                     st.session_state.feature_df = get_df_from_rules(
-                        [";".join(feat[0]) for feat in features[classes]], [";".join(feat[1]) for feat in features[classes]])
-                    save_ruleset(feature_path, features)
+                        [";".join(feat[0]) for feat in st.session_state.features[classes]], [";".join(feat[1]) for feat in st.session_state.features[classes]])
+                    save_ruleset("saved_features.json",
+                                 st.session_state.features)
                     rerun()
 
             evaluate = st.button("Evaluate ruleset")
             if evaluate:
                 with st.spinner("Evaluating rules..."):
-                    st.session_state.dataframe, st.session_state.whole_accuracy = evaluate_feature(
-                        classes, features[classes], data, graph_format)
-                    st.session_state.val_dataframe, st.session_state.whole_accuracy_val = evaluate_feature(
-                        classes, features[classes], val_data, graph_format)
+                    st.session_state.dataframe, st.session_state.whole_accuracy = evaluator.evaluate_feature(
+                        classes, st.session_state.features[classes], data, graph_format)
+                    st.session_state.val_dataframe, st.session_state.whole_accuracy_val = evaluator.evaluate_feature(
+                        classes, st.session_state.features[classes], val_data, graph_format)
                 st.success('Done!')
 
         with col2:
@@ -301,8 +392,10 @@ def main():
 
                 prec = st.session_state.dataframe.iloc[sens.index(
                     option)].Precision
-                recall = st.session_state.dataframe.iloc[sens.index(option)].Recall
-                fscore = st.session_state.dataframe.iloc[sens.index(option)].Fscore
+                recall = st.session_state.dataframe.iloc[sens.index(
+                    option)].Recall
+                fscore = st.session_state.dataframe.iloc[sens.index(
+                    option)].Fscore
                 support = st.session_state.dataframe.iloc[sens.index(
                     option)].Support
 
@@ -393,38 +486,42 @@ def main():
                         st.text(f"False negatives: {len(fn_graphs)}")
                         current_graph = fn_graphs[st.session_state.false_neg_number]
                         with open("graph.dot", "w+") as f:
-                            f.write(to_dot(current_graph, marked_nodes=set(nodes)))
+                            f.write(
+                                to_dot(current_graph, marked_nodes=set(nodes)))
                         st.graphviz_chart(
                             to_dot(fn_graphs[st.session_state.false_neg_number], marked_nodes=set(nodes)), use_container_width=True)
 
-                if graph_format == "fourlang":
-                    fl = FourLang(current_graph, 0)
-                    expand_node = st.text_input("Expand node", None)
-                    append_zero_path = st.button(
-                        "Expand node and append zero paths to the graph")
-                    if append_zero_path:
-                        tfl.expand(fl, depth=1, expand_set={
-                                   expand_node}, strategy="whitelisting")
-                        fl.append_zero_paths()
+                # TODO
+                # this is just experimental
+                # if graph_format == "fourlang":
+                #     fl = FourLang(current_graph, 0)
+                #     expand_node = st.text_input("Expand node", None)
+                #     append_zero_path = st.button(
+                #         "Expand node and append zero paths to the graph")
+                #     if append_zero_path:
+                #         tfl.expand(fl, depth=1, expand_set={
+                #                    expand_node}, strategy="whitelisting")
+                #         fl.append_zero_paths()
 
-                    show_graph = st.expander(
-                        "Show graph", expanded=False)
+                #     show_graph = st.expander(
+                #         "Show graph", expanded=False)
 
-                    with show_graph:
-                        if current_graph:
-                            st.graphviz_chart(
-                                to_dot(fl.G, marked_nodes=set(nodes)), use_container_width=True)
+                #     with show_graph:
+                #         if current_graph:
+                #             st.graphviz_chart(
+                #                 to_dot(fl.G, marked_nodes=set(nodes)), use_container_width=True)
 
-                    clustered_words = st.expander(
-                        "Show clustered words:", expanded=False)
+                #     clustered_words = st.expander(
+                #         "Show clustered words:", expanded=False)
 
-                    with clustered_words:
-                        if st.session_state.clustered_words_path:
-                            image = Image.open(
-                                st.session_state.clustered_words_path)
-                            st.image(image, caption='trained_feature',
-                                     use_column_width=True)
+                #     with clustered_words:
+                #         if st.session_state.clustered_words_path:
+                #             image = Image.open(
+                #                 st.session_state.clustered_words_path)
+                #             st.image(image, caption='trained_feature',
+                #                      use_column_width=True)
 
 
 if __name__ == "__main__":
-    main()
+    args = get_args()
+    main(args)

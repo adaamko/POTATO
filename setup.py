@@ -21,7 +21,8 @@ setup(
         "matplotlib",
         "graphviz",
         "openpyxl",
-        "streamlit"
+        "streamlit",
+        "streamlit-aggrid"
     ],
     packages=find_packages(),
     zip_safe=False)
