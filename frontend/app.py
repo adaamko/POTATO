@@ -55,6 +55,8 @@ if "suggested_features" not in st.session_state:
     st.session_state.suggested_features = {}
 if "trained" not in st.session_state:
     st.session_state.trained = False
+if "ml_feature" not in st.session_state:
+    st.session_state.ml_feature = None
 
 
 def rerun():
@@ -202,7 +204,8 @@ def get_args():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-t", "--train-data", type=str, required=True)
     parser.add_argument("-v", "--val-data", type=str, required=True)
-    parser.add_argument("-r", "--rule-ext", default=None, type=str)
+    parser.add_argument("-sr", "--suggested-rules", default=None, type=str)
+    parser.add_argument("-hr", "--hand-rules", default=None, type=str)
     parser.add_argument("-g", "--graph-format", default="fourlang", type=str)
     return parser.parse_args()
 
@@ -216,7 +219,11 @@ def main(args):
     data = read_train(args.train_data)
     val_data = read_val(args.val_data)
     graph_format = args.graph_format
-    feature_path = args.rule_ext
+    feature_path = args.suggested_rules
+    hand_made_rules = args.hand_rules
+    if hand_made_rules:
+        with open(hand_made_rules) as f:
+            st.session_state.features = json.load(f)
 
     if not feature_path and not st.session_state.trained:
         st.sidebar.title("Train your dataset!")
@@ -226,7 +233,7 @@ def main(args):
             st.session_state.trained = True
             with st_stdout("success"):
                 print("Success, your dataset is trained, wait for the app to load..")
-                time.sleep(3)   
+                time.sleep(3)
                 rerun()
         st.markdown("<h3 style='text-align: center; color: black;'>Your dataset is shown below, click the train button to train your dataset!</h3>",
                     unsafe_allow_html=True)
@@ -242,7 +249,7 @@ def main(args):
         st.bar_chart(
             pd.Series(' '.join(data['text']).lower().split()).value_counts()[:100])
 
-    if st.session_state.trained or args.rule_ext:
+    if st.session_state.trained or args.suggested_rules:
         col1, col2 = st.columns(2)
 
         if feature_path and os.path.exists(feature_path):
@@ -297,7 +304,8 @@ def main(args):
                 if st.session_state.features[classes]:
                     st.session_state.feature_df = get_df_from_rules(
                         [";".join(feat[0]) for feat in st.session_state.features[classes]], [";".join(feat[1]) for feat in st.session_state.features[classes]])
-                    save_ruleset("saved_features.json",
+                    save_rules = hand_made_rules or "saved_features.json"
+                    save_ruleset(save_rules,
                                  st.session_state.features)
                     rerun()
             st.session_state.feature_df = get_df_from_rules(
@@ -357,7 +365,8 @@ def main(args):
                         rls_after_delete)
                     st.session_state.feature_df = get_df_from_rules(
                         [";".join(feat[0]) for feat in st.session_state.features[classes]], [";".join(feat[1]) for feat in st.session_state.features[classes]])
-                    save_ruleset("saved_features.json",
+                    save_rules = hand_made_rules or "saved_features.json"
+                    save_ruleset(save_rules,
                                  st.session_state.features)
                     rerun()
 
@@ -490,6 +499,34 @@ def main(args):
                                 to_dot(current_graph, marked_nodes=set(nodes)))
                         st.graphviz_chart(
                             to_dot(fn_graphs[st.session_state.false_neg_number], marked_nodes=set(nodes)), use_container_width=True)
+
+                suggest_new_rule = st.button("suggest new rule")
+                if suggest_new_rule:
+                    if st.session_state.suggested_features[classes]:
+                        suggested_feature = st.session_state.suggested_features[classes].pop(
+                            0)
+                        while st.session_state.suggested_features[classes] and suggested_feature in st.session_state.features[classes]:
+                            suggested_feature = st.session_state.suggested_features[classes].pop(
+                                0)
+
+                        st.session_state.ml_feature = suggested_feature
+
+                if st.session_state.ml_feature:
+
+                    st.markdown(
+                        f'<span style="color:red"><b>{st.session_state.ml_feature}</b></span>', unsafe_allow_html=True)
+
+                    accept_rule = st.button("Accept")
+                    decline_rule = st.button("Decline")
+
+                    if accept_rule:
+                        st.session_state.features[classes].append(
+                            st.session_state.ml_feature)
+                        st.session_state.ml_feature = None
+                        rerun()
+                    elif decline_rule:
+                        st.session_state.ml_feature = None
+                        rerun()
 
                 # TODO
                 # this is just experimental
