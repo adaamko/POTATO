@@ -54,8 +54,6 @@ class GraphExtractor():
 
 
 class FeatureEvaluator():
-    def __init__(self):
-        pass
 
     def one_versus_rest(self, df, entity):
         mapper = {entity: 1}
