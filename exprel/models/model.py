@@ -17,7 +17,7 @@ from tuw_nlp.text.utils import load_parsed, save_parsed
 from exprel.models.utils import tree_to_code
 
 
-class GraphModel():
+class GraphModel:
     def __init__(self):
         self.lexgraphs = LexGraphs()
         self.feature_vocab = Vocabulary()
@@ -34,23 +34,26 @@ class GraphModel():
         return [graph_to_pn(G) for G in self.get_feature_graphs()]
 
     def get_feature_graphs(self):
-        return [
-            self.lexgraphs.from_tuple(T) for T in self.get_feature_names()]
+        return [self.lexgraphs.from_tuple(T) for T in self.get_feature_names()]
 
     def get_feature_names(self):
-        return [
-            self.feature_vocab.get_word(i) for i in range(
-                len(self.feature_vocab))]
+        return [self.feature_vocab.get_word(i) for i in range(len(self.feature_vocab))]
 
     def convert_tree_to_features(self, clf, feature_graph_strings):
         features = defaultdict(list)
 
         for j, est in enumerate(clf.estimators_):
-            paths = [i for i in list(tree_to_code(
-                est, feature_graph_strings, self.inverse_relabel)) if i[2]]
+            paths = [
+                i
+                for i in list(
+                    tree_to_code(est, feature_graph_strings, self.inverse_relabel)
+                )
+                if i[2]
+            ]
             for path in paths:
                 features[list(self.label_vocab.word_to_id.keys())[j]].append(
-                    (path[0], path[1], self.label_vocab.id_to_word[j]))
+                    (path[0], path[1], self.label_vocab.id_to_word[j])
+                )
 
         return features
 
@@ -66,8 +69,7 @@ class GraphModel():
         self.vocab_size = len(self.feature_vocab)
 
     def select_n_best(self, max_features):
-        relabel_dict, feature_num = self.feature_vocab.select_n_best(
-            max_features)
+        relabel_dict, feature_num = self.feature_vocab.select_n_best(max_features)
         self.vocab_size = feature_num
         self.relabel_dict = relabel_dict
         self.inverse_relabel = {relabel_dict[k]: k for k in relabel_dict}
@@ -78,7 +80,8 @@ class GraphModel():
             edge_to_ind[len(graph.edges(data=True))].append(i)
 
         relabel_dict, feature_num = self.feature_vocab.select_n_best_from_each_class(
-            max_features, edge_to_ind, up_to=3)
+            max_features, edge_to_ind, up_to=3
+        )
         self.vocab_size = feature_num
         self.relabel_dict = relabel_dict
         self.inverse_relabel = {relabel_dict[k]: k for k in relabel_dict}
@@ -93,7 +96,10 @@ class GraphModel():
                         X[i][self.relabel_dict[j]] = 1
                 else:
                     X[i][j] = 1
-            y[i] = label_vocab[attr[i]] if label_vocab else self.label_vocab.get_id(
-                attr[i], allow_new=True)
+            y[i] = (
+                label_vocab[attr[i]]
+                if label_vocab
+                else self.label_vocab.get_id(attr[i], allow_new=True)
+            )
 
         return X, y

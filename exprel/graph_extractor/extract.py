@@ -1,4 +1,3 @@
-
 import argparse
 import json
 import logging
@@ -14,14 +13,18 @@ from networkx.algorithms.isomorphism import DiGraphMatcher
 from sklearn.metrics import precision_recall_fscore_support
 from tqdm import tqdm
 from tuw_nlp.grammar.text_to_4lang import TextTo4lang
-from tuw_nlp.graph.utils import (GraphFormulaMatcher, GraphMatcher,
-                                 graph_to_isi, graph_to_pn, pn_to_graph)
+from tuw_nlp.graph.utils import (
+    GraphFormulaMatcher,
+    GraphMatcher,
+    graph_to_isi,
+    graph_to_pn,
+    pn_to_graph,
+)
 from tuw_nlp.text.pipeline import CachedStanzaPipeline
 
 
-class GraphExtractor():
-    def __init__(
-            self, cache_dir=None, cache_fn=None, lang=None):
+class GraphExtractor:
+    def __init__(self, cache_dir=None, cache_fn=None, lang=None):
         self.cache_dir = cache_dir
         self.cache_fn = cache_fn
         self.lang = lang
@@ -37,7 +40,9 @@ class GraphExtractor():
 
     def parse_iterable(self, iterable, graph_type="fourlang"):
         if graph_type == "fourlang":
-            with TextTo4lang(lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir) as tfl:
+            with TextTo4lang(
+                lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir
+            ) as tfl:
                 for sen in tqdm(iterable):
                     fl_graphs = list(tfl(sen))
                     g = fl_graphs[0]
@@ -53,14 +58,14 @@ class GraphExtractor():
                 yield G
 
 
-class FeatureEvaluator():
-
+class FeatureEvaluator:
     def one_versus_rest(self, df, entity):
         mapper = {entity: 1}
 
         one_versus_rest_df = df.copy()
         one_versus_rest_df["one_versus_rest"] = [
-            mapper[item] if item in mapper else 0 for item in df.label]
+            mapper[item] if item in mapper else 0 for item in df.label
+        ]
 
         return one_versus_rest_df
 
@@ -73,7 +78,11 @@ class FeatureEvaluator():
         with open(path, "w+") as f:
             for i, g in enumerate(graphs):
                 matcher = DiGraphMatcher(
-                    g, feature_graph, node_match=GraphFormulaMatcher.node_matcher, edge_match=GraphFormulaMatcher.edge_matcher)
+                    g,
+                    feature_graph,
+                    node_match=GraphFormulaMatcher.node_matcher,
+                    edge_match=GraphFormulaMatcher.edge_matcher,
+                )
                 if matcher.subgraph_is_isomorphic():
                     for iso_pairs in matcher.subgraph_isomorphisms_iter():
                         nodes = []
@@ -83,42 +92,47 @@ class FeatureEvaluator():
                         nodes_str = ",".join(nodes)
                         label = labels[i]
                         sentence = data.iloc[i].text
-                        f.write(
-                            f"{feature}\t{nodes_str}\t{sentence}\t{label}\n")
+                        f.write(f"{feature}\t{nodes_str}\t{sentence}\t{label}\n")
 
         return path
 
     def cluster_feature(self, path):
-
         def to_dot(graph, feature):
-            lines = [u'digraph finite_state_machine {']
-            lines.append('\tdpi=70;label=' + '"' + feature + '"')
+            lines = ["digraph finite_state_machine {"]
+            lines.append("\tdpi=70;label=" + '"' + feature + '"')
             # lines.append('\tordering=out;')
             # sorting everything to make the process deterministic
             node_lines = []
             node_to_name = {}
             for node, n_data in graph.nodes(data=True):
                 printname = node
-                if 'color' in n_data and n_data['color'] == "red":
-                    node_line = u'\t{0} [shape = circle, label = "{1}", \
+                if "color" in n_data and n_data["color"] == "red":
+                    node_line = '\t{0} [shape = circle, label = "{1}", \
                             style=filled, fillcolor=red];'.format(
-                        printname, printname.split("_")[0]).replace('-', '_')
-                if 'color' in n_data and n_data['color'] == "green":
-                    node_line = u'\t{0} [shape = circle, label = "{1}", \
+                        printname, printname.split("_")[0]
+                    ).replace(
+                        "-", "_"
+                    )
+                if "color" in n_data and n_data["color"] == "green":
+                    node_line = '\t{0} [shape = circle, label = "{1}", \
                             style="filled", fillcolor=green];'.format(
-                        printname, printname.split("_")[0]).replace('-', '_')
+                        printname, printname.split("_")[0]
+                    ).replace(
+                        "-", "_"
+                    )
                 node_lines.append(node_line)
             lines += sorted(node_lines)
 
             edge_lines = []
             for u, v, edata in graph.edges(data=True):
-                if 'color' in edata:
+                if "color" in edata:
                     edge_lines.append(
-                        u'\t{0} -> {1} [ label = "{2}" ];'.format(u, v, edata['color']))
+                        '\t{0} -> {1} [ label = "{2}" ];'.format(u, v, edata["color"])
+                    )
 
             lines += sorted(edge_lines)
-            lines.append('}')
-            return u'\n'.join(lines)
+            lines.append("}")
+            return "\n".join(lines)
 
         with open("longman_zero_paths_one_exp.json") as f:
             graphs = json.load(f)
@@ -168,8 +182,9 @@ class FeatureEvaluator():
                 fields = line.strip("\n").split("\t")
                 features.append(fields[1])
                 labels.append(int(fields[3]))
-        words_to_measures = {word: {"TP": 0, "FP": 0, "TN": 0, "FN": 0}
-                             for word in set(features)}
+        words_to_measures = {
+            word: {"TP": 0, "FP": 0, "TN": 0, "FN": 0} for word in set(features)
+        }
         for word in words_to_measures:
             for i, label in enumerate(labels):
                 if label and features[i] == word:
@@ -196,7 +211,10 @@ class FeatureEvaluator():
         selected_words = set()
 
         for word in words_to_measures:
-            if words_to_measures[word]["precision"] > 0.8 and words_to_measures[word]["recall"] > 0.01:
+            if (
+                words_to_measures[word]["precision"] > 0.8
+                and words_to_measures[word]["recall"] > 0.01
+            ):
                 selected_words.add(word)
 
         return selected_words
@@ -228,7 +246,9 @@ class FeatureEvaluator():
                 false_neg_s.append((sen, lab))
 
         accuracy = []
-        for pcf in precision_recall_fscore_support(labels, whole_predicted, average=None):
+        for pcf in precision_recall_fscore_support(
+            labels, whole_predicted, average=None
+        ):
             accuracy.append(pcf[1])
 
         for feat in features:
@@ -262,7 +282,21 @@ class FeatureEvaluator():
             measure.append(false_neg_s)
             measure_features.append(measure)
 
-        df = pd.DataFrame(measure_features, columns=[
-            'Feature', 'Precision', 'Recall', "Fscore", "Support", "False_positive_graphs", "False_positive_sens", "True_positive_graphs", "True_positive_sens", "False_negative_graphs", "False_negative_sens"])
+        df = pd.DataFrame(
+            measure_features,
+            columns=[
+                "Feature",
+                "Precision",
+                "Recall",
+                "Fscore",
+                "Support",
+                "False_positive_graphs",
+                "False_positive_sens",
+                "True_positive_graphs",
+                "True_positive_sens",
+                "False_negative_graphs",
+                "False_negative_sens",
+            ],
+        )
 
         return df, accuracy

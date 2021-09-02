@@ -37,18 +37,24 @@ class SemevalSample(Sample):
     def _postprocess(self, graph):
         for node, attr in graph.nodes(data=True):
             if self.e1_lemma:
-                if attr["name"] == self.e1_lemma or attr["name"] == self.e1_lemma.split()[-1]:
+                if (
+                    attr["name"] == self.e1_lemma
+                    or attr["name"] == self.e1_lemma.split()[-1]
+                ):
                     attr["name"] = "entity1"
             else:
                 if attr["name"] == self.e1 or attr["name"] == self.e1.split()[-1]:
                     attr["name"] = "entity1"
             if self.e2_lemma:
-                if attr["name"] == self.e2_lemma or attr["name"] == self.e2_lemma.split()[-1]:
+                if (
+                    attr["name"] == self.e2_lemma
+                    or attr["name"] == self.e2_lemma.split()[-1]
+                ):
                     attr["name"] = "entity2"
             else:
                 if attr["name"] == self.e2 or attr["name"] == self.e2.split()[-1]:
                     attr["name"] = "entity2"
-        
+
         return graph
 
     def set_graph(self, graph):

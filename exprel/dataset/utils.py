@@ -6,26 +6,27 @@ import re
 from tuw_nlp.graph.utils import preprocess_node_alto, preprocess_edge_alto
 
 
-def ud_to_graph(sen, edge_attr='color'):
+def ud_to_graph(sen, edge_attr="color"):
     """convert dependency-parsed stanza Sentence to nx.DiGraph"""
     G = nx.DiGraph()
     root_id = None
     for word in sen.to_dict():
-        if isinstance(word['id'], (list, tuple)):
+        if isinstance(word["id"], (list, tuple)):
             # token representing an mwe, e.g. "vom" ~ "von dem"
             continue
-        G.add_node(word['id'], name=preprocess_node_alto(word["lemma"]))
-        if word['deprel'] == "root":
-            root_id = word['id']
-            G.add_node(word['head'], name="root")
-        G.add_edge(word['head'], word['id'])
-        G[word['head']][word['id']].update(
-            {edge_attr: preprocess_node_alto(word['deprel'])})
+        G.add_node(word["id"], name=preprocess_node_alto(word["lemma"]))
+        if word["deprel"] == "root":
+            root_id = word["id"]
+            G.add_node(word["head"], name="root")
+        G.add_edge(word["head"], word["id"])
+        G[word["head"]][word["id"]].update(
+            {edge_attr: preprocess_node_alto(word["deprel"])}
+        )
 
     return G, root_id
 
 
-def default_pn_to_graph(raw_dl, edge_attr='color'):
+def default_pn_to_graph(raw_dl, edge_attr="color"):
     g = pn.decode(raw_dl)
     G = nx.DiGraph()
 
@@ -84,7 +85,7 @@ def default_pn_to_graph(raw_dl, edge_attr='color'):
     return G, root_id
 
 
-def amr_pn_to_graph(raw_dl, edge_attr='color', clean_nodes=False):
+def amr_pn_to_graph(raw_dl, edge_attr="color", clean_nodes=False):
     g = pn.decode(raw_dl)
     G = nx.DiGraph()
 

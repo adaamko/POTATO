@@ -37,7 +37,11 @@ def evaluate_features(dataset, features, graph_format):
             matches.append("")
             predicted.append("NOT")
 
-    d = {"Sentence": dataset.text.tolist(), "Predicted label": predicted, "Matched rule": matches}
+    d = {
+        "Sentence": dataset.text.tolist(),
+        "Predicted label": predicted,
+        "Matched rule": matches,
+    }
     df = pd.DataFrame(d)
     return df
 
@@ -46,8 +50,7 @@ def get_args():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-t", "--graph-type", type=str, default="fourlang")
     parser.add_argument("-f", "--features", type=str, required=True)
-    parser.add_argument("-d", "--dataset-path", type=str,
-                        default=None, required=True)
+    parser.add_argument("-d", "--dataset-path", type=str, default=None, required=True)
 
     return parser.parse_args()
 
@@ -55,8 +58,9 @@ def get_args():
 def main():
     logging.basicConfig(
         level=logging.WARNING,
-        format="%(asctime)s : " +
-        "%(module)s (%(lineno)s) - %(levelname)s - %(message)s")
+        format="%(asctime)s : "
+        + "%(module)s (%(lineno)s) - %(levelname)s - %(message)s",
+    )
 
     args = get_args()
     df = pd.read_pickle(args.dataset_path)
@@ -64,7 +68,7 @@ def main():
     with open(args.features) as f:
         features = json.load(f)
     df = evaluate_features(df, features, args.graph_type)
-    df.to_csv(sys.stdout, sep='\t')
+    df.to_csv(sys.stdout, sep="\t")
 
 
 if __name__ == "__main__":

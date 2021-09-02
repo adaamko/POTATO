@@ -8,8 +8,14 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split as split
 
 
-class GraphTrainer():
-    def __init__(self, dataset: pd.DataFrame, lang: str = "en", max_edge: int = 2, max_features: int = 2000) -> None:
+class GraphTrainer:
+    def __init__(
+        self,
+        dataset: pd.DataFrame,
+        lang: str = "en",
+        max_edge: int = 2,
+        max_features: int = 2000,
+    ) -> None:
         print("Initializing trainer object...")
         self.dataset = dataset
         self.extractor = GraphExtractor(lang=lang, cache_fn="en_nlp_cache")
@@ -24,8 +30,7 @@ class GraphTrainer():
         labels = self.dataset.label_id.tolist()
         graphs = self.dataset.graph.tolist()
 
-        print(
-            f"Featurizing graphs by generating subgraphs up to {self.max_edge}...")
+        print(f"Featurizing graphs by generating subgraphs up to {self.max_edge}...")
         for ind, graph, label in tqdm(zip(ids, graphs, labels)):
             self.graph_model.featurize_sen_graph(ind, graph, label, self.max_edge)
 
@@ -38,14 +43,16 @@ class GraphTrainer():
 
         label_vocab = {}
         for label in self.dataset.label.unique():
-            label_vocab[label] = self.dataset[self.dataset.label ==
-                                              label].iloc[0].label_id
+            label_vocab[label] = (
+                self.dataset[self.dataset.label == label].iloc[0].label_id
+            )
 
         inv_vocab = {v: k for k, v in label_vocab.items()}
 
         print("Generating training data...")
         train_X, train_Y = self.graph_model.get_x_y(
-            self.dataset.label.tolist(), label_vocab=label_vocab)
+            self.dataset.label.tolist(), label_vocab=label_vocab
+        )
 
         print("Training...")
         self.model.fit(train_X, train_Y)
@@ -59,14 +66,18 @@ class GraphTrainer():
 
             for i, w in enumerate(targeted_df.weight.tolist()):
                 if w > 0.01:
-                    most_important_weights.append(targeted_df.iloc[i].feature.strip("x"))
+                    most_important_weights.append(
+                        targeted_df.iloc[i].feature.strip("x")
+                    )
 
             for i in most_important_weights:
                 if i != "<BIAS>":
                     g_nx = self.feature_graphs[self.graph_model.inverse_relabel[int(i)]]
-                    g = self.feature_graph_strings[self.graph_model.inverse_relabel[int(i)]]
+                    g = self.feature_graph_strings[
+                        self.graph_model.inverse_relabel[int(i)]
+                    ]
                     features[inv_vocab[int(target)]].append(
-                        ([g], [], inv_vocab[int(target)]))
-
+                        ([g], [], inv_vocab[int(target)])
+                    )
 
         return features

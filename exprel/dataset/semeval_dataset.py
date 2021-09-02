@@ -24,17 +24,30 @@ class SemevalDataset(Dataset):
 
     def read_dataset(self, path):
         with open(path, "r+") as f:
-            for sample, label, _, _ in tqdm(itertools.zip_longest(*[f]*4)):
+            for sample, label, _, _ in tqdm(itertools.zip_longest(*[f] * 4)):
                 sen_id, sentence = sample.split("\t")
                 semeval_sample = SemevalSample(
-                    sen_id, sentence.strip("\n"), label.strip("\n"), self.nlp, self.docs)
+                    sen_id, sentence.strip("\n"), label.strip("\n"), self.nlp, self.docs
+                )
                 yield semeval_sample
 
     def to_dataframe(self):
         self.le.fit([sample.label for sample in self._dataset])
-        df = pd.DataFrame({"sen_id": [sample.sen_id for sample in self._dataset], "e1": [sample.e1 for sample in self._dataset], "e2": [
-                          sample.e2 for sample in self._dataset],  "e1_lemma": [sample.e1_lemma for sample in self._dataset], "e2_lemma": [
-            sample.e2_lemma for sample in self._dataset], "sentence": [sample.sentence for sample in self._dataset], "label": [sample.label for sample in self._dataset], "label_id": self.le.transform([sample.label for sample in self._dataset]), "graph": [sample.graph for sample in self._dataset]})
+        df = pd.DataFrame(
+            {
+                "sen_id": [sample.sen_id for sample in self._dataset],
+                "e1": [sample.e1 for sample in self._dataset],
+                "e2": [sample.e2 for sample in self._dataset],
+                "e1_lemma": [sample.e1_lemma for sample in self._dataset],
+                "e2_lemma": [sample.e2_lemma for sample in self._dataset],
+                "sentence": [sample.sentence for sample in self._dataset],
+                "label": [sample.label for sample in self._dataset],
+                "label_id": self.le.transform(
+                    [sample.label for sample in self._dataset]
+                ),
+                "graph": [sample.graph for sample in self._dataset],
+            }
+        )
 
         return df
 
@@ -43,6 +56,7 @@ class SemevalDataset(Dataset):
 
         one_versus_rest_df = df.copy()
         one_versus_rest_df["one_versus_rest"] = [
-            mapper[item] if item in mapper else 0 for item in df.label]
+            mapper[item] if item in mapper else 0 for item in df.label
+        ]
 
         return one_versus_rest_df

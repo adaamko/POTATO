@@ -9,7 +9,9 @@ from exprel.graph_extractor.extract import GraphExtractor
 
 
 class Dataset:
-    def __init__(self, examples: List[Tuple[str, str]], label_vocab: Dict[str, int], lang="en") -> None:
+    def __init__(
+        self, examples: List[Tuple[str, str]], label_vocab: Dict[str, int], lang="en"
+    ) -> None:
         self.nlp = stanza.Pipeline(lang)
         self.label_vocab = label_vocab
         self._dataset = self.read_dataset(examples)
@@ -19,14 +21,24 @@ class Dataset:
         return [Sample(example) for example in examples]
 
     def to_dataframe(self) -> pd.DataFrame:
-        df = pd.DataFrame({"text": [sample.text for sample in self._dataset], "label": [
-                          sample.label for sample in self._dataset], "label_id": [
-                              self.label_vocab[sample.label] for sample in self._dataset], "graph": [sample.graph for sample in self._dataset] })
+        df = pd.DataFrame(
+            {
+                "text": [sample.text for sample in self._dataset],
+                "label": [sample.label for sample in self._dataset],
+                "label_id": [
+                    self.label_vocab[sample.label] for sample in self._dataset
+                ],
+                "graph": [sample.graph for sample in self._dataset],
+            }
+        )
         return df
 
     def parse_graphs(self, graph_format: str = "fourlang") -> List[nx.DiGraph]:
-        graphs = list(self.extractor.parse_iterable(
-            [sample.text for sample in self._dataset], graph_format))
+        graphs = list(
+            self.extractor.parse_iterable(
+                [sample.text for sample in self._dataset], graph_format
+            )
+        )
 
         self.graphs = graphs
         return graphs
