@@ -8,7 +8,7 @@ from collections import defaultdict
 import networkx as nx
 import pandas as pd
 import stanza
-from exprel.dataset.utils import default_pn_to_graph
+from exprel.dataset.utils import default_pn_to_graph, ud_to_graph
 from graphviz import Source
 from networkx.algorithms.isomorphism import DiGraphMatcher
 from sklearn.metrics import precision_recall_fscore_support
@@ -29,7 +29,8 @@ class GraphExtractor():
         self.matcher = None
 
     def init_nlp(self):
-        self.nlp = stanza.Pipeline(self.lang)
+        nlp = stanza.Pipeline(self.lang)
+        self.nlp = CachedStanzaPipeline(nlp, self.cache_fn)
 
     def set_matcher(self, patterns):
         self.matcher = GraphMatcher(patterns)
@@ -43,6 +44,13 @@ class GraphExtractor():
                     for n in fl_graphs[1:]:
                         g = nx.compose(g, n)
                     yield g
+
+        if graph_type == "ud":
+            self.init_nlp()
+            for sen in tqdm(iterable):
+                doc = self.nlp(sen)
+                G, _ = ud_to_graph(doc.sentences[0])
+                yield G
 
 
 class FeatureEvaluator():

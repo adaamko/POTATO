@@ -6,6 +6,26 @@ import re
 from tuw_nlp.graph.utils import preprocess_node_alto, preprocess_edge_alto
 
 
+def ud_to_graph(sen, edge_attr='color'):
+    """convert dependency-parsed stanza Sentence to nx.DiGraph"""
+    G = nx.DiGraph()
+    root_id = None
+    for word in sen.to_dict():
+        if isinstance(word['id'], (list, tuple)):
+            # token representing an mwe, e.g. "vom" ~ "von dem"
+            continue
+        print(word)
+        G.add_node(word['id'], name=preprocess_node_alto(word["lemma"]))
+        if word['deprel'] == "root":
+            root_id = word['id']
+            G.add_node(word['head'], name="root")
+        G.add_edge(word['head'], word['id'])
+        G[word['head']][word['id']].update(
+            {edge_attr: preprocess_node_alto(word['deprel'])})
+
+    return G, root_id
+
+
 def default_pn_to_graph(raw_dl, edge_attr='color'):
     g = pn.decode(raw_dl)
     G = nx.DiGraph()
@@ -37,7 +57,7 @@ def default_pn_to_graph(raw_dl, edge_attr='color'):
 
     for trip in g.triples:
         if trip[1] != ":instance":
-            edge = preprocess_edge_alto(trip[1])
+            edge = trip[1].split(":")[1]
             src = trip[0]
             tgt = trip[2]
             if src not in char_to_id:
