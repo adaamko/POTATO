@@ -14,7 +14,6 @@ def ud_to_graph(sen, edge_attr='color'):
         if isinstance(word['id'], (list, tuple)):
             # token representing an mwe, e.g. "vom" ~ "von dem"
             continue
-        print(word)
         G.add_node(word['id'], name=preprocess_node_alto(word["lemma"]))
         if word['deprel'] == "root":
             root_id = word['id']

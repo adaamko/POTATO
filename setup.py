@@ -16,6 +16,7 @@ setup(
         "tinydb",
         "pandas",
         "tqdm",
+        "stanza",
         "sklearn",
         "eli5",
         "matplotlib",

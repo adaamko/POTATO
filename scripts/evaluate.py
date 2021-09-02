@@ -7,31 +7,25 @@ from collections import defaultdict
 
 import networkx as nx
 import pandas as pd
-from exprel.dataset.hasoc_dataset import HasocDataset
-from exprel.dataset.utils import amr_pn_to_graph
+from exprel.dataset.utils import default_pn_to_graph
 from networkx.algorithms.isomorphism import DiGraphMatcher
 from sklearn.metrics import precision_recall_fscore_support
 from tqdm import tqdm
 from tuw_nlp.graph.utils import GraphFormulaMatcher, pn_to_graph
 
 
-def evaluate_features(dataset, graphs_path, features, graph_format):
-    labels = dataset.label.tolist()
-    with open(graphs_path, "rb") as f:
-        graphs = pickle.load(f)
+def evaluate_features(dataset, features, graph_format):
+    graphs = dataset.graph.tolist()
 
     matches = []
     predicted = []
-    labels = []
 
     feature_values = []
     for k in features:
         for f in features[k]:
             feature_values.append(f)
-    if graph_format == "amr":
-        matcher = GraphFormulaMatcher(feature_values, converter=amr_pn_to_graph)
-    else:
-        matcher = GraphFormulaMatcher(feature_values, converter=pn_to_graph)
+
+    matcher = GraphFormulaMatcher(feature_values, converter=default_pn_to_graph)
 
     for i, g in tqdm(enumerate(graphs)):
         feats = matcher.match(g)
@@ -43,7 +37,7 @@ def evaluate_features(dataset, graphs_path, features, graph_format):
             matches.append("")
             predicted.append("NOT")
 
-    d = {"Sentence": dataset.sentence.tolist(), "Predicted label": predicted, "Matched rule": matches}
+    d = {"Sentence": dataset.text.tolist(), "Predicted label": predicted, "Matched rule": matches}
     df = pd.DataFrame(d)
     return df
 
@@ -53,8 +47,6 @@ def get_args():
     parser.add_argument("-t", "--graph-type", type=str, default="fourlang")
     parser.add_argument("-f", "--features", type=str, required=True)
     parser.add_argument("-d", "--dataset-path", type=str,
-                        default=None, required=True)
-    parser.add_argument("-g", "--input-graphs", type=str,
                         default=None, required=True)
 
     return parser.parse_args()
@@ -67,13 +59,11 @@ def main():
         "%(module)s (%(lineno)s) - %(levelname)s - %(message)s")
 
     args = get_args()
-    df = pd.read_csv(args.dataset_path, delimiter="\t")
-    data = HasocDataset(df)
-    df = data.to_dataframe()
-    df = df.rename(columns={'preprocessed_text': 'sentence', 'task1': 'label'})
+    df = pd.read_pickle(args.dataset_path)
+
     with open(args.features) as f:
         features = json.load(f)
-    df = evaluate_features(df, args.input_graphs, features, args.graph_type)
+    df = evaluate_features(df, features, args.graph_type)
     df.to_csv(sys.stdout, sep='\t')
 
 
