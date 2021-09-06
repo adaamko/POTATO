@@ -402,13 +402,10 @@ def main(args):
                     if ";" in rule_to_train or ".*" not in rule_to_train:
                         st.text("Only single and underspecified rules can be trained!")
                     else:
-                        trained_feature = evaluator.train_feature(
+                        selected_words = evaluator.train_feature(
                             classes, rule_to_train, data, graph_format
                         )
-                        (
-                            st.session_state.clustered_words_path,
-                            selected_words,
-                        ) = evaluator.cluster_feature(trained_feature)
+
                         for f in selected_words:
                             rls_after_delete.append([[f], [], classes])
                 else:
@@ -690,16 +687,6 @@ def main(args):
                 #         if current_graph:
                 #             st.graphviz_chart(
                 #                 to_dot(fl.G, marked_nodes=set(nodes)), use_container_width=True)
-
-                #     clustered_words = st.expander(
-                #         "Show clustered words:", expanded=False)
-
-                #     with clustered_words:
-                #         if st.session_state.clustered_words_path:
-                #             image = Image.open(
-                #                 st.session_state.clustered_words_path)
-                #             st.image(image, caption='trained_feature',
-                #                      use_column_width=True)
 
 
 if __name__ == "__main__":

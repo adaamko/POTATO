@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import sys
+import os
 from collections import defaultdict
 
 import networkx as nx
@@ -35,9 +36,6 @@ class GraphExtractor:
         nlp = stanza.Pipeline(self.lang)
         self.nlp = CachedStanzaPipeline(nlp, self.cache_fn)
 
-    def set_matcher(self, patterns):
-        self.matcher = GraphMatcher(patterns)
-
     def parse_iterable(self, iterable, graph_type="fourlang"):
         if graph_type == "fourlang":
             with TextTo4lang(
@@ -59,6 +57,35 @@ class GraphExtractor:
 
 
 class FeatureEvaluator:
+    def __init__(self, graph_format="ud"):
+        self.graph_format = graph_format
+
+    def match_features(self, dataset, features):
+        graphs = dataset.graph.tolist()
+
+        matches = []
+        predicted = []
+
+        matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph)
+
+        for i, g in tqdm(enumerate(graphs)):
+            feats = matcher.match(g)
+            for key, feature in feats:
+                matches.append(features[feature])
+                predicted.append(key)
+                break
+            else:
+                matches.append("")
+                predicted.append("")
+
+        d = {
+            "Sentence": dataset.text.tolist(),
+            "Predicted label": predicted,
+            "Matched rule": matches,
+        }
+        df = pd.DataFrame(d)
+        return df
+
     def one_versus_rest(self, df, entity):
         mapper = {entity: 1}
 
@@ -75,6 +102,7 @@ class FeatureEvaluator:
         graphs = data.graph.tolist()
         labels = self.one_versus_rest(data, cl).one_versus_rest.tolist()
         path = "trained_features.tsv"
+        trained_features = []
         with open(path, "w+") as f:
             for i, g in enumerate(graphs):
                 matcher = DiGraphMatcher(
@@ -93,10 +121,13 @@ class FeatureEvaluator:
                         label = labels[i]
                         sentence = data.iloc[i].text
                         f.write(f"{feature}\t{nodes_str}\t{sentence}\t{label}\n")
+                        trained_features.append(
+                            (feature, nodes_str, sentence, str(label))
+                        )
 
-        return path
+        return self.cluster_feature(trained_features)[1]
 
-    def cluster_feature(self, path):
+    def cluster_feature(self, trained_features):
         def to_dot(graph, feature):
             lines = ["digraph finite_state_machine {"]
             lines.append("\tdpi=70;label=" + '"' + feature + '"')
@@ -134,15 +165,15 @@ class FeatureEvaluator:
             lines.append("}")
             return "\n".join(lines)
 
-        with open("longman_zero_paths_one_exp.json") as f:
-            graphs = json.load(f)
+        graphs = {}
+        if os.path.isfile("longman_zero_paths_one_exp"):
+            with open("longman_zero_paths_one_exp.json") as f:
+                graphs = json.load(f)
 
         words = {}
-        with open(path) as f:
-            for line in f:
-                fields = line.strip("\n").split("\t")
-                words[fields[1] + "_" + fields[3]] = int(fields[3])
-                feature = fields[0]
+        for fields in trained_features:
+            words[fields[1] + "_" + fields[3]] = int(fields[3])
+            feature = fields[0]
         graph = nx.MultiDiGraph()
 
         color_map = []
@@ -165,7 +196,7 @@ class FeatureEvaluator:
         d.engine = "circo"
         d.format = "png"
 
-        selected_words = select_words(path)
+        selected_words = self.select_words(trained_features)
 
         word_features = []
 
@@ -173,15 +204,13 @@ class FeatureEvaluator:
 
         return d.render(view=True), word_features
 
-    def select_words(self, path):
+    def select_words(self, trained_features):
         features = []
         labels = []
 
-        with open(path) as f:
-            for line in f:
-                fields = line.strip("\n").split("\t")
-                features.append(fields[1])
-                labels.append(int(fields[3]))
+        for fields in trained_features:
+            features.append(fields[1])
+            labels.append(int(fields[3]))
         words_to_measures = {
             word: {"TP": 0, "FP": 0, "TN": 0, "FN": 0} for word in set(features)
         }

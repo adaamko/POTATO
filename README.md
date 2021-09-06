@@ -40,7 +40,8 @@ sentences = [("fuck absolutely everything about today.", "HOF"),
             ("[USER] you'd immediately stop", "NOT"),
             ("Just... shut the fuck up", "HOF"),
             ("RT [USER]: ohhhh shit a [USER] [URL]", "HOF"),
-            ("all i want is for yara to survive tonight", "NOT")]
+            ("all i want is for yara to survive tonight", "NOT"),
+            ("fuck them", "HOF")]
 ```
 
 Initialize the dataset and also provide a label encoding. Then parse the sentences into graphs. Currently we provide three types of graphs: _ud_, _fourlang_, _amr_.
@@ -50,7 +51,140 @@ dataset = Dataset(sentences, label_vocab={"NOT":0, "HOF": 1})
 dataset.set_graphs(dataset.parse_graphs(graph_format="ud"))
 ```
 
-Then, finally train the dataset with graph features and rank them based on relevancy:
+### Rules
+
+If the dataset is prepared and the graphs are parsed, we can write rules to match labels. We can write rules either manually or extract
+them automatically (EXPREL also provides a frontend that tries to do both).
+
+The simplest rule would be just a node in the graph:
+```python
+#the syntax of the rules is List[List[rules that we want to match], List[rules that shouldn't be in the matched graphs], Label of the rule]
+rule_to_match = [[["(u_1 / fuck)"], [], "HOF"]]
+```
+
+Init the rule matcher:
+```python
+from exprel.graph_extractor.extract import FeatureEvaluator
+evaluator = FeatureEvaluator()
+```
+
+Match the rules in the dataset:
+```python
+#match single feature
+evaluator.match_features(df, rule_to_match)
+```
+
+The function will return a dataframe with the matched instances:
+|    | Sentence                                                                         | Predicted label   | Matched rule                  |
+|---:|:---------------------------------------------------------------------------------|:------------------|:------------------------------|
+|  0 | fuck absolutely everything about today.                                          | HOF               | [['(u_1 / fuck)'], [], 'HOF'] |
+|  1 | I just made food and I'm making myself sick to my stomach. Lol, wtf is this shit |                   |                               |
+|  2 | RT [USER]: America is the most fucked up country [URL]                           |                   |                               |
+|  3 | you'd be blind to not see the heart eyes i have for you.                         |                   |                               |
+|  4 | It's hard for me to give a fuck now                                              | HOF               | [['(u_1 / fuck)'], [], 'HOF'] |
+|  5 | tell me everything                                                               |                   |                               |
+|  6 | Bitch YES [URL]                                                                  |                   |                               |
+|  7 | Eight people a minute....                                                        |                   |                               |
+|  8 | RT [USER]: im not fine, i need you                                               |                   |                               |
+|  9 | Holy shit.. 3 months and I'll be in Italy                                        |                   |                               |
+| 10 | Now I do what I want 🤪                                                          |                   |                               |
+| 11 | [USER] you'd immediately stop                                                    |                   |                               |
+| 12 | Just... shut the fuck up                                                         | HOF               | [['(u_1 / fuck)'], [], 'HOF'] |
+| 13 | RT [USER]: ohhhh shit a [USER] [URL]                                             |                   |                               |
+| 14 | all i want is for yara to survive tonight                                        |                   |                               |
+| 15 | fuck them                                                                        | HOF               | [['(u_1 / fuck)'], [], 'HOF'] |
+
+On of the core features of our tool is that we are also able to match subgraphs:
+```python
+#match a simple graph feature
+evaluator.match_features(df, [[["(u_1 / fuck :obj (u_2 / everything))"], [], "HOF"]])
+```
+
+This will only return one match instead of three:
+|    | Sentence                                                                         | Predicted label   | Matched rule                                          |
+|---:|:---------------------------------------------------------------------------------|:------------------|:------------------------------------------------------|
+|  0 | fuck absolutely everything about today.                                          | HOF               | [['(u_1 / fuck :obj (u_2 / everything))'], [], 'HOF'] |
+|  1 | I just made food and I'm making myself sick to my stomach. Lol, wtf is this shit |                   |                                                       |
+|  2 | RT [USER]: America is the most fucked up country [URL]                           |                   |                                                       |
+|  3 | you'd be blind to not see the heart eyes i have for you.                         |                   |                                                       |
+|  4 | It's hard for me to give a fuck now                                              |                   |                                                       |
+|  5 | tell me everything                                                               |                   |                                                       |
+|  6 | Bitch YES [URL]                                                                  |                   |                                                       |
+|  7 | Eight people a minute....                                                        |                   |                                                       |
+|  8 | RT [USER]: im not fine, i need you                                               |                   |                                                       |
+|  9 | Holy shit.. 3 months and I'll be in Italy                                        |                   |                                                       |
+| 10 | Now I do what I want 🤪                                                          |                   |                                                       |
+| 11 | [USER] you'd immediately stop                                                    |                   |                                                       |
+| 12 | Just... shut the fuck up                                                         |                   |                                                       |
+| 13 | RT [USER]: ohhhh shit a [USER] [URL]                                             |                   |                                                       |
+| 14 | all i want is for yara to survive tonight                                        |                   |                                                       |
+| 15 | fuck them                                                                        |                   |                                                       |                                                                   | HOF               | [['(u_1 / fuck)'], ['(u_2 / absolutely)'], 'HOF'] |
+
+
+We can also add negated features that we don't want to match (this won't match the first row where 'absolutely' is present):
+```python
+#match a simple graph feature
+evaluator.match_features(df, [[["(u_1 / fuck)"], ["(u_2 / absolutely)"], "HOF"]])
+```
+
+|    | Sentence                                                                         | Predicted label   | Matched rule                                      |
+|---:|:---------------------------------------------------------------------------------|:------------------|:--------------------------------------------------|
+|  0 | fuck absolutely everything about today.                                          |                   |                                                   |
+|  1 | I just made food and I'm making myself sick to my stomach. Lol, wtf is this shit |                   |                                                   |
+|  2 | RT [USER]: America is the most fucked up country [URL]                           |                   |                                                   |
+|  3 | you'd be blind to not see the heart eyes i have for you.                         |                   |                                                   |
+|  4 | It's hard for me to give a fuck now                                              | HOF               | [['(u_1 / fuck)'], ['(u_2 / absolutely)'], 'HOF'] |
+|  5 | tell me everything                                                               |                   |                                                   |
+|  6 | Bitch YES [URL]                                                                  |                   |                                                   |
+|  7 | Eight people a minute....                                                        |                   |                                                   |
+|  8 | RT [USER]: im not fine, i need you                                               |                   |                                                   |
+|  9 | Holy shit.. 3 months and I'll be in Italy                                        |                   |                                                   |
+| 10 | Now I do what I want 🤪                                                          |                   |                                                   |
+| 11 | [USER] you'd immediately stop                                                    |                   |                                                   |
+| 12 | Just... shut the fuck up                                                         | HOF               | [['(u_1 / fuck)'], ['(u_2 / absolutely)'], 'HOF'] |
+| 13 | RT [USER]: ohhhh shit a [USER] [URL]                                             |                   |                                                   |
+| 14 | all i want is for yara to survive tonight                                        |                   |                                                   |
+| 15 | fuck them                                                                        | HOF               | [['(u_1 / fuck)'], ['(u_2 / absolutely)'], 'HOF'] |
+
+If we don't want to specify nodes, regex can also be used in place of the node-names:
+
+```python
+#regex can be used to match any node (this will match instances where 'fuck' is connected to any node with 'obj' edge)
+evaluator.match_features(df, [[["(u_1 / fuck :obj (u_2 / .*))"], [], "HOF"]])
+```
+
+|    | Sentence                                                                         | Predicted label   | Matched rule                                  |
+|---:|:---------------------------------------------------------------------------------|:------------------|:----------------------------------------------|
+|  0 | fuck absolutely everything about today.                                          | HOF               | [['(u_1 / fuck :obj (u_2 / .*))'], [], 'HOF'] |
+|  1 | I just made food and I'm making myself sick to my stomach. Lol, wtf is this shit |                   |                                               |
+|  2 | RT [USER]: America is the most fucked up country [URL]                           |                   |                                               |
+|  3 | you'd be blind to not see the heart eyes i have for you.                         |                   |                                               |
+|  4 | It's hard for me to give a fuck now                                              |                   |                                               |
+|  5 | tell me everything                                                               |                   |                                               |
+|  6 | Bitch YES [URL]                                                                  |                   |                                               |
+|  7 | Eight people a minute....                                                        |                   |                                               |
+|  8 | RT [USER]: im not fine, i need you                                               |                   |                                               |
+|  9 | Holy shit.. 3 months and I'll be in Italy                                        |                   |                                               |
+| 10 | Now I do what I want 🤪                                                          |                   |                                               |
+| 11 | [USER] you'd immediately stop                                                    |                   |                                               |
+| 12 | Just... shut the fuck up                                                         |                   |                                               |
+| 13 | RT [USER]: ohhhh shit a [USER] [URL]                                             |                   |                                               |
+| 14 | all i want is for yara to survive tonight                                        |                   |                                               |
+| 15 | fuck them                                                                        | HOF               | [['(u_1 / fuck :obj (u_2 / .*))'], [], 'HOF'] |
+
+We can also train regex rules from a training data, this will automatically replace regex '.*' with nodes that are 
+'good enough' statistically based on the provided dataframe.
+
+```python
+#regex can be used to match any node (this will match instances where 'fuck' is connected to any node with 'obj' edge)
+evaluator.train_feature("HOF", "(u_1 / fuck :obj (u_2 / .*))", df)
+```
+
+This will return '(u_1 / fuck :obj (u_2 / everything|they))'] (replaced '.*' with _everything_ and _they_)
+
+### Learning rules
+
+To extract rules automatically, train the dataset with graph features and rank them based on relevancy:
 
 ```python
 df = dataset.to_dataframe()
@@ -111,11 +245,11 @@ python evaluate.py -t ud -f ../frontend/saved_features.json -d ../notebooks/val_
 ```
 
 The result will be a _csv_ file with the labels and the matched rules:
-|   | Sentence                                | Predicted label | Matched rule                          |   |
-|---|-----------------------------------------|-----------------|---------------------------------------|---|
-| 0 | RT [USER]: ohhhh shit a [USER] [URL]    | HOF             | ['(u_48 / shit)']                     |   |
-| 1 | [USER] you'd immediately stop           | HOF             | ['(u_40 / user :punct (u_42 / LSB))'] |   |
-| 2 | fuck absolutely everything about today. | HOF             | Matched rule                          |   |
+|     | Sentence                                | Predicted label | Matched rule                          |     |
+| --- | --------------------------------------- | --------------- | ------------------------------------- | --- |
+| 0   | RT [USER]: ohhhh shit a [USER] [URL]    | HOF             | ['(u_48 / shit)']                     |     |
+| 1   | [USER] you'd immediately stop           | HOF             | ['(u_40 / user :punct (u_42 / LSB))'] |     |
+| 2   | fuck absolutely everything about today. | HOF             | Matched rule                          |     |
 
 ## Contributing
 

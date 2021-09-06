@@ -36,9 +36,7 @@ def default_pn_to_graph(raw_dl, edge_attr="color"):
         if i == 0:
             root_id = next_id
             name = trip[2]
-            if name:
-                name = preprocess_node_alto(name)
-            else:
+            if not name:
                 name = "None"
             G.add_node(root_id, name=name)
             char_to_id[trip[0]] = next_id
@@ -47,9 +45,7 @@ def default_pn_to_graph(raw_dl, edge_attr="color"):
         elif trip[1] == ":instance":
             if trip[2]:
                 name = trip[2]
-                if name:
-                    name = preprocess_node_alto(name)
-                else:
+                if not name:
                     name = "None"
                 G.add_node(next_id, name=name)
                 char_to_id[trip[0]] = next_id
@@ -63,18 +59,14 @@ def default_pn_to_graph(raw_dl, edge_attr="color"):
             if src not in char_to_id:
                 char_to_id[src] = next_id
                 name = src
-                if name:
-                    name = preprocess_node_alto(name)
-                else:
+                if not name:
                     name = "None"
                 G.add_node(next_id, name=name)
                 next_id += 1
             if tgt not in char_to_id:
                 char_to_id[tgt] = next_id
                 name = tgt
-                if name:
-                    name = preprocess_node_alto(name)
-                else:
+                if not name:
                     name = "None"
                 G.add_node(next_id, name=name)
                 next_id += 1

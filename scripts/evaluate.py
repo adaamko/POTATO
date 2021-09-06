@@ -8,42 +8,7 @@ from collections import defaultdict
 import networkx as nx
 import pandas as pd
 from exprel.dataset.utils import default_pn_to_graph
-from networkx.algorithms.isomorphism import DiGraphMatcher
-from sklearn.metrics import precision_recall_fscore_support
-from tqdm import tqdm
-from tuw_nlp.graph.utils import GraphFormulaMatcher, pn_to_graph
-
-
-def evaluate_features(dataset, features, graph_format):
-    graphs = dataset.graph.tolist()
-
-    matches = []
-    predicted = []
-
-    feature_values = []
-    for k in features:
-        for f in features[k]:
-            feature_values.append(f)
-
-    matcher = GraphFormulaMatcher(feature_values, converter=default_pn_to_graph)
-
-    for i, g in tqdm(enumerate(graphs)):
-        feats = matcher.match(g)
-        for key, feature in feats:
-            matches.append(features[key][feature][0])
-            predicted.append(key)
-            break
-        else:
-            matches.append("")
-            predicted.append("NOT")
-
-    d = {
-        "Sentence": dataset.text.tolist(),
-        "Predicted label": predicted,
-        "Matched rule": matches,
-    }
-    df = pd.DataFrame(d)
-    return df
+from exprel.graph_extractor.extract import FeatureEvaluator
 
 
 def get_args():
@@ -67,7 +32,13 @@ def main():
 
     with open(args.features) as f:
         features = json.load(f)
-    df = evaluate_features(df, features, args.graph_type)
+
+    feature_values = []
+    for k in features:
+        for f in features[k]:
+            feature_values.append(f)
+    evaluator = FeatureEvaluator()
+    df = evaluator.match_features(df, feature_values)
     df.to_csv(sys.stdout, sep="\t")
 
 
