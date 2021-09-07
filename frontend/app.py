@@ -212,7 +212,7 @@ def read_val(path):
 def train_df(df):
     with st_stdout("code"):
         trainer = GraphTrainer(df)
-        features = trainer.train()
+        features = trainer.prepare_and_train()
 
         return features
 
