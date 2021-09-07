@@ -3,7 +3,7 @@ is a human-in-the-loop XAI framework for extracting and evaluating interpretable
 
 ## Install and Quick Start
 ### Setup
-The tool is heavily dependent upon then [tuw-nlp](https://github.com/recski/tuw-nlp) repository:
+The tool is heavily dependent upon the [tuw-nlp](https://github.com/recski/tuw-nlp) repository:
 
 ```
 git clone https://github.com/recski/tuw-nlp.git
