@@ -249,7 +249,7 @@ The result will be a _csv_ file with the labels and the matched rules:
 | --- | --------------------------------------- | --------------- | ------------------------------------- | --- |
 | 0   | RT [USER]: ohhhh shit a [USER] [URL]    | HOF             | ['(u_48 / shit)']                     |     |
 | 1   | [USER] you'd immediately stop           | HOF             | ['(u_40 / user :punct (u_42 / LSB))'] |     |
-| 2   | fuck absolutely everything about today. | HOF             | Matched rule                          |     |
+| 2   | fuck absolutely everything about today. | HOF             |  ['(u_1 / fuck)']                            |     |
 
 ## Contributing
 
