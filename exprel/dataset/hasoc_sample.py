@@ -23,6 +23,3 @@ class HasocSample(Sample):
 
     def _postprocess(self, graph):
         return graph
-
-    def set_graph(self, graph):
-        self.graph = graph
