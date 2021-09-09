@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 setup(
     name="exprel",
     version="0.1",
-    description="NLP tools at TUW Informatics",
+    description="XAI human-in-the-loop information extraction framework",
     url="https://github.com/adaamko/exp-relation-extraction",
     author="Adam Kovacs, Gabor Recski",
     author_email="adam.kovacs@tuwien.ac.at, gabor.recski@tuwien.ac.at",
