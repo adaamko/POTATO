@@ -347,9 +347,7 @@ def main(args):
                     if ag["selected_rows"]
                     else ag["data"].to_dict(orient="records")
                 )
-                st.write(ag["data"].to_dict(orient="records"))
                 for rule in selected_rules:
-                    st.write(rule)
                     positive_rules = (
                         rule["rules"].split(";")
                         if "rules" in rule and rule["rules"].strip()
@@ -410,7 +408,6 @@ def main(args):
                 if rows_to_delete and delete:
                     for r in feature_list:
                         if ";".join(r[0]) not in rows_to_delete:
-                            st.write(r)
                             rls_after_delete.append(r)
                 elif rows_to_delete and train:
                     rls_after_delete = copy.deepcopy(feature_list)
