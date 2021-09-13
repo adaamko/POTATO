@@ -71,6 +71,7 @@ evaluator = FeatureEvaluator()
 Match the rules in the dataset:
 ```python
 #match single feature
+df = dataset.to_dataframe()
 evaluator.match_features(df, rule_to_match)
 ```
 
