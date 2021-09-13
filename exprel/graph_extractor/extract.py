@@ -96,7 +96,29 @@ class FeatureEvaluator:
 
         return one_versus_rest_df
 
-    def train_feature(self, cl, feature, data, graph_format="fourlang"):
+    def rank_features(self, cl, features, orig_data, false_negatives):
+        subset_data = orig_data.iloc[false_negatives]
+        df, accuracy = self.evaluate_feature(cl, features, subset_data)
+
+        features_stat = []
+
+        for i, feature in enumerate(features):
+            features_stat.append(
+                (
+                    feature,
+                    df.iloc[i].Precision,
+                    df.iloc[i].Recall,
+                    df.iloc[i].Fscore,
+                    df.iloc[i].Support,
+                )
+            )
+
+        def rank(feature):
+            return len(df.iloc[features.index(feature[0])].True_positive_graphs)
+
+        return sorted(features_stat, key=rank, reverse=True)
+
+    def train_feature(self, cl, feature, data, graph_format="ud"):
         feature_graph = default_pn_to_graph(feature)[0]
 
         graphs = data.graph.tolist()
@@ -248,7 +270,7 @@ class FeatureEvaluator:
 
         return selected_words
 
-    def evaluate_feature(self, cl, features, data, graph_format="fourlang"):
+    def evaluate_feature(self, cl, features, data, graph_format="ud"):
         measure_features = []
         graphs = data.graph.tolist()
         labels = self.one_versus_rest(data, cl).one_versus_rest.tolist()
@@ -259,6 +281,7 @@ class FeatureEvaluator:
         # We want to view false negative examples for all rules, not rule specific
         false_neg_g = []
         false_neg_s = []
+        false_neg_indices = []
         matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph)
         for i, g in enumerate(graphs):
             feats = matcher.match(g)
@@ -273,6 +296,7 @@ class FeatureEvaluator:
                 sen = data.iloc[i].text
                 lab = data.iloc[i].label
                 false_neg_s.append((sen, lab))
+                false_neg_indices.append(i)
 
         accuracy = []
         for pcf in precision_recall_fscore_support(
@@ -309,6 +333,7 @@ class FeatureEvaluator:
             measure.append(true_pos_s)
             measure.append(false_neg_g)
             measure.append(false_neg_s)
+            measure.append(false_neg_indices)
             measure_features.append(measure)
 
         df = pd.DataFrame(
@@ -325,6 +350,7 @@ class FeatureEvaluator:
                 "True_positive_sens",
                 "False_negative_graphs",
                 "False_negative_sens",
+                "False_negative_indices",
             ],
         )
 

@@ -1,11 +1,14 @@
+from collections import defaultdict
+from typing import Dict, List
+from typing import Union
+
 import eli5
 import pandas as pd
 from exprel.graph_extractor.extract import GraphExtractor
 from exprel.models.model import GraphModel
-from tqdm import tqdm
-from collections import defaultdict
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split as split
+from tqdm import tqdm
 
 
 class GraphTrainer:
@@ -24,7 +27,11 @@ class GraphTrainer:
         self.max_features = max_features
         self.model = LogisticRegression(random_state=0)
 
-    def train(self) -> None:
+    def prepare_and_train(self) -> Dict[str, List[List[Union[List[str], str]]]]:
+        self.prepare()
+        return self.train()
+
+    def prepare(self) -> None:
         ids = pd.to_numeric(self.dataset.index).tolist()
         sentences = self.dataset.text.tolist()
         labels = self.dataset.label_id.tolist()
@@ -41,6 +48,7 @@ class GraphTrainer:
         print("Selecting the best features...")
         self.graph_model.select_n_best(self.max_features)
 
+    def train(self) -> Dict[str, List[List[Union[List[str], str]]]]:
         label_vocab = {}
         for label in self.dataset.label.unique():
             label_vocab[label] = (

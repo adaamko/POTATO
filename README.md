@@ -190,7 +190,7 @@ To extract rules automatically, train the dataset with graph features and rank t
 df = dataset.to_dataframe()
 trainer = GraphTrainer(df)
 #extract features
-features = trainer.train()
+features = trainer.prepare_and_train()
 
 from sklearn.model_selection import train_test_split
 

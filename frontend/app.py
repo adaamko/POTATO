@@ -55,6 +55,8 @@ if "trained" not in st.session_state:
     st.session_state.trained = False
 if "ml_feature" not in st.session_state:
     st.session_state.ml_feature = None
+if "sens" not in st.session_state:
+    st.session_state.sens = []
 
 
 def rerun():
@@ -212,7 +214,7 @@ def read_val(path):
 def train_df(df):
     with st_stdout("code"):
         trainer = GraphTrainer(df)
-        features = trainer.train()
+        features = trainer.prepare_and_train()
 
         return features
 
@@ -274,7 +276,7 @@ def main(args):
     if st.session_state.trained or args.suggested_rules:
         col1, col2 = st.columns(2)
 
-        if feature_path and os.path.exists(feature_path):
+        if feature_path and os.path.exists(feature_path) and not st.session_state.suggested_features:
             with open(feature_path) as f:
                 st.session_state.suggested_features = json.load(f)
 
@@ -301,50 +303,12 @@ def main(args):
             classes = st.selectbox(
                 "Choose class", list(st.session_state.features.keys())
             )
-            sens = [";".join(feat[0]) for feat in st.session_state.features[classes]]
-            option = "Rules to add here"
-            option = st.selectbox("Choose from the rules", sens)
 
-            G, _ = default_pn_to_graph(option.split(";")[0])
-
-            text_G, _ = default_pn_to_graph(option.split(";")[0])
-
-            st.graphviz_chart(to_dot(text_G), use_container_width=True)
-            nodes = [
-                d_clean(n[1]["name"].split("_")[0]) for n in text_G.nodes(data=True)
-            ]
-
-            text = st.text_area("You can add a new rule here")
-
-            negated_text = st.text_area("You can modify the negated features here")
-
-            agree = st.button("Add rule to the ruleset")
-            if agree:
-                if not negated_text.strip():
-                    negated_features = []
-                else:
-                    negated_features = negated_text.split(";")
-                st.session_state.features[classes].append(
-                    [[text], negated_features, classes]
-                )
-                if st.session_state.features[classes]:
-                    st.session_state.feature_df = get_df_from_rules(
-                        [
-                            ";".join(feat[0])
-                            for feat in st.session_state.features[classes]
-                        ],
-                        [
-                            ";".join(feat[1])
-                            for feat in st.session_state.features[classes]
-                        ],
-                    )
-                    save_rules = hand_made_rules or "saved_features.json"
-                    save_ruleset(save_rules, st.session_state.features)
-                    rerun()
             st.session_state.feature_df = get_df_from_rules(
                 [";".join(feat[0]) for feat in st.session_state.features[classes]],
                 [";".join(feat[1]) for feat in st.session_state.features[classes]],
             )
+
             with st.form("example form") as f:
                 gb = GridOptionsBuilder.from_dataframe(st.session_state.feature_df)
                 # make all columns editable
@@ -354,6 +318,7 @@ def main(args):
                     use_checkbox=True,
                     groupSelectsChildren=True,
                     groupSelectsFiltered=True,
+                    # ◙pre_selected_rows=[1,2]
                 )
                 go = gb.build()
                 ag = AgGrid(
@@ -362,14 +327,63 @@ def main(args):
                     key="grid1",
                     allow_unsafe_jscode=True,
                     reload_data=True,
-                    update_mode=GridUpdateMode.MODEL_CHANGED,
+                    update_mode=GridUpdateMode.MODEL_CHANGED
+                    | GridUpdateMode.VALUE_CHANGED,
                     width="100%",
+                    theme="material",
                     fit_columns_on_grid_load=True,
                 )
+
                 delete_or_train = st.radio(
                     "Delete or Train selected rules", ("none", "delete", "train")
                 )
                 submit = st.form_submit_button(label="save updates")
+                evaluate = st.form_submit_button(label="evaluate selected")
+
+            if evaluate:
+                feature_list = []
+                selected_rules = (
+                    ag["selected_rows"]
+                    if ag["selected_rows"]
+                    else ag["data"].to_dict(orient="records")
+                )
+                for rule in selected_rules:
+                    positive_rules = (
+                        rule["rules"].split(";")
+                        if "rules" in rule and rule["rules"].strip()
+                        else []
+                    )
+                    negated_rules = (
+                        rule["negated_rules"].split(";")
+                        if "negated_rules" in rule and rule["negated_rules"].strip()
+                        else []
+                    )
+                    feature_list.append(
+                        [
+                            positive_rules,
+                            negated_rules,
+                            classes,
+                        ]
+                    )
+                st.session_state.sens = [";".join(feat[0]) for feat in feature_list]
+                with st.spinner("Evaluating rules..."):
+                    (
+                        st.session_state.dataframe,
+                        st.session_state.whole_accuracy,
+                    ) = evaluator.evaluate_feature(
+                        classes, feature_list, data, graph_format
+                    )
+                    (
+                        st.session_state.val_dataframe,
+                        st.session_state.whole_accuracy_val,
+                    ) = evaluator.evaluate_feature(
+                        classes,
+                        feature_list,
+                        val_data,
+                        graph_format,
+                    )
+                st.success("Done!")
+                rerun()
 
             if submit:
                 delete = delete_or_train == "delete"
@@ -394,7 +408,6 @@ def main(args):
                 if rows_to_delete and delete:
                     for r in feature_list:
                         if ";".join(r[0]) not in rows_to_delete:
-                            st.write(r)
                             rls_after_delete.append(r)
                 elif rows_to_delete and train:
                     rls_after_delete = copy.deepcopy(feature_list)
@@ -427,60 +440,138 @@ def main(args):
                     save_ruleset(save_rules, st.session_state.features)
                     rerun()
 
-            evaluate = st.button("Evaluate ruleset")
-            if evaluate:
-                with st.spinner("Evaluating rules..."):
-                    (
-                        st.session_state.dataframe,
-                        st.session_state.whole_accuracy,
-                    ) = evaluator.evaluate_feature(
-                        classes, st.session_state.features[classes], data, graph_format
+            text = st.text_area("You can add a new rule here manually")
+
+            negated_text = st.text_area("You can modify the negated features here")
+
+            agree = st.button("Add rule to the ruleset")
+            if agree:
+                if not negated_text.strip():
+                    negated_features = []
+                else:
+                    negated_features = negated_text.split(";")
+                st.session_state.features[classes].append(
+                    [[text], negated_features, classes]
+                )
+                if st.session_state.features[classes]:
+                    st.session_state.feature_df = get_df_from_rules(
+                        [
+                            ";".join(feat[0])
+                            for feat in st.session_state.features[classes]
+                        ],
+                        [
+                            ";".join(feat[1])
+                            for feat in st.session_state.features[classes]
+                        ],
                     )
-                    (
-                        st.session_state.val_dataframe,
-                        st.session_state.whole_accuracy_val,
-                    ) = evaluator.evaluate_feature(
-                        classes,
-                        st.session_state.features[classes],
-                        val_data,
-                        graph_format,
+                    save_rules = hand_made_rules or "saved_features.json"
+                    save_ruleset(save_rules, st.session_state.features)
+                    rerun()
+
+            st.markdown(
+                f"<span><b>Or get suggestions by our ML!</b></span>",
+                unsafe_allow_html=True,
+            )
+            suggest_new_rule = st.button("suggest new rules")
+            if suggest_new_rule:
+                if (
+                    not st.session_state.dataframe.empty
+                    and st.session_state.sens
+                    and st.session_state.suggested_features[classes]
+                ):
+                    features_to_rank = st.session_state.suggested_features[classes][:5]
+                    with st.spinner("Ranking rules..."):
+                        features_ranked = evaluator.rank_features(
+                            classes,
+                            features_to_rank,
+                            data,
+                            st.session_state.dataframe.iloc[
+                                0
+                            ].False_negative_indices,
+                        )
+                    suggested_feature = features_ranked[0]
+                    st.session_state.suggested_features[classes].remove(
+                        suggested_feature[0]
                     )
-                st.success("Done!")
+
+                    st.session_state.ml_feature = suggested_feature
+
+            if st.session_state.ml_feature:
+                st.markdown(
+                    f"<span>Feature: {st.session_state.ml_feature[0]}, Precision: <b>{st.session_state.ml_feature[1]:.3f}</b>, \
+                        Recall: <b>{st.session_state.ml_feature[2]:.3f}</b>, Fscore: <b>{st.session_state.ml_feature[3]:.3f}</b>, \
+                            Support: <b>{st.session_state.ml_feature[4]}</b></span>",
+                    unsafe_allow_html=True,
+                )
+
+                accept_rule = st.button("Accept")
+                decline_rule = st.button("Decline")
+
+                if accept_rule:
+                    st.session_state.features[classes].append(
+                        st.session_state.ml_feature[0]
+                    )
+                    st.session_state.ml_feature = None
+                    rerun()
+                elif decline_rule:
+                    st.session_state.ml_feature = None
+                    rerun()
 
         with col2:
-            if not st.session_state.dataframe.empty:
+            if not st.session_state.dataframe.empty and st.session_state.sens:
+                if st.session_state.sens:
+                    option = st.selectbox(
+                        "Choose from the rules", st.session_state.sens
+                    )
+
+                    G, _ = default_pn_to_graph(option.split(";")[0])
+
+                    text_G, _ = default_pn_to_graph(option.split(";")[0])
+
+                    st.graphviz_chart(to_dot(text_G), use_container_width=True)
+                    nodes = [
+                        d_clean(n[1]["name"].split("_")[0])
+                        for n in text_G.nodes(data=True)
+                    ]
                 st.markdown(
                     f"<span>Result of using all the rules: Precision: <b>{st.session_state.whole_accuracy[0]:.3f}</b>, \
                         Recall: <b>{st.session_state.whole_accuracy[1]:.3f}</b>, Fscore: <b>{st.session_state.whole_accuracy[2]:.3f}</b>, \
                             Support: <b>{st.session_state.whole_accuracy[3]}</b></span>",
                     unsafe_allow_html=True,
                 )
-
                 fp_graphs = st.session_state.dataframe.iloc[
-                    sens.index(option)
+                    st.session_state.sens.index(option)
                 ].False_positive_graphs
                 fp_sentences = st.session_state.dataframe.iloc[
-                    sens.index(option)
+                    st.session_state.sens.index(option)
                 ].False_positive_sens
 
                 tp_graphs = st.session_state.dataframe.iloc[
-                    sens.index(option)
+                    st.session_state.sens.index(option)
                 ].True_positive_graphs
                 tp_sentences = st.session_state.dataframe.iloc[
-                    sens.index(option)
+                    st.session_state.sens.index(option)
                 ].True_positive_sens
 
                 fn_graphs = st.session_state.dataframe.iloc[
-                    sens.index(option)
+                    st.session_state.sens.index(option)
                 ].False_negative_graphs
                 fn_sentences = st.session_state.dataframe.iloc[
-                    sens.index(option)
+                    st.session_state.sens.index(option)
                 ].False_negative_sens
 
-                prec = st.session_state.dataframe.iloc[sens.index(option)].Precision
-                recall = st.session_state.dataframe.iloc[sens.index(option)].Recall
-                fscore = st.session_state.dataframe.iloc[sens.index(option)].Fscore
-                support = st.session_state.dataframe.iloc[sens.index(option)].Support
+                prec = st.session_state.dataframe.iloc[
+                    st.session_state.sens.index(option)
+                ].Precision
+                recall = st.session_state.dataframe.iloc[
+                    st.session_state.sens.index(option)
+                ].Recall
+                fscore = st.session_state.dataframe.iloc[
+                    st.session_state.sens.index(option)
+                ].Fscore
+                support = st.session_state.dataframe.iloc[
+                    st.session_state.sens.index(option)
+                ].Support
 
                 st.markdown(
                     f"<span>The rule's result: Precision: <b>{prec:.3f}</b>, Recall: <b>{recall:.3f}</b>, \
@@ -490,16 +581,16 @@ def main(args):
 
                 with st.expander("Show validation data", expanded=False):
                     val_prec = st.session_state.val_dataframe.iloc[
-                        sens.index(option)
+                        st.session_state.sens.index(option)
                     ].Precision
                     val_recall = st.session_state.val_dataframe.iloc[
-                        sens.index(option)
+                        st.session_state.sens.index(option)
                     ].Recall
                     val_fscore = st.session_state.val_dataframe.iloc[
-                        sens.index(option)
+                        st.session_state.sens.index(option)
                     ].Fscore
                     val_support = st.session_state.val_dataframe.iloc[
-                        sens.index(option)
+                        st.session_state.sens.index(option)
                     ].Support
                     st.markdown(
                         f"<span>Result of using all the rules on the validation data: Precision: <b>{st.session_state.whole_accuracy_val[0]:.3f}</b>, \
@@ -631,42 +722,6 @@ def main(args):
                             ),
                             use_container_width=True,
                         )
-
-                suggest_new_rule = st.button("suggest new rule")
-                if suggest_new_rule:
-                    if st.session_state.suggested_features[classes]:
-                        suggested_feature = st.session_state.suggested_features[
-                            classes
-                        ].pop(0)
-                        while (
-                            st.session_state.suggested_features[classes]
-                            and suggested_feature in st.session_state.features[classes]
-                        ):
-                            suggested_feature = st.session_state.suggested_features[
-                                classes
-                            ].pop(0)
-
-                        st.session_state.ml_feature = suggested_feature
-
-                if st.session_state.ml_feature:
-
-                    st.markdown(
-                        f'<span style="color:red"><b>{st.session_state.ml_feature}</b></span>',
-                        unsafe_allow_html=True,
-                    )
-
-                    accept_rule = st.button("Accept")
-                    decline_rule = st.button("Decline")
-
-                    if accept_rule:
-                        st.session_state.features[classes].append(
-                            st.session_state.ml_feature
-                        )
-                        st.session_state.ml_feature = None
-                        rerun()
-                    elif decline_rule:
-                        st.session_state.ml_feature = None
-                        rerun()
 
                 # TODO
                 # this is just experimental
