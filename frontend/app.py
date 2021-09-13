@@ -276,7 +276,7 @@ def main(args):
     if st.session_state.trained or args.suggested_rules:
         col1, col2 = st.columns(2)
 
-        if feature_path and os.path.exists(feature_path):
+        if feature_path and os.path.exists(feature_path) and not st.session_state.suggested_features:
             with open(feature_path) as f:
                 st.session_state.suggested_features = json.load(f)
 
@@ -474,24 +474,33 @@ def main(args):
             )
             suggest_new_rule = st.button("suggest new rules")
             if suggest_new_rule:
-                if st.session_state.suggested_features[classes]:
-                    suggested_feature = st.session_state.suggested_features[
-                        classes
-                    ].pop(0)
-                    while (
-                        st.session_state.suggested_features[classes]
-                        and suggested_feature in st.session_state.features[classes]
-                    ):
-                        suggested_feature = st.session_state.suggested_features[
-                            classes
-                        ].pop(0)
+                if (
+                    not st.session_state.dataframe.empty
+                    and st.session_state.sens
+                    and st.session_state.suggested_features[classes]
+                ):
+                    features_to_rank = st.session_state.suggested_features[classes][:5]
+                    with st.spinner("Ranking rules..."):
+                        features_ranked = evaluator.rank_features(
+                            classes,
+                            features_to_rank,
+                            data,
+                            st.session_state.dataframe.iloc[
+                                0
+                            ].False_negative_indices,
+                        )
+                    suggested_feature = features_ranked[0]
+                    st.session_state.suggested_features[classes].remove(
+                        suggested_feature[0]
+                    )
 
                     st.session_state.ml_feature = suggested_feature
 
             if st.session_state.ml_feature:
-
                 st.markdown(
-                    f'<span style="color:red"><b>{st.session_state.ml_feature}</b></span>',
+                    f"<span>Feature: {st.session_state.ml_feature[0]}, Precision: <b>{st.session_state.ml_feature[1]:.3f}</b>, \
+                        Recall: <b>{st.session_state.ml_feature[2]:.3f}</b>, Fscore: <b>{st.session_state.ml_feature[3]:.3f}</b>, \
+                            Support: <b>{st.session_state.ml_feature[4]}</b></span>",
                     unsafe_allow_html=True,
                 )
 
@@ -500,7 +509,7 @@ def main(args):
 
                 if accept_rule:
                     st.session_state.features[classes].append(
-                        st.session_state.ml_feature
+                        st.session_state.ml_feature[0]
                     )
                     st.session_state.ml_feature = None
                     rerun()
