@@ -1,5 +1,6 @@
 from collections import defaultdict
 from typing import Dict, List
+from typing import Union
 
 import eli5
 import pandas as pd
@@ -26,7 +27,7 @@ class GraphTrainer:
         self.max_features = max_features
         self.model = LogisticRegression(random_state=0)
 
-    def prepare_and_train(self) -> Dict[str, List[List[List[str], List[str], str]]]:
+    def prepare_and_train(self) -> Dict[str, List[List[Union[List[str], str]]]]:
         self.prepare()
         return self.train()
 
@@ -47,7 +48,7 @@ class GraphTrainer:
         print("Selecting the best features...")
         self.graph_model.select_n_best(self.max_features)
 
-    def train(self) -> Dict[str, List[List[List[str], List[str], str]]]:
+    def train(self) -> Dict[str, List[List[Union[List[str], str]]]]:
         label_vocab = {}
         for label in self.dataset.label.unique():
             label_vocab[label] = (
