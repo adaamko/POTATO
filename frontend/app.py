@@ -225,23 +225,14 @@ def get_args():
     parser.add_argument("-v", "--val-data", type=str, required=True)
     parser.add_argument("-sr", "--suggested-rules", default=None, type=str)
     parser.add_argument("-hr", "--hand-rules", default=None, type=str)
+    parser.add_argument("-m", "--mode", default="supervised", type=str)
     parser.add_argument("-g", "--graph-format", default="fourlang", type=str)
     return parser.parse_args()
 
 
-def main(args):
-    st.set_page_config(layout="wide")
-    st.markdown(
-        "<h1 style='text-align: center; color: black;'>Rule extraction framework</h1>",
-        unsafe_allow_html=True,
-    )
-
-    evaluator = init_evaluator()
-    data = read_train(args.train_data)
-    val_data = read_val(args.val_data)
-    graph_format = args.graph_format
-    feature_path = args.suggested_rules
-    hand_made_rules = args.hand_rules
+def supervised_mode(
+    evaluator, data, val_data, graph_format, feature_path, hand_made_rules
+):
     if hand_made_rules:
         with open(hand_made_rules) as f:
             st.session_state.features = json.load(f)
@@ -273,10 +264,14 @@ def main(args):
             pd.Series(" ".join(data["text"]).lower().split()).value_counts()[:100]
         )
 
-    if st.session_state.trained or args.suggested_rules:
+    if st.session_state.trained or feature_path:
         col1, col2 = st.columns(2)
 
-        if feature_path and os.path.exists(feature_path) and not st.session_state.suggested_features:
+        if (
+            feature_path
+            and os.path.exists(feature_path)
+            and not st.session_state.suggested_features
+        ):
             with open(feature_path) as f:
                 st.session_state.suggested_features = json.load(f)
 
@@ -485,9 +480,7 @@ def main(args):
                             classes,
                             features_to_rank,
                             data,
-                            st.session_state.dataframe.iloc[
-                                0
-                            ].False_negative_indices,
+                            st.session_state.dataframe.iloc[0].False_negative_indices,
                         )
                     suggested_feature = features_ranked[0]
                     st.session_state.suggested_features[classes].remove(
@@ -723,25 +716,56 @@ def main(args):
                             use_container_width=True,
                         )
 
-                # TODO
-                # this is just experimental
-                # if graph_format == "fourlang":
-                #     fl = FourLang(current_graph, 0)
-                #     expand_node = st.text_input("Expand node", None)
-                #     append_zero_path = st.button(
-                #         "Expand node and append zero paths to the graph")
-                #     if append_zero_path:
-                #         tfl.expand(fl, depth=1, expand_set={
-                #                    expand_node}, strategy="whitelisting")
-                #         fl.append_zero_paths()
 
-                #     show_graph = st.expander(
-                #         "Show graph", expanded=False)
+def unsupervised_mode(evaluator, data, val_data, graph_format, feature_path, hand_made_rules):
+    df = data[["text", "label"]]
+    gb = GridOptionsBuilder.from_dataframe(df)
+    # make all columns editable
+    gb.configure_columns(["label"], editable=True)
+    gb.configure_selection(
+        "multiple",
+        use_checkbox=True,
+        groupSelectsChildren=True,
+        groupSelectsFiltered=True,
+        # ◙pre_selected_rows=[1,2]
+    )
+    go = gb.build()
+    ag = AgGrid(
+        df,
+        gridOptions=go,
+        key="grid1",
+        allow_unsafe_jscode=True,
+        reload_data=True,
+        update_mode=GridUpdateMode.MODEL_CHANGED
+        | GridUpdateMode.VALUE_CHANGED,
+        width="100%",
+        theme="material",
+        fit_columns_on_grid_load=True,
+    )
 
-                #     with show_graph:
-                #         if current_graph:
-                #             st.graphviz_chart(
-                #                 to_dot(fl.G, marked_nodes=set(nodes)), use_container_width=True)
+
+def main(args):
+    st.set_page_config(layout="wide")
+    st.markdown(
+        "<h1 style='text-align: center; color: black;'>Rule extraction framework</h1>",
+        unsafe_allow_html=True,
+    )
+
+    evaluator = init_evaluator()
+    data = read_train(args.train_data)
+    val_data = read_val(args.val_data)
+    graph_format = args.graph_format
+    feature_path = args.suggested_rules
+    hand_made_rules = args.hand_rules
+    mode = args.mode
+    if mode == "supervised":
+        supervised_mode(
+            evaluator, data, val_data, graph_format, feature_path, hand_made_rules
+        )
+    elif mode == "unsupervised":
+        unsupervised_mode(
+            evaluator, data, val_data, graph_format, feature_path, hand_made_rules
+        )
 
 
 if __name__ == "__main__":
