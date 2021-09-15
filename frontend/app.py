@@ -717,31 +717,36 @@ def supervised_mode(
                         )
 
 
-def unsupervised_mode(evaluator, data, val_data, graph_format, feature_path, hand_made_rules):
+def unsupervised_mode(
+    evaluator, data, val_data, graph_format, feature_path, hand_made_rules
+):
     df = data[["text", "label"]]
-    gb = GridOptionsBuilder.from_dataframe(df)
-    # make all columns editable
-    gb.configure_columns(["label"], editable=True)
-    gb.configure_selection(
-        "multiple",
-        use_checkbox=True,
-        groupSelectsChildren=True,
-        groupSelectsFiltered=True,
-        # ◙pre_selected_rows=[1,2]
-    )
-    go = gb.build()
-    ag = AgGrid(
-        df,
-        gridOptions=go,
-        key="grid1",
-        allow_unsafe_jscode=True,
-        reload_data=True,
-        update_mode=GridUpdateMode.MODEL_CHANGED
-        | GridUpdateMode.VALUE_CHANGED,
-        width="100%",
-        theme="material",
-        fit_columns_on_grid_load=True,
-    )
+
+    with st.form("example form") as f:
+        gb = GridOptionsBuilder.from_dataframe(df)
+        # make all columns editable
+        gb.configure_columns(["label"], editable=True)
+        gb.configure_selection(
+            "multiple",
+            use_checkbox=True,
+            groupSelectsChildren=True,
+            groupSelectsFiltered=True,
+            # ◙pre_selected_rows=[1,2]
+        )
+        go = gb.build()
+        ag = AgGrid(
+            df,
+            gridOptions=go,
+            key="grid1",
+            allow_unsafe_jscode=True,
+            reload_data=True,
+            update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
+            width="100%",
+            theme="material",
+            fit_columns_on_grid_load=True,
+        )
+
+        annotate = st.form_submit_button("Annotate")
 
 
 def main(args):
