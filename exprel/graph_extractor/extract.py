@@ -334,6 +334,7 @@ class FeatureEvaluator:
             measure.append(false_neg_g)
             measure.append(false_neg_s)
             measure.append(false_neg_indices)
+            measure.append(predicted)
             measure_features.append(measure)
 
         df = pd.DataFrame(
@@ -351,6 +352,7 @@ class FeatureEvaluator:
                 "False_negative_graphs",
                 "False_negative_sens",
                 "False_negative_indices",
+                "Predicted",
             ],
         )
 

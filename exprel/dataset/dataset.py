@@ -26,7 +26,8 @@ class Dataset:
                 "text": [sample.text for sample in self._dataset],
                 "label": [sample.label for sample in self._dataset],
                 "label_id": [
-                    self.label_vocab[sample.label] if sample.label else None for sample in self._dataset
+                    self.label_vocab[sample.label] if sample.label else None
+                    for sample in self._dataset
                 ],
                 "graph": [sample.graph for sample in self._dataset],
             }

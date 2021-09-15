@@ -35,6 +35,8 @@ if "true_graph_number" not in st.session_state:
     st.session_state.true_graph_number = 0
 if "false_neg_number" not in st.session_state:
     st.session_state.false_neg_number = 0
+if "predicted_num" not in st.session_state:
+    st.session_state.predicted_num = 0
 if "whole_accuracy" not in st.session_state:
     st.session_state.whole_accuracy = []
 if "dataframe" not in st.session_state:
@@ -219,17 +221,6 @@ def train_df(df):
         return features
 
 
-def get_args():
-    parser = argparse.ArgumentParser(description="")
-    parser.add_argument("-t", "--train-data", type=str, required=True)
-    parser.add_argument("-v", "--val-data", type=str, required=True)
-    parser.add_argument("-sr", "--suggested-rules", default=None, type=str)
-    parser.add_argument("-hr", "--hand-rules", default=None, type=str)
-    parser.add_argument("-m", "--mode", default="supervised", type=str)
-    parser.add_argument("-g", "--graph-format", default="fourlang", type=str)
-    return parser.parse_args()
-
-
 def supervised_mode(
     evaluator, data, val_data, graph_format, feature_path, hand_made_rules
 ):
@@ -291,8 +282,8 @@ def supervised_mode(
 
         col2.header("Graphs and results")
 
-        if graph_format == "fourlang":
-            tfl = load_text_to_4lang()
+        # if graph_format == "fourlang":
+        #    tfl = load_text_to_4lang()
 
         with col1:
             classes = st.selectbox(
@@ -717,27 +708,110 @@ def supervised_mode(
                         )
 
 
-def unsupervised_mode(
-    evaluator, data, val_data, graph_format, feature_path, hand_made_rules
-):
-    df = data[["text", "label"]]
+def annotate_df(predicted):
+    for i, pred in enumerate(predicted):
+        if pred:
+            st.session_state.df.loc[i, "label"] = st.session_state.inverse_labels[1]
+            st.session_state.df.loc[i, "applied_rules"] = pred
 
-    with st.form("example form") as f:
-        gb = GridOptionsBuilder.from_dataframe(df)
-        # make all columns editable
-        gb.configure_columns(["label"], editable=True)
-        gb.configure_selection(
-            "multiple",
-            use_checkbox=True,
-            groupSelectsChildren=True,
-            groupSelectsFiltered=True,
-            # ◙pre_selected_rows=[1,2]
+
+def unsupervised_mode(evaluator, data, graph_format, feature_path, hand_made_rules):
+
+    if hand_made_rules:
+        with open(hand_made_rules) as f:
+            st.session_state.features = json.load(f)
+    if "df" not in st.session_state:
+        st.session_state.df = data.copy()
+        if "annotated" not in st.session_state.df:
+            st.session_state.df["annotated"] = False
+        if "applied_rules" not in st.session_state.df:
+            st.session_state.df["applied_rules"] = [
+                [] for _ in range(len(st.session_state.df))
+            ]
+        st.session_state.df.reset_index(level=0, inplace=True)
+
+    if "applied_rules" not in st.session_state:
+        st.session_state.applied_rules = []
+
+    df_annotated = st.session_state.df[st.session_state.df.annotated == True][
+        ["index", "text", "label", "applied_rules"]
+    ]
+    df_unannotated = st.session_state.df[st.session_state.df.annotated == False][
+        ["index", "text", "label", "applied_rules"]
+    ]
+
+    if "labels" not in st.session_state:
+        st.text("Before we start, please provide labels you want to train")
+        user_input = st.text_input("label encoding", "NOT:0,OFF:1")
+
+        st.session_state.labels = {
+            label.split(":")[0]: int(label.split(":")[1])
+            for label in user_input.split(",")
+        }
+
+        st.write(st.session_state.labels)
+        st.session_state.inverse_labels = {
+            v: k for (k, v) in st.session_state.labels.items()
+        }
+    else:
+        st.markdown(
+            f"<span><b>Annotate samples here:</b></span>",
+            unsafe_allow_html=True,
         )
-        go = gb.build()
+
+        if st.session_state.applied_rules:
+            st.markdown(
+                f"<span>Currently the following rules are applied:</span>",
+                unsafe_allow_html=True,
+            )
+            st.write(st.session_state.applied_rules)
+        with st.form("annotate form") as f:
+            gb = GridOptionsBuilder.from_dataframe(df_unannotated)
+            gb.configure_default_column(
+                editable=True,
+                resizable=True,
+                sorteable=True,
+                wrapText=True,
+                autoHeight=False,
+            )
+            # make all columns editable
+            gb.configure_selection(
+                "multiple",
+                use_checkbox=True,
+                groupSelectsChildren=True,
+                groupSelectsFiltered=True,
+            )
+            go = gb.build()
+            ag = AgGrid(
+                df_unannotated,
+                gridOptions=go,
+                key="grid2",
+                allow_unsafe_jscode=True,
+                reload_data=True,
+                update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
+                width="100%",
+                theme="material",
+                fit_columns_on_grid_load=True,
+            )
+
+            annotate = st.form_submit_button("Annotate")
+
+        if annotate:
+            if ag["selected_rows"]:
+                for row in ag["selected_rows"]:
+                    st.session_state.df.loc[
+                        row["index"], "label"
+                    ] = st.session_state.inverse_labels[1]
+                    st.session_state.df.loc[row["index"], "annotated"] = True
+                rerun()
+
+        st.markdown(
+            f"<span>Samples you have already annotated:</span>",
+            unsafe_allow_html=True,
+        )
         ag = AgGrid(
-            df,
-            gridOptions=go,
-            key="grid1",
+            df_annotated,
+            key="grid3",
             allow_unsafe_jscode=True,
             reload_data=True,
             update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
@@ -746,7 +820,501 @@ def unsupervised_mode(
             fit_columns_on_grid_load=True,
         )
 
-        annotate = st.form_submit_button("Annotate")
+        train = st.button("Train!")
+        if train:
+            st.session_state.trained = True
+            df_to_train = st.session_state.df.copy()
+            df_to_train["label"] = df_to_train["label"].apply(
+                lambda x: st.session_state.inverse_labels[0] if not x else x
+            )
+            df_to_train["label_id"] = df_to_train["label"].apply(
+                lambda x: st.session_state.labels[x]
+            )
+            st.session_state.suggested_features = train_df(df_to_train)
+            st.session_state.dataframe = pd.DataFrame
+
+        col1, col2 = st.columns(2)
+
+        if st.session_state.trained and st.session_state.suggested_features:
+            with col1:
+
+                if not st.session_state.features:
+                    for key in st.session_state.suggested_features:
+                        st.session_state.features[key] = [
+                            st.session_state.suggested_features[key].pop(0)
+                        ]
+
+                classes = st.selectbox(
+                    "Choose class", list(st.session_state.features.keys())
+                )
+
+                st.session_state.feature_df = get_df_from_rules(
+                    [";".join(feat[0]) for feat in st.session_state.features[classes]],
+                    [";".join(feat[1]) for feat in st.session_state.features[classes]],
+                )
+
+                with st.form("example form") as f:
+                    gb = GridOptionsBuilder.from_dataframe(st.session_state.feature_df)
+                    # make all columns editable
+                    gb.configure_columns(["rules", "negated_rules"], editable=True)
+                    gb.configure_selection(
+                        "multiple",
+                        use_checkbox=True,
+                        groupSelectsChildren=True,
+                        groupSelectsFiltered=True,
+                        # ◙pre_selected_rows=[1,2]
+                    )
+                    go = gb.build()
+                    ag = AgGrid(
+                        st.session_state.feature_df,
+                        gridOptions=go,
+                        key="grid1",
+                        allow_unsafe_jscode=True,
+                        reload_data=True,
+                        update_mode=GridUpdateMode.MODEL_CHANGED
+                        | GridUpdateMode.VALUE_CHANGED,
+                        width="100%",
+                        theme="material",
+                        fit_columns_on_grid_load=True,
+                    )
+
+                    delete_or_train = st.radio(
+                        "Delete or Train selected rules", ("none", "delete", "train")
+                    )
+                    submit = st.form_submit_button(label="save updates")
+                    evaluate = st.form_submit_button(label="evaluate selected")
+                    annotate = st.form_submit_button(label="annotate based on selected")
+
+                feature_list = []
+                selected_rules = (
+                    ag["selected_rows"]
+                    if ag["selected_rows"]
+                    else ag["data"].to_dict(orient="records")
+                )
+                for rule in selected_rules:
+                    positive_rules = (
+                        rule["rules"].split(";")
+                        if "rules" in rule and rule["rules"].strip()
+                        else []
+                    )
+                    negated_rules = (
+                        rule["negated_rules"].split(";")
+                        if "negated_rules" in rule and rule["negated_rules"].strip()
+                        else []
+                    )
+                    feature_list.append(
+                        [
+                            positive_rules,
+                            negated_rules,
+                            classes,
+                        ]
+                    )
+
+                if evaluate or annotate:
+                    st.session_state.sens = [";".join(feat[0]) for feat in feature_list]
+                    with st.spinner("Evaluating rules..."):
+                        (
+                            st.session_state.dataframe,
+                            st.session_state.whole_accuracy,
+                        ) = evaluator.evaluate_feature(
+                            classes, feature_list, st.session_state.df, graph_format
+                        )
+
+                    st.success("Done!")
+
+                    if annotate:
+                        predicted_rules = [[] for _ in range(len(st.session_state.df))]
+                        st.session_state.applied_rules = st.session_state.sens
+                        for j, opt in enumerate(st.session_state.sens):
+                            predicted = st.session_state.dataframe.iloc[j].Predicted
+
+                            predicted_indices = [
+                                i for i, pred in enumerate(predicted) if pred == 1
+                            ]
+
+                            for ind in predicted_indices:
+                                predicted_rules[ind].append(opt)
+                        annotate_df(predicted_rules)
+                        st.session_state.trained = False
+
+                    rerun()
+
+                if submit:
+                    delete = delete_or_train == "delete"
+                    train = delete_or_train == "train"
+
+                    rows_to_delete = [r["rules"] for r in ag["selected_rows"]]
+                    rls_after_delete = []
+
+                    negated_list = ag["data"]["negated_rules"].tolist()
+                    feature_list = []
+                    for i, rule in enumerate(ag["data"]["rules"].tolist()):
+                        if not negated_list[i].strip():
+                            feature_list.append([rule.split(";"), [], classes])
+                        else:
+                            feature_list.append(
+                                [
+                                    rule.split(";"),
+                                    negated_list[i].strip().split(";"),
+                                    classes,
+                                ]
+                            )
+                    if rows_to_delete and delete:
+                        for r in feature_list:
+                            if ";".join(r[0]) not in rows_to_delete:
+                                rls_after_delete.append(r)
+                    elif rows_to_delete and train:
+                        rls_after_delete = copy.deepcopy(feature_list)
+                        rule_to_train = rows_to_delete[0]
+                        if ";" in rule_to_train or ".*" not in rule_to_train:
+                            st.text(
+                                "Only single and underspecified rules can be trained!"
+                            )
+                        else:
+                            selected_words = evaluator.train_feature(
+                                classes,
+                                rule_to_train,
+                                st.session_state.df,
+                                graph_format,
+                            )
+
+                            for f in selected_words:
+                                rls_after_delete.append([[f], [], classes])
+                    else:
+                        rls_after_delete = copy.deepcopy(feature_list)
+
+                    if rls_after_delete:
+                        st.session_state.features[classes] = copy.deepcopy(
+                            rls_after_delete
+                        )
+                        st.session_state.feature_df = get_df_from_rules(
+                            [
+                                ";".join(feat[0])
+                                for feat in st.session_state.features[classes]
+                            ],
+                            [
+                                ";".join(feat[1])
+                                for feat in st.session_state.features[classes]
+                            ],
+                        )
+                        save_rules = hand_made_rules or "saved_features.json"
+                        save_ruleset(save_rules, st.session_state.features)
+                        rerun()
+
+                text = st.text_area("You can add a new rule here manually")
+
+                negated_text = st.text_area("You can modify the negated features here")
+
+                agree = st.button("Add rule to the ruleset")
+                if agree:
+                    if not negated_text.strip():
+                        negated_features = []
+                    else:
+                        negated_features = negated_text.split(";")
+                    st.session_state.features[classes].append(
+                        [[text], negated_features, classes]
+                    )
+                    if st.session_state.features[classes]:
+                        st.session_state.feature_df = get_df_from_rules(
+                            [
+                                ";".join(feat[0])
+                                for feat in st.session_state.features[classes]
+                            ],
+                            [
+                                ";".join(feat[1])
+                                for feat in st.session_state.features[classes]
+                            ],
+                        )
+                        save_rules = hand_made_rules or "saved_features.json"
+                        save_ruleset(save_rules, st.session_state.features)
+                        rerun()
+
+                st.markdown(
+                    f"<span><b>Or get suggestions by our ML!</b></span>",
+                    unsafe_allow_html=True,
+                )
+                suggest_new_rule = st.button("suggest new rules")
+                if suggest_new_rule:
+                    if (
+                        not st.session_state.dataframe.empty
+                        and st.session_state.sens
+                        and st.session_state.suggested_features[classes]
+                    ):
+                        features_to_rank = st.session_state.suggested_features[classes][
+                            :5
+                        ]
+                        with st.spinner("Ranking rules..."):
+                            features_ranked = evaluator.rank_features(
+                                classes,
+                                features_to_rank,
+                                st.session_state.df,
+                                st.session_state.dataframe.iloc[
+                                    0
+                                ].False_negative_indices,
+                            )
+                        suggested_feature = features_ranked[0]
+                        st.session_state.suggested_features[classes].remove(
+                            suggested_feature[0]
+                        )
+
+                        st.session_state.ml_feature = suggested_feature
+
+                if st.session_state.ml_feature:
+                    st.markdown(
+                        f"<span>Feature: {st.session_state.ml_feature[0]}, Precision: <b>{st.session_state.ml_feature[1]:.3f}</b>, \
+                            Recall: <b>{st.session_state.ml_feature[2]:.3f}</b>, Fscore: <b>{st.session_state.ml_feature[3]:.3f}</b>, \
+                                Support: <b>{st.session_state.ml_feature[4]}</b></span>",
+                        unsafe_allow_html=True,
+                    )
+
+                    accept_rule = st.button("Accept")
+                    decline_rule = st.button("Decline")
+
+                    if accept_rule:
+                        st.session_state.features[classes].append(
+                            st.session_state.ml_feature[0]
+                        )
+                        st.session_state.ml_feature = None
+                        rerun()
+                    elif decline_rule:
+                        st.session_state.ml_feature = None
+                        rerun()
+            with col2:
+                if not st.session_state.dataframe.empty and st.session_state.sens:
+                    if st.session_state.sens:
+                        option = st.selectbox(
+                            "Choose from the rules", st.session_state.sens
+                        )
+
+                        G, _ = default_pn_to_graph(option.split(";")[0])
+
+                        text_G, _ = default_pn_to_graph(option.split(";")[0])
+
+                        st.graphviz_chart(to_dot(text_G), use_container_width=True)
+                        nodes = [
+                            d_clean(n[1]["name"].split("_")[0])
+                            for n in text_G.nodes(data=True)
+                        ]
+                    st.markdown(
+                        f"<span>Result of using all the rules: Precision: <b>{st.session_state.whole_accuracy[0]:.3f}</b>, \
+                            Recall: <b>{st.session_state.whole_accuracy[1]:.3f}</b>, Fscore: <b>{st.session_state.whole_accuracy[2]:.3f}</b>, \
+                                Support: <b>{st.session_state.whole_accuracy[3]}</b></span>",
+                        unsafe_allow_html=True,
+                    )
+                    fp_graphs = st.session_state.dataframe.iloc[
+                        st.session_state.sens.index(option)
+                    ].False_positive_graphs
+                    fp_sentences = st.session_state.dataframe.iloc[
+                        st.session_state.sens.index(option)
+                    ].False_positive_sens
+
+                    tp_graphs = st.session_state.dataframe.iloc[
+                        st.session_state.sens.index(option)
+                    ].True_positive_graphs
+                    tp_sentences = st.session_state.dataframe.iloc[
+                        st.session_state.sens.index(option)
+                    ].True_positive_sens
+
+                    fn_graphs = st.session_state.dataframe.iloc[
+                        st.session_state.sens.index(option)
+                    ].False_negative_graphs
+                    fn_sentences = st.session_state.dataframe.iloc[
+                        st.session_state.sens.index(option)
+                    ].False_negative_sens
+
+                    prec = st.session_state.dataframe.iloc[
+                        st.session_state.sens.index(option)
+                    ].Precision
+                    recall = st.session_state.dataframe.iloc[
+                        st.session_state.sens.index(option)
+                    ].Recall
+                    fscore = st.session_state.dataframe.iloc[
+                        st.session_state.sens.index(option)
+                    ].Fscore
+                    support = st.session_state.dataframe.iloc[
+                        st.session_state.sens.index(option)
+                    ].Support
+
+                    predicted = st.session_state.dataframe.iloc[
+                        st.session_state.sens.index(option)
+                    ].Predicted
+
+                    st.markdown(
+                        f"<span>The rule's result: Precision: <b>{prec:.3f}</b>, Recall: <b>{recall:.3f}</b>, \
+                            Fscore: <b>{fscore:.3f}</b>, Support: <b>{support}</b></span>",
+                        unsafe_allow_html=True,
+                    )
+
+                    tp_fp_fn_choice = (
+                        "Predicted",
+                        "True Positive graphs",
+                        "False Positive graphs",
+                        "False Negative graphs",
+                    )
+                    tp_fp_fn = st.selectbox(
+                        "Select the option you want to view", tp_fp_fn_choice
+                    )
+
+                    current_graph = None
+                    if tp_fp_fn == "Predicted":
+                        predicted_inds = [
+                            i for i, pred in enumerate(predicted) if pred == 1
+                        ]
+                        if st.button("Previous Predicted"):
+                            st.session_state.predicted_num = max(
+                                0, st.session_state.predicted_num - 1
+                            )
+                        if st.button("Next Predicted"):
+                            st.session_state.predicted_num = min(
+                                st.session_state.predicted_num + 1,
+                                len(predicted_inds) - 1,
+                            )
+
+                        if st.session_state.predicted_num > len(predicted_inds) - 1:
+                            st.session_state.predicted_inds = 0
+
+                        st.markdown(
+                            f"<span><b>Sentence:</b> {st.session_state.df.iloc[predicted_inds[st.session_state.predicted_num]].text}</span>",
+                            unsafe_allow_html=True,
+                        )
+                        st.markdown(
+                            f"<span><b>Gold label:</b> {st.session_state.df.iloc[predicted_inds[st.session_state.predicted_num]].label}</span>",
+                            unsafe_allow_html=True,
+                        )
+                        st.text(f"Predicted: {len(predicted_inds)}")
+                        current_graph = st.session_state.df.iloc[
+                            predicted_inds[st.session_state.predicted_num]
+                        ].graph
+                        st.graphviz_chart(
+                            to_dot(
+                                current_graph,
+                                marked_nodes=set(nodes),
+                            ),
+                            use_container_width=True,
+                        )
+
+                    elif tp_fp_fn == "False Positive graphs":
+                        if fp_graphs:
+                            if st.button("Previous FP"):
+                                st.session_state.false_graph_number = max(
+                                    0, st.session_state.false_graph_number - 1
+                                )
+                            if st.button("Next FP"):
+                                st.session_state.false_graph_number = min(
+                                    st.session_state.false_graph_number + 1,
+                                    len(fp_graphs) - 1,
+                                )
+
+                            if st.session_state.false_graph_number > len(fp_graphs) - 1:
+                                st.session_state.false_graph_number = 0
+
+                            st.markdown(
+                                f"<span><b>Sentence:</b> {fp_sentences[st.session_state.false_graph_number][0]}</span>",
+                                unsafe_allow_html=True,
+                            )
+                            st.markdown(
+                                f"<span><b>Gold label:</b> {fp_sentences[st.session_state.false_graph_number][1]}</span>",
+                                unsafe_allow_html=True,
+                            )
+                            st.text(f"False positives: {len(fp_graphs)}")
+                            current_graph = fp_graphs[
+                                st.session_state.false_graph_number
+                            ]
+                            st.graphviz_chart(
+                                to_dot(
+                                    fp_graphs[st.session_state.false_graph_number],
+                                    marked_nodes=set(nodes),
+                                ),
+                                use_container_width=True,
+                            )
+
+                    elif tp_fp_fn == "True Positive graphs":
+                        if tp_graphs:
+                            if st.button("Previous TP"):
+                                st.session_state.true_graph_number = max(
+                                    0, st.session_state.true_graph_number - 1
+                                )
+                            if st.button("Next TP"):
+                                st.session_state.true_graph_number = min(
+                                    st.session_state.true_graph_number + 1,
+                                    len(tp_graphs) - 1,
+                                )
+
+                            if st.session_state.true_graph_number > len(tp_graphs) - 1:
+                                st.session_state.true_graph_number = 0
+
+                            with open("graph.dot", "w+") as f:
+                                f.write(
+                                    to_dot(
+                                        tp_graphs[st.session_state.true_graph_number],
+                                        marked_nodes=set(nodes),
+                                    )
+                                )
+
+                            st.markdown(
+                                f"<span><b>Sentence:</b> {tp_sentences[st.session_state.true_graph_number][0]}</span>",
+                                unsafe_allow_html=True,
+                            )
+                            st.markdown(
+                                f"<span><b>Gold label:</b> {tp_sentences[st.session_state.true_graph_number][1]}</span>",
+                                unsafe_allow_html=True,
+                            )
+                            st.text(f"True positives: {len(tp_graphs)}")
+                            current_graph = tp_graphs[
+                                st.session_state.true_graph_number
+                            ]
+                            st.graphviz_chart(
+                                to_dot(
+                                    tp_graphs[st.session_state.true_graph_number],
+                                    marked_nodes=set(nodes),
+                                ),
+                                use_container_width=True,
+                            )
+                    elif tp_fp_fn == "False Negative graphs":
+                        if fn_graphs:
+                            if st.button("Previous FN"):
+                                st.session_state.false_neg_number = max(
+                                    0, st.session_state.false_neg_number - 1
+                                )
+                            if st.button("Next FN"):
+                                st.session_state.false_neg_number = min(
+                                    st.session_state.false_neg_number + 1,
+                                    len(fn_graphs) - 1,
+                                )
+
+                            if st.session_state.false_neg_number > len(fn_graphs) - 1:
+                                st.session_state.false_neg_number = 0
+
+                            st.markdown(
+                                f"<span><b>Sentence:</b> {fn_sentences[st.session_state.false_neg_number][0]}</span>",
+                                unsafe_allow_html=True,
+                            )
+                            st.markdown(
+                                f"<span><b>Gold label:</b> {fn_sentences[st.session_state.false_neg_number][1]}</span>",
+                                unsafe_allow_html=True,
+                            )
+                            st.text(f"False negatives: {len(fn_graphs)}")
+                            current_graph = fn_graphs[st.session_state.false_neg_number]
+                            with open("graph.dot", "w+") as f:
+                                f.write(to_dot(current_graph, marked_nodes=set(nodes)))
+                            st.graphviz_chart(
+                                to_dot(
+                                    fn_graphs[st.session_state.false_neg_number],
+                                    marked_nodes=set(nodes),
+                                ),
+                                use_container_width=True,
+                            )
+
+
+def get_args():
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument("-t", "--train-data", type=str, required=True)
+    parser.add_argument("-v", "--val-data", type=str)
+    parser.add_argument("-sr", "--suggested-rules", default=None, type=str)
+    parser.add_argument("-hr", "--hand-rules", default=None, type=str)
+    parser.add_argument("-m", "--mode", default="supervised", type=str)
+    parser.add_argument("-g", "--graph-format", default="fourlang", type=str)
+    return parser.parse_args()
 
 
 def main(args):
@@ -758,7 +1326,8 @@ def main(args):
 
     evaluator = init_evaluator()
     data = read_train(args.train_data)
-    val_data = read_val(args.val_data)
+    if args.val_data:
+        val_data = read_val(args.val_data)
     graph_format = args.graph_format
     feature_path = args.suggested_rules
     hand_made_rules = args.hand_rules
@@ -768,9 +1337,7 @@ def main(args):
             evaluator, data, val_data, graph_format, feature_path, hand_made_rules
         )
     elif mode == "unsupervised":
-        unsupervised_mode(
-            evaluator, data, val_data, graph_format, feature_path, hand_made_rules
-        )
+        unsupervised_mode(evaluator, data, graph_format, feature_path, hand_made_rules)
 
 
 if __name__ == "__main__":
