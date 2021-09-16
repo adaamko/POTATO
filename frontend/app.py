@@ -39,7 +39,7 @@ if "predicted_num" not in st.session_state:
     st.session_state.predicted_num = 0
 if "whole_accuracy" not in st.session_state:
     st.session_state.whole_accuracy = []
-if "dataframe" not in st.session_state:
+if "df_statistics" not in st.session_state:
     st.session_state.df_statistics = pd.DataFrame
 if "val_dataframe" not in st.session_state:
     st.session_state.val_dataframe = pd.DataFrame
@@ -729,7 +729,7 @@ def unsupervised_mode(evaluator, data, graph_format, feature_path, hand_made_rul
                 resizable=True,
                 sorteable=True,
                 wrapText=True,
-                autoHeight=False,
+                autoHeight=True,
             )
             # make all columns editable
             gb.configure_selection(
