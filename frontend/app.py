@@ -305,6 +305,7 @@ def extract_data_from_dataframe(option):
 
 
 def graph_viewer(type, graphs, sentences, nodes):
+
     graph_type = {
         "FP": st.session_state.false_graph_number,
         "TP": st.session_state.true_graph_number,
@@ -336,6 +337,13 @@ def graph_viewer(type, graphs, sentences, nodes):
         ),
         use_container_width=True,
     )
+
+    if type == "FP":
+        st.session_state.false_graph_number = graph_type[type]
+    elif type == "TP":
+        st.session_state.true_graph_number = graph_type[type]
+    elif type == "FN":
+        st.session_state.false_neg_number = graph_type[type]
 
 
 def add_rule_manually(classes, hand_made_rules):
