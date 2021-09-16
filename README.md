@@ -238,6 +238,38 @@ if you already used the UI and extracted the features manually and you want to l
 streamlit run app.py -- -t ../notebooks/train_dataset -v ../notebooks/val_dataset -g ud -sr ../notebooks/features.json -hr ../notebooks/manual_features.json
 ```
 
+### Unsupervised mode
+
+If labels are not or just partially provided, the frontend can be started also in _unsupervised_ mode, where the user can _annotate_ a few examples at the start, then the system gradually offers rules based on the provided examples. 
+
+
+Dataset without labels can be initialized with:
+```python
+sentences = [("fuck absolutely everything about today.", ""),
+            ("I just made food and I'm making myself sick to my stomach. Lol, wtf is this shit", ""),
+            ("RT [USER]: America is the most fucked up country [URL]", ""),
+            ("you'd be blind to not see the heart eyes i have for you.", ""),
+            ("It's hard for me to give a fuck now", ""),
+            ("tell me everything", ""),
+            ("Bitch YES [URL]", ""),
+            ("Eight people a minute....", ""),
+            ("RT [USER]: im not fine, i need you", ""),
+            ("Holy shit.. 3 months and I'll be in Italy", ""),
+            ("Now I do what I want 🤪", ""),
+            ("[USER] you'd immediately stop", ""),
+            ("Just... shut the fuck up", ""),
+            ("RT [USER]: ohhhh shit a [USER] [URL]", ""),
+            ("all i want is for yara to survive tonight", ""),
+            ("fuck them", "")]
+```
+
+Then, the frontend can be started:
+```
+streamlit run app.py -- -t ../notebooks/test_dataset.pickle -g ud -m unsupervised
+```
+
+
+
 ## Evaluate
 If you have the features ready and you want to evaluate them on a test set, you can run:
 
