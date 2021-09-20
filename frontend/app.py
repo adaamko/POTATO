@@ -208,6 +208,10 @@ def read_train(path):
     return pd.read_pickle(path)
 
 
+def save_dataframe(data, path):
+    data.to_pickle(path)
+
+
 @st.cache(allow_output_mutation=True)
 def read_val(path):
     return pd.read_pickle(path)
@@ -233,8 +237,12 @@ def rule_chooser():
 def annotate_df(predicted):
     for i, pred in enumerate(predicted):
         if pred:
-            st.session_state.df.loc[i, "label"] = st.session_state.inverse_labels[1]
-            st.session_state.df.loc[i, "applied_rules"] = pred
+            st.session_state.df.at[i, "label"] = st.session_state.inverse_labels[1]
+            st.session_state.df.at[i, "applied_rules"] = pred
+        else:
+            st.session_state.df.at[i, "applied_rules"] = []
+            if st.session_state.df.loc[i, "annotated"] == False:
+                st.session_state.df.at[i, "label"] = ""
 
 
 def show_ml_feature(classes):
@@ -680,8 +688,10 @@ def supervised_mode(
                         graph_viewer("FN", fn_graphs, fn_sentences, nodes)
 
 
-def unsupervised_mode(evaluator, data, graph_format, feature_path, hand_made_rules):
-
+def unsupervised_mode(
+    evaluator, train_data, graph_format, feature_path, hand_made_rules
+):
+    data = read_train(train_data)
     if hand_made_rules:
         with open(hand_made_rules) as f:
             st.session_state.features = json.load(f)
@@ -694,6 +704,8 @@ def unsupervised_mode(evaluator, data, graph_format, feature_path, hand_made_rul
                 [] for _ in range(len(st.session_state.df))
             ]
         st.session_state.df.reset_index(level=0, inplace=True)
+    if "df_to_train" not in st.session_state:
+        st.session_state.df_to_train = pd.DataFrame
 
     if "applied_rules" not in st.session_state:
         st.session_state.applied_rules = []
@@ -787,16 +799,39 @@ def unsupervised_mode(evaluator, data, graph_format, feature_path, hand_made_rul
 
         train = st.button("Train!")
         if train:
-            st.session_state.trained = True
             df_to_train = st.session_state.df.copy()
-            df_to_train["label"] = df_to_train["label"].apply(
-                lambda x: st.session_state.inverse_labels[0] if not x else x
-            )
-            df_to_train["label_id"] = df_to_train["label"].apply(
-                lambda x: st.session_state.labels[x]
-            )
-            st.session_state.suggested_features = train_df(df_to_train)
-            st.session_state.df_statistics = pd.DataFrame
+            df_to_train = df_to_train[df_to_train.applied_rules.map(len) == 0]
+
+            if not df_to_train.empty:
+                st.session_state.trained = True
+                df_to_train["label"] = df_to_train["label"].apply(
+                    lambda x: st.session_state.inverse_labels[0] if not x else x
+                )
+                df_to_train["label_id"] = df_to_train["label"].apply(
+                    lambda x: st.session_state.labels[x]
+                )
+
+                positive_size = df_to_train.groupby("label").size()[
+                    st.session_state.inverse_labels[1]
+                ]
+                df_to_train = df_to_train.groupby("label").sample(
+                    n=positive_size, random_state=1, replace=True
+                )
+                st.session_state.suggested_features = train_df(df_to_train)
+                st.session_state.df_to_train = df_to_train
+                st.session_state.df_statistics = pd.DataFrame
+                for key in st.session_state.suggested_features:
+                    if key not in st.session_state.features:
+                        st.session_state.features[key] = [
+                            st.session_state.suggested_features[key].pop(0)
+                        ]
+                    else:
+                        st.session_state.features[key].append(
+                            st.session_state.suggested_features[key].pop(0)
+                        )
+
+            else:
+                st.write("Empty dataframe!")
 
         col1, col2 = st.columns(2)
 
@@ -882,7 +917,10 @@ def unsupervised_mode(evaluator, data, graph_format, feature_path, hand_made_rul
                             st.session_state.df_statistics,
                             st.session_state.whole_accuracy,
                         ) = evaluator.evaluate_feature(
-                            classes, feature_list, st.session_state.df, graph_format
+                            classes,
+                            feature_list,
+                            st.session_state.df,
+                            graph_format,
                         )
 
                     st.success("Done!")
@@ -900,6 +938,7 @@ def unsupervised_mode(evaluator, data, graph_format, feature_path, hand_made_rul
                             for ind in predicted_indices:
                                 predicted_rules[ind].append(opt)
                         annotate_df(predicted_rules)
+                        save_dataframe(data, train_data)
                         st.session_state.trained = False
 
                     rerun()
@@ -1094,7 +1133,9 @@ def main(args):
             evaluator, data, val_data, graph_format, feature_path, hand_made_rules
         )
     elif mode == "unsupervised":
-        unsupervised_mode(evaluator, data, graph_format, feature_path, hand_made_rules)
+        unsupervised_mode(
+            evaluator, args.train_data, graph_format, feature_path, hand_made_rules
+        )
 
 
 if __name__ == "__main__":
