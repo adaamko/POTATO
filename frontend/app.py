@@ -703,7 +703,8 @@ def unsupervised_mode(
             st.session_state.df["applied_rules"] = [
                 [] for _ in range(len(st.session_state.df))
             ]
-        st.session_state.df.reset_index(level=0, inplace=True)
+        if 'index' not in st.session_state.df:
+            st.session_state.df.reset_index(level=0, inplace=True)
     if "df_to_train" not in st.session_state:
         st.session_state.df_to_train = pd.DataFrame
 
@@ -780,22 +781,53 @@ def unsupervised_mode(
                         row["index"], "label"
                     ] = st.session_state.inverse_labels[1]
                     st.session_state.df.loc[row["index"], "annotated"] = True
+                save_dataframe(st.session_state.df, train_data)
                 rerun()
 
         st.markdown(
             f"<span>Samples you have already annotated:</span>",
             unsafe_allow_html=True,
         )
-        ag = AgGrid(
-            df_annotated,
-            key="grid3",
-            allow_unsafe_jscode=True,
-            reload_data=True,
-            update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
-            width="100%",
-            theme="material",
-            fit_columns_on_grid_load=True,
-        )
+        with st.form("annotated form") as f:
+            gb = GridOptionsBuilder.from_dataframe(df_annotated)
+            gb.configure_default_column(
+                editable=True,
+                resizable=True,
+                sorteable=True,
+                wrapText=True,
+            )
+            # make all columns editable
+            gb.configure_selection(
+                "multiple",
+                use_checkbox=True,
+                groupSelectsChildren=True,
+                groupSelectsFiltered=True,
+            )
+            go = gb.build()
+            ag_ann = AgGrid(
+                df_annotated,
+                gridOptions=go,
+                key="grid3",
+                allow_unsafe_jscode=True,
+                reload_data=True,
+                update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
+                width="100%",
+                theme="material",
+                fit_columns_on_grid_load=True,
+            )
+
+            clear_annotate = st.form_submit_button("Clear annotation")
+
+        if clear_annotate:
+            if ag_ann["selected_rows"]:
+                for row in ag_ann["selected_rows"]:
+                    st.session_state.df.loc[
+                        row["index"], "label"
+                    ] = st.session_state.inverse_labels[1]
+                    st.session_state.df.loc[row["index"], "annotated"] = False
+                    st.session_state.df.loc[row["index"], "label"] = ""
+                save_dataframe(st.session_state.df, train_data)
+                rerun()
 
         train = st.button("Train!")
         if train:
@@ -938,7 +970,6 @@ def unsupervised_mode(
                             for ind in predicted_indices:
                                 predicted_rules[ind].append(opt)
                         annotate_df(predicted_rules)
-                        save_dataframe(data, train_data)
                         st.session_state.trained = False
 
                     rerun()
