@@ -1,40 +1,15 @@
+from typing import Tuple
 import networkx as nx
-from bs4 import BeautifulSoup
 from exprel.dataset.sample import Sample
-from stanza.models.common.doc import Document
 
 
-class SemevalSample(Sample):
-    def __init__(self, sen_id, sentence, label, nlp, docs):
-        super().__init__()
-        self.sen_id = int(sen_id)
-        self.e1 = None
-        self.e2 = None
-        self.e1_lemma = None
-        self.e2_lemma = None
-        self.prepare_sentence(sentence)
-        self.label = label
-        self.nlp = nlp
-        self.graph = None
-        self.docs = docs
-        self._doc = None
-        self.prepare_doc()
+class RelationSample(Sample):
+    def __init__(self, example: Tuple[str, str]) -> None:
+        super().__init__(example=example)
+        self.e1 = example[2]
+        self.e2 = example[3]
 
-    @property
-    def sentence(self):
-        return self._sentence
-
-    @sentence.setter
-    def sentence(self, sen):
-        self.prepare_sentence(sen)
-
-    def prepare_sentence(self, sen):
-        soup = BeautifulSoup(sen)
-        self._sentence = soup.text.strip('"')
-        self.e1 = soup.e1.text.split()[-1]
-        self.e2 = soup.e2.text.split()[-1]
-
-    def _postprocess(self, graph):
+    def _postprocess(self, graph: nx.Digraph) -> nx.Digraph:
         for node, attr in graph.nodes(data=True):
             if self.e1_lemma:
                 if (
@@ -57,14 +32,11 @@ class SemevalSample(Sample):
 
         return graph
 
-    def set_graph(self, graph):
+    def set_graph(self, graph: nx.Digraph) -> None:
         self.graph = self._postprocess(graph)
 
-    def prepare_doc(self):
-        doc = self.nlp(self._sentence)
-        self._doc = doc
-
-        for token in self._doc.sentences[0].words:
+    def prepare_lemma(self, doc) -> None:
+        for token in doc.sentences[0].words:
             if token.text == self.e1:
                 self.e1_lemma = token.lemma
             if token.text == self.e2:

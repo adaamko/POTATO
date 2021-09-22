@@ -703,7 +703,7 @@ def unsupervised_mode(
             st.session_state.df["applied_rules"] = [
                 [] for _ in range(len(st.session_state.df))
             ]
-        if 'index' not in st.session_state.df:
+        if "index" not in st.session_state.df:
             st.session_state.df.reset_index(level=0, inplace=True)
     if "df_to_train" not in st.session_state:
         st.session_state.df_to_train = pd.DataFrame
