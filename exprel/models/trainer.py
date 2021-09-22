@@ -1,6 +1,7 @@
 from collections import defaultdict
 from typing import Dict, List
 from typing import Union
+from math import log2, sqrt
 
 import eli5
 import pandas as pd
@@ -46,7 +47,11 @@ class GraphTrainer:
         self.feature_graph_strings = self.graph_model.get_feature_graph_strings()
 
         print("Selecting the best features...")
-        self.graph_model.select_n_best(self.max_features)
+        if self.max_features > len(graphs):
+            n_best = int(log2(len(graphs)) * sqrt(len(graphs)))
+            self.graph_model.select_n_best(n_best)
+        else:
+            self.graph_model.select_n_best(self.max_features)
 
     def train(self) -> Dict[str, List[List[Union[List[str], str]]]]:
         label_vocab = {}
