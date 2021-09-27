@@ -38,8 +38,10 @@ def main():
         for f in features[k]:
             feature_values.append(f)
     evaluator = FeatureEvaluator()
-    df = evaluator.match_features(df, feature_values)
-    df.to_csv(sys.stdout, sep="\t")
+    pred_df = evaluator.match_features(df, feature_values)
+    if "label" in df:
+        pred_df["label"] = df.label
+    pred_df.to_csv(sys.stdout, sep="\t")
 
 
 if __name__ == "__main__":

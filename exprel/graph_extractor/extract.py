@@ -33,7 +33,10 @@ class GraphExtractor:
         self.matcher = None
 
     def init_nlp(self):
-        nlp = stanza.Pipeline(self.lang)
+        if self.lang == "en_bio":
+            nlp = stanza.Pipeline(self.lang, package="craft")
+        else:
+            nlp = stanza.Pipeline(self.lang)
         self.nlp = CachedStanzaPipeline(nlp, self.cache_fn)
 
     def parse_iterable(self, iterable, graph_type="fourlang"):

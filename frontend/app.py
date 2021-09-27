@@ -245,7 +245,7 @@ def annotate_df(predicted):
                 st.session_state.df.at[i, "label"] = ""
 
 
-def show_ml_feature(classes):
+def show_ml_feature(classes, hand_made_rules):
     st.markdown(
         f"<span>Feature: {st.session_state.ml_feature[0]}, Precision: <b>{st.session_state.ml_feature[1]:.3f}</b>, \
                         Recall: <b>{st.session_state.ml_feature[2]:.3f}</b>, Fscore: <b>{st.session_state.ml_feature[3]:.3f}</b>, \
@@ -257,7 +257,14 @@ def show_ml_feature(classes):
     if accept_rule:
         st.session_state.features[classes].append(st.session_state.ml_feature[0])
         st.session_state.ml_feature = None
-        rerun()
+        if st.session_state.features[classes]:
+            st.session_state.feature_df = get_df_from_rules(
+                [";".join(feat[0]) for feat in st.session_state.features[classes]],
+                [";".join(feat[1]) for feat in st.session_state.features[classes]],
+            )
+            save_rules = hand_made_rules or "saved_features.json"
+            save_ruleset(save_rules, st.session_state.features)
+            rerun()
     elif decline_rule:
         st.session_state.ml_feature = None
         rerun()
@@ -609,7 +616,7 @@ def supervised_mode(
             rank_and_suggest(classes, data, evaluator)
 
             if st.session_state.ml_feature:
-                show_ml_feature(classes)
+                show_ml_feature(classes, hand_made_rules)
 
         with col2:
             if not st.session_state.df_statistics.empty and st.session_state.sens:
@@ -1040,7 +1047,7 @@ def unsupervised_mode(
                 rank_and_suggest(classes, st.session_state.df, evaluator)
 
                 if st.session_state.ml_feature:
-                    show_ml_feature(classes)
+                    show_ml_feature(classes, hand_made_rules)
             with col2:
                 if not st.session_state.df_statistics.empty and st.session_state.sens:
                     if st.session_state.sens:
