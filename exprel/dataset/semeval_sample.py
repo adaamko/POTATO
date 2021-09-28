@@ -5,7 +5,7 @@ from stanza.models.common.doc import Document
 
 
 class SemevalSample(Sample):
-    def __init__(self, sen_id, sentence, label, nlp, db, docs):
+    def __init__(self, sen_id, sentence, label, nlp, docs):
         super().__init__()
         self.sen_id = int(sen_id)
         self.e1 = None
@@ -15,7 +15,6 @@ class SemevalSample(Sample):
         self.prepare_sentence(sentence)
         self.label = label
         self.nlp = nlp
-        self.db = db
         self.graph = None
         self.docs = docs
         self._doc = None
@@ -38,34 +37,32 @@ class SemevalSample(Sample):
     def _postprocess(self, graph):
         for node, attr in graph.nodes(data=True):
             if self.e1_lemma:
-                if attr["name"] == self.e1_lemma or attr["name"] == self.e1_lemma.split()[-1]:
+                if (
+                    attr["name"] == self.e1_lemma
+                    or attr["name"] == self.e1_lemma.split()[-1]
+                ):
                     attr["name"] = "entity1"
             else:
                 if attr["name"] == self.e1 or attr["name"] == self.e1.split()[-1]:
                     attr["name"] = "entity1"
             if self.e2_lemma:
-                if attr["name"] == self.e2_lemma or attr["name"] == self.e2_lemma.split()[-1]:
+                if (
+                    attr["name"] == self.e2_lemma
+                    or attr["name"] == self.e2_lemma.split()[-1]
+                ):
                     attr["name"] = "entity2"
             else:
                 if attr["name"] == self.e2 or attr["name"] == self.e2.split()[-1]:
                     attr["name"] = "entity2"
-        
+
         return graph
 
     def set_graph(self, graph):
         self.graph = self._postprocess(graph)
 
     def prepare_doc(self):
-        if len(self.docs) >= self.sen_id:
-            self._doc = Document(self.docs[self.sen_id-1]["processed"])
-        else:
-            document = self.db.query_document(self.sen_id)
-            if not document:
-                doc = self.nlp(self._sentence)
-                self.db.insert_document(self.sen_id, doc)
-                self._doc = doc
-            else:
-                self._doc = Document(document["processed"])
+        doc = self.nlp(self._sentence)
+        self._doc = doc
 
         for token in self._doc.sentences[0].words:
             if token.text == self.e1:

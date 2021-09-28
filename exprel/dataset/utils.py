@@ -3,10 +3,81 @@ from collections import defaultdict
 import networkx as nx
 import penman as pn
 import re
-from tuw_nlp.graph.utils import preprocess_node_alto
+from tuw_nlp.graph.utils import preprocess_node_alto, preprocess_edge_alto
 
 
-def amr_pn_to_graph(raw_dl, edge_attr='color', clean_nodes=False):
+def ud_to_graph(sen, edge_attr="color"):
+    """convert dependency-parsed stanza Sentence to nx.DiGraph"""
+    G = nx.DiGraph()
+    root_id = None
+    for word in sen.to_dict():
+        if isinstance(word["id"], (list, tuple)):
+            # token representing an mwe, e.g. "vom" ~ "von dem"
+            continue
+        G.add_node(word["id"], name=preprocess_node_alto(word["lemma"]))
+        if word["deprel"] == "root":
+            root_id = word["id"]
+            G.add_node(word["head"], name="root")
+        G.add_edge(word["head"], word["id"])
+        G[word["head"]][word["id"]].update(
+            {edge_attr: preprocess_node_alto(word["deprel"])}
+        )
+
+    return G, root_id
+
+
+def default_pn_to_graph(raw_dl, edge_attr="color"):
+    g = pn.decode(raw_dl)
+    G = nx.DiGraph()
+
+    char_to_id = defaultdict(int)
+    next_id = 0
+    for i, trip in enumerate(g.triples):
+        if i == 0:
+            root_id = next_id
+            name = trip[2]
+            if not name:
+                name = "None"
+            G.add_node(root_id, name=name)
+            char_to_id[trip[0]] = next_id
+            next_id += 1
+
+        elif trip[1] == ":instance":
+            if trip[2]:
+                name = trip[2]
+                if not name:
+                    name = "None"
+                G.add_node(next_id, name=name)
+                char_to_id[trip[0]] = next_id
+                next_id += 1
+
+    for trip in g.triples:
+        if trip[1] != ":instance":
+            edge = trip[1].split(":")[1]
+            src = trip[0]
+            tgt = trip[2]
+            if src not in char_to_id:
+                char_to_id[src] = next_id
+                name = src
+                if not name:
+                    name = "None"
+                G.add_node(next_id, name=name)
+                next_id += 1
+            if tgt not in char_to_id:
+                char_to_id[tgt] = next_id
+                name = tgt
+                if not name:
+                    name = "None"
+                G.add_node(next_id, name=name)
+                next_id += 1
+
+            G.add_edge(char_to_id[src], char_to_id[tgt])
+            G[char_to_id[src]][char_to_id[tgt]].update({edge_attr: edge})
+
+    return G, root_id
+
+
+def amr_pn_to_graph(raw_dl, edge_attr="color", clean_nodes=False):
     g = pn.decode(raw_dl)
     G = nx.DiGraph()
 
