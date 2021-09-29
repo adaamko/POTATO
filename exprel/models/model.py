@@ -14,7 +14,7 @@ from tuw_nlp.common.vocabulary import Vocabulary
 from tuw_nlp.graph.lexical import LexGraphs
 from tuw_nlp.graph.utils import graph_to_pn
 from tuw_nlp.text.utils import load_parsed, save_parsed
-from exprel.models.utils import tree_to_code
+from potato.models.utils import tree_to_code
 
 
 class GraphModel:

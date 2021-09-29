@@ -5,8 +5,8 @@ from math import log2, sqrt
 
 import eli5
 import pandas as pd
-from exprel.graph_extractor.extract import GraphExtractor
-from exprel.models.model import GraphModel
+from potato.graph_extractor.extract import GraphExtractor
+from potato.models.model import GraphModel
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split as split
 from tqdm import tqdm

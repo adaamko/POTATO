@@ -4,8 +4,8 @@ import pandas as pd
 import networkx as nx
 import stanza
 import pickle
-from exprel.dataset.sample import Sample
-from exprel.graph_extractor.extract import GraphExtractor
+from potato.dataset.sample import Sample
+from potato.graph_extractor.extract import GraphExtractor
 
 
 class Dataset:

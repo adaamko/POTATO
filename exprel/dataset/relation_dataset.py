@@ -1,8 +1,8 @@
 from typing import Dict, List, Tuple
 
 import pandas as pd
-from exprel.dataset.dataset import Dataset
-from exprel.dataset.relation_sample import RelationSample
+from potato.dataset.dataset import Dataset
+from potato.dataset.relation_sample import RelationSample
 
 
 class RelationDataset(Dataset):

@@ -1,4 +1,4 @@
-# EXPREL 
+# POTATO 
 is a human-in-the-loop XAI framework for extracting and evaluating interpretable graph features for any classification problem  
 
 ## Install and Quick Start
@@ -11,17 +11,17 @@ cd tuw-nlp
 pip install -e .
 ```
 
-Then install EXPREL:
+Then install POTATO:
 ```
 pip install -e .
 ```
 
 ### Usage
 
-First import packages from exprel:
+First import packages from potato:
 ```python
-from exprel.dataset.dataset import Dataset
-from exprel.models.trainer import GraphTrainer
+from potato.dataset.dataset import Dataset
+from potato.models.trainer import GraphTrainer
 ```
 
 Initialize the dataset you want to classify:
@@ -54,7 +54,7 @@ dataset.set_graphs(dataset.parse_graphs(graph_format="ud"))
 ### Rules
 
 If the dataset is prepared and the graphs are parsed, we can write rules to match labels. We can write rules either manually or extract
-them automatically (EXPREL also provides a frontend that tries to do both).
+them automatically (POTATO also provides a frontend that tries to do both).
 
 The simplest rule would be just a node in the graph:
 ```python
@@ -64,7 +64,7 @@ rule_to_match = [[["(u_1 / fuck)"], [], "HOF"]]
 
 Init the rule matcher:
 ```python
-from exprel.graph_extractor.extract import FeatureEvaluator
+from potato.graph_extractor.extract import FeatureEvaluator
 evaluator = FeatureEvaluator()
 ```
 

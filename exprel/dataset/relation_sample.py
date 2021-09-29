@@ -1,6 +1,6 @@
 from typing import Tuple
 import networkx as nx
-from exprel.dataset.sample import Sample
+from potato.dataset.sample import Sample
 
 
 class RelationSample(Sample):

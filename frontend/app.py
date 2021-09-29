@@ -19,9 +19,9 @@ import penman as pn
 import requests
 import streamlit as st
 import streamlit.components.v1 as components
-from exprel.dataset.utils import default_pn_to_graph
-from exprel.graph_extractor.extract import FeatureEvaluator
-from exprel.models.trainer import GraphTrainer
+from potato.dataset.utils import default_pn_to_graph
+from potato.graph_extractor.extract import FeatureEvaluator
+from potato.models.trainer import GraphTrainer
 from PIL import Image
 from st_aggrid import AgGrid, DataReturnMode, GridOptionsBuilder, GridUpdateMode, JsCode
 from streamlit.report_thread import REPORT_CONTEXT_ATTR_NAME

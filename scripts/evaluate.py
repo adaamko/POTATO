@@ -7,8 +7,8 @@ from collections import defaultdict
 
 import networkx as nx
 import pandas as pd
-from exprel.dataset.utils import default_pn_to_graph
-from exprel.graph_extractor.extract import FeatureEvaluator
+from potato.dataset.utils import default_pn_to_graph
+from potato.graph_extractor.extract import FeatureEvaluator
 
 
 def get_args():

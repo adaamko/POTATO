@@ -8,7 +8,7 @@ from collections import defaultdict
 import networkx as nx
 import pandas as pd
 import stanza
-from exprel.dataset.utils import default_pn_to_graph, ud_to_graph
+from potato.dataset.utils import default_pn_to_graph, ud_to_graph
 from graphviz import Source
 from networkx.algorithms.isomorphism import DiGraphMatcher
 from sklearn.metrics import precision_recall_fscore_support
