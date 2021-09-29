@@ -147,7 +147,7 @@ evaluator.match_features(df, [[["(u_1 / fuck)"], ["(u_2 / absolutely)"], "HOF"]]
 | 14 | all i want is for yara to survive tonight                                        |                   |                                                   |
 | 15 | fuck them                                                                        | HOF               | [['(u_1 / fuck)'], ['(u_2 / absolutely)'], 'HOF'] |
 
-If we don't want to specify nodes, regex can also be used in place of the node-names:
+If we don't want to specify nodes, regex can also be used in place of the node and edge-names:
 
 ```python
 #regex can be used to match any node (this will match instances where 'fuck' is connected to any node with 'obj' edge)
