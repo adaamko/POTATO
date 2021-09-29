@@ -1,5 +1,5 @@
-# POTATO 
-is a human-in-the-loop XAI framework for extracting and evaluating interpretable graph features for any classification problem  
+# POTATO: exPlainable infOrmation exTrAcTion framewOrk
+POTATO is a human-in-the-loop XAI framework for extracting and evaluating interpretable graph features for any classification problem  
 
 ## Install and Quick Start
 ### Setup
