@@ -34,7 +34,7 @@ class GraphExtractor:
 
     def init_nlp(self):
         if self.lang == "en_bio":
-            nlp = stanza.Pipeline(self.lang, package="craft")
+            nlp = stanza.Pipeline('en', package="craft")
         else:
             nlp = stanza.Pipeline(self.lang)
         self.nlp = CachedStanzaPipeline(nlp, self.cache_fn)
@@ -55,8 +55,11 @@ class GraphExtractor:
             self.init_nlp()
             for sen in tqdm(iterable):
                 doc = self.nlp(sen)
-                G, _ = ud_to_graph(doc.sentences[0])
-                yield G
+                g, _ = ud_to_graph(doc.sentences[0])
+                for doc_sen in doc.sentences[1:]:
+                    n, _ = ud_to_graph(doc_sen)
+                    g = nx.compose(g, n)
+                yield g
 
 
 class FeatureEvaluator:
