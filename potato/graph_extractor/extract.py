@@ -34,7 +34,7 @@ class GraphExtractor:
 
     def init_nlp(self):
         if self.lang == "en_bio":
-            nlp = stanza.Pipeline('en', package="craft")
+            nlp = stanza.Pipeline("en", package="craft")
         else:
             nlp = stanza.Pipeline(self.lang)
         self.nlp = CachedStanzaPipeline(nlp, self.cache_fn)

@@ -59,6 +59,8 @@ if "ml_feature" not in st.session_state:
     st.session_state.ml_feature = None
 if "sens" not in st.session_state:
     st.session_state.sens = []
+if "min_edge" not in st.session_state:
+    st.session_state.min_edge = 0
 
 
 def rerun():
@@ -217,10 +219,10 @@ def read_val(path):
     return pd.read_pickle(path)
 
 
-def train_df(df):
+def train_df(df, min_edge=1):
     with st_stdout("code"):
         trainer = GraphTrainer(df)
-        features = trainer.prepare_and_train()
+        features = trainer.prepare_and_train(min_edge=min_edge)
 
         return features
 
@@ -417,8 +419,13 @@ def supervised_mode(
     if not feature_path and not st.session_state.trained:
         st.sidebar.title("Train your dataset!")
         show_app = st.sidebar.button("Train")
+        st.session_state.min_edge = st.sidebar.number_input(
+            "Min edge in features", min_value=0, max_value=10, value=1, step=1
+        )
         if show_app:
-            st.session_state.suggested_features = train_df(data)
+            st.session_state.suggested_features = train_df(
+                data, st.session_state.min_edge
+            )
             st.session_state.trained = True
             with st_stdout("success"):
                 print("Success, your dataset is trained, wait for the app to load..")
@@ -856,7 +863,9 @@ def unsupervised_mode(
                 df_to_train = df_to_train.groupby("label").sample(
                     n=positive_size, random_state=1, replace=True
                 )
-                st.session_state.suggested_features = train_df(df_to_train)
+                st.session_state.suggested_features = train_df(
+                    df_to_train, st.session_state.min_edge
+                )
                 st.session_state.df_to_train = df_to_train
                 st.session_state.df_statistics = pd.DataFrame
                 for key in st.session_state.suggested_features:
