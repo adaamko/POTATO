@@ -28,9 +28,11 @@ class GraphTrainer:
         self.max_features = max_features
         self.model = LogisticRegression(random_state=0)
 
-    def prepare_and_train(self) -> Dict[str, List[List[Union[List[str], str]]]]:
+    def prepare_and_train(
+        self, min_edge=1
+    ) -> Dict[str, List[List[Union[List[str], str]]]]:
         self.prepare()
-        return self.train()
+        return self.train(min_edge=min_edge)
 
     def prepare(self) -> None:
         ids = pd.to_numeric(self.dataset.index).tolist()
@@ -53,7 +55,7 @@ class GraphTrainer:
         else:
             self.graph_model.select_n_best(self.max_features)
 
-    def train(self) -> Dict[str, List[List[Union[List[str], str]]]]:
+    def train(self, min_edge=1) -> Dict[str, List[List[Union[List[str], str]]]]:
         label_vocab = {}
         for label in self.dataset.label.unique():
             label_vocab[label] = (
@@ -89,8 +91,9 @@ class GraphTrainer:
                     g = self.feature_graph_strings[
                         self.graph_model.inverse_relabel[int(i)]
                     ]
-                    features[inv_vocab[int(target)]].append(
-                        ([g], [], inv_vocab[int(target)])
-                    )
+                    if len(g_nx.edges()) >= min_edge:
+                        features[inv_vocab[int(target)]].append(
+                            ([g], [], inv_vocab[int(target)])
+                        )
 
         return features

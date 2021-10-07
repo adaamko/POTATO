@@ -12,7 +12,6 @@ class Dataset:
     def __init__(
         self, examples: List[Tuple[str, str]], label_vocab: Dict[str, int], lang="en"
     ) -> None:
-        self.nlp = stanza.Pipeline(lang)
         self.label_vocab = label_vocab
         self._dataset = self.read_dataset(examples)
         self.extractor = GraphExtractor(lang=lang, cache_fn="en_nlp_cache")
