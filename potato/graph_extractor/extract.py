@@ -145,6 +145,14 @@ class FeatureEvaluator:
                         for k in iso_pairs:
                             if feature_graph.nodes[iso_pairs[k]]["name"] == ".*":
                                 nodes.append(g.nodes[k]["name"])
+                        if not nodes:
+                            g2_to_g1 = {v: u for (u, v) in iso_pairs.items()}
+                            for u, v, attrs in feature_graph.edges(data=True):
+                                if attrs["color"] == ".*":
+                                    edge = g.get_edge_data(g2_to_g1[u], g2_to_g1[v])[
+                                        "color"
+                                    ]
+                                    nodes.append(edge)
                         nodes_str = ",".join(nodes)
                         label = labels[i]
                         sentence = data.iloc[i].text
@@ -204,7 +212,6 @@ class FeatureEvaluator:
             feature = fields[0]
         graph = nx.MultiDiGraph()
 
-        color_map = []
         for word in words:
             if words[word] == 1:
                 color = "green"
@@ -269,8 +276,8 @@ class FeatureEvaluator:
 
         for word in words_to_measures:
             if (
-                words_to_measures[word]["precision"] > 0.8
-                and words_to_measures[word]["recall"] > 0.01
+                words_to_measures[word]["precision"] > 0.9
+                and words_to_measures[word]["TP"] > 2
             ):
                 selected_words.add(word)
 
