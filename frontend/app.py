@@ -199,22 +199,20 @@ def get_df_from_rules(rules, negated_rules):
 
     return df
 
+
 def save_after_modify(hand_made_rules, classes):
-    st.session_state.features[classes] = copy.deepcopy(st.session_state.rls_after_delete)
+    st.session_state.features[classes] = copy.deepcopy(
+        st.session_state.rls_after_delete
+    )
     st.session_state.feature_df = get_df_from_rules(
-        [
-            ";".join(feat[0])
-            for feat in st.session_state.features[classes]
-        ],
-        [
-            ";".join(feat[1])
-            for feat in st.session_state.features[classes]
-        ],
+        [";".join(feat[0]) for feat in st.session_state.features[classes]],
+        [";".join(feat[1]) for feat in st.session_state.features[classes]],
     )
     save_rules = hand_made_rules or "saved_features.json"
     save_ruleset(save_rules, st.session_state.features)
     st.session_state.rows_to_delete = []
     rerun()
+
 
 @st.cache(allow_output_mutation=True)
 def load_text_to_4lang():
@@ -590,7 +588,9 @@ def supervised_mode(
                 delete = delete_or_train == "delete"
                 train = delete_or_train == "train"
 
-                st.session_state.rows_to_delete = [r["rules"] for r in ag["selected_rows"]]
+                st.session_state.rows_to_delete = [
+                    r["rules"] for r in ag["selected_rows"]
+                ]
                 st.session_state.rls_after_delete = []
 
                 negated_list = ag["data"]["negated_rules"].tolist()
@@ -630,13 +630,12 @@ def supervised_mode(
 
             if st.session_state.rows_to_delete and delete_or_train == "delete":
                 with st.form("Delete form"):
-                    st.write('The following rules will be deleted, do you accept it?')
+                    st.write("The following rules will be deleted, do you accept it?")
                     st.write(st.session_state.rows_to_delete)
-                    save_button = st.form_submit_button('Accept Delete')
+                    save_button = st.form_submit_button("Accept Delete")
 
                 if save_button:
                     save_after_modify(hand_made_rules, classes)
-
 
             add_rule_manually(classes, hand_made_rules)
             rank_and_suggest(classes, data, evaluator)
@@ -1013,7 +1012,9 @@ def unsupervised_mode(
                     delete = delete_or_train == "delete"
                     train = delete_or_train == "train"
 
-                    st.session_state.rows_to_delete = [r["rules"] for r in ag["selected_rows"]]
+                    st.session_state.rows_to_delete = [
+                        r["rules"] for r in ag["selected_rows"]
+                    ]
                     st.session_state.rls_after_delete = []
 
                     negated_list = ag["data"]["negated_rules"].tolist()
@@ -1049,18 +1050,22 @@ def unsupervised_mode(
                             )
 
                             for f in selected_words:
-                                st.session_state.rls_after_delete.append([[f], [], classes])
+                                st.session_state.rls_after_delete.append(
+                                    [[f], [], classes]
+                                )
                     else:
                         st.session_state.rls_after_delete = copy.deepcopy(feature_list)
-                    
+
                     if st.session_state.rls_after_delete and not delete:
                         save_after_modify(hand_made_rules, classes)
 
                 if st.session_state.rows_to_delete and delete_or_train == "delete":
                     with st.form("Delete form"):
-                        st.write('The following rules will be deleted, do you accept it?')
+                        st.write(
+                            "The following rules will be deleted, do you accept it?"
+                        )
                         st.write(st.session_state.rows_to_delete)
-                        save_button = st.form_submit_button('Accept Delete')
+                        save_button = st.form_submit_button("Accept Delete")
 
                     if save_button:
                         save_after_modify(hand_made_rules, classes)
@@ -1165,8 +1170,20 @@ def get_args():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-t", "--train-data", type=str, required=True)
     parser.add_argument("-v", "--val-data", type=str)
-    parser.add_argument("-sr", "--suggested-rules", default=None, type=str)
-    parser.add_argument("-hr", "--hand-rules", default=None, type=str)
+    parser.add_argument(
+        "-sr",
+        "--suggested-rules",
+        default=None,
+        type=str,
+        help="Rules extracted automatically from python. If not present, the UI will automatically train it.",
+    )
+    parser.add_argument(
+        "-hr",
+        "--hand-rules",
+        default=None,
+        type=str,
+        help="Rules extracted with the UI. If provided, the UI will load them.",
+    )
     parser.add_argument("-m", "--mode", default="supervised", type=str)
     parser.add_argument("-g", "--graph-format", default="fourlang", type=str)
     return parser.parse_args()
