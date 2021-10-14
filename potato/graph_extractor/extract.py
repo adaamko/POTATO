@@ -161,7 +161,7 @@ class FeatureEvaluator:
                             (feature, nodes_str, sentence, str(label))
                         )
 
-        return self.cluster_feature(trained_features)[1]
+        return self.cluster_feature(trained_features)
 
     def cluster_feature(self, trained_features):
         def to_dot(graph, feature):
@@ -227,9 +227,10 @@ class FeatureEvaluator:
                         if hypernym == "1":
                             graph.add_edge(word, w, color=hypernym)
 
-        d = Source(to_dot(graph, feature))
-        d.engine = "circo"
-        d.format = "png"
+        # Show words!
+        # d = Source(to_dot(graph, feature))
+        # d.engine = "circo"
+        # d.format = "png"
 
         selected_words = self.select_words(trained_features)
 
@@ -237,7 +238,8 @@ class FeatureEvaluator:
 
         word_features.append(feature.replace(".*", "|".join(selected_words)))
 
-        return d.render(view=True), word_features
+        # return d.render(view=True), word_features
+        return word_features
 
     def select_words(self, trained_features):
         features = []
@@ -275,9 +277,9 @@ class FeatureEvaluator:
         selected_words = set()
 
         for word in words_to_measures:
-            if (
-                words_to_measures[word]["precision"] > 0.9
-                and words_to_measures[word]["TP"] > 2
+            if words_to_measures[word]["precision"] > 0.9 and (
+                words_to_measures[word]["TP"] > 1
+                or words_to_measures[word]["recall"] > 0.01
             ):
                 selected_words.add(word)
 

@@ -29,7 +29,7 @@ class GraphTrainer:
         self.model = LogisticRegression(random_state=0)
 
     def prepare_and_train(
-        self, min_edge=1
+        self, min_edge=0
     ) -> Dict[str, List[List[Union[List[str], str]]]]:
         self.prepare()
         return self.train(min_edge=min_edge)

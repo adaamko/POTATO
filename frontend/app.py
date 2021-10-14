@@ -239,7 +239,7 @@ def read_val(path):
     return pd.read_pickle(path)
 
 
-def train_df(df, min_edge=1):
+def train_df(df, min_edge=0):
     with st_stdout("code"):
         trainer = GraphTrainer(df)
         features = trainer.prepare_and_train(min_edge=min_edge)
@@ -440,7 +440,7 @@ def supervised_mode(
         st.sidebar.title("Train your dataset!")
         show_app = st.sidebar.button("Train")
         st.session_state.min_edge = st.sidebar.number_input(
-            "Min edge in features", min_value=0, max_value=10, value=1, step=1
+            "Min edge in features", min_value=0, max_value=3, value=0, step=1
         )
         if show_app:
             st.session_state.suggested_features = train_df(
@@ -484,7 +484,7 @@ def supervised_mode(
                 pop_len = (
                     5
                     if len(st.session_state.suggested_features[key]) > 5
-                    else len(st.session_state.suggested_features[key]) - 1
+                    else len(st.session_state.suggested_features[key])
                 )
                 st.session_state.features[key] = [
                     st.session_state.suggested_features[key].pop(0)
