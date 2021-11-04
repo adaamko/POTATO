@@ -3,7 +3,7 @@ POTATO is a human-in-the-loop XAI framework for extracting and evaluating interp
 
 ## Built systems
 
-We also provide already built rule-systems with POTATO (e.g. our paper _Offensive text detection on English Twitter with deep learning models and rule-based systems_ for the HASOC2021 shared task). If you are interested in that, you can go under _features/_ for more info!
+To get started with rule-systems we provide rule-based features prebuilt with POTATO on different datasets(e.g. our paper _Offensive text detection on English Twitter with deep learning models and rule-based systems_ for the HASOC2021 shared task). If you are interested in that, you can go under _features/_ for more info!
 
 ## Install and Quick Start
 ### Setup
