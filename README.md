@@ -1,6 +1,10 @@
 # POTATO: exPlainable infOrmation exTrAcTion framewOrk
 POTATO is a human-in-the-loop XAI framework for extracting and evaluating interpretable graph features for any classification problem  
 
+## Built systems
+
+We also provide already built rule-systems with POTATO (e.g. our paper _Offensive text detection on English Twitter with deep learning models and rule-based systems_ for the HASOC2021 shared task). If you are interested in that, you can go under _features/_ for more info!
+
 ## Install and Quick Start
 ### Setup
 The tool is heavily dependent upon the [tuw-nlp](https://github.com/recski/tuw-nlp) repository:
