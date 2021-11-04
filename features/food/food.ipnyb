@@ -15,7 +15,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 2,
    "metadata": {},
    "outputs": [],
    "source": [
@@ -31,7 +31,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 3,
    "metadata": {},
    "outputs": [],
    "source": [
@@ -40,7 +40,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 4,
    "metadata": {},
    "outputs": [],
    "source": [
@@ -49,7 +49,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 5,
    "metadata": {},
    "outputs": [],
    "source": [
@@ -72,7 +72,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 6,
    "metadata": {},
    "outputs": [],
    "source": [
@@ -89,7 +89,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 15,
    "metadata": {},
    "outputs": [],
    "source": [
@@ -99,26 +99,103 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 16,
    "metadata": {
     "scrolled": true,
     "tags": []
    },
-   "outputs": [],
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "2021-10-08 17:46:40 INFO: Loading these models for language: en (English):\n",
+      "=======================\n",
+      "| Processor | Package |\n",
+      "-----------------------\n",
+      "| tokenize  | craft   |\n",
+      "| pos       | craft   |\n",
+      "| lemma     | craft   |\n",
+      "| depparse  | craft   |\n",
+      "=======================\n",
+      "\n",
+      "INFO:stanza:Loading these models for language: en (English):\n",
+      "=======================\n",
+      "| Processor | Package |\n",
+      "-----------------------\n",
+      "| tokenize  | craft   |\n",
+      "| pos       | craft   |\n",
+      "| lemma     | craft   |\n",
+      "| depparse  | craft   |\n",
+      "=======================\n",
+      "\n",
+      "2021-10-08 17:46:40 INFO: Use device: cpu\n",
+      "INFO:stanza:Use device: cpu\n",
+      "2021-10-08 17:46:40 INFO: Loading: tokenize\n",
+      "INFO:stanza:Loading: tokenize\n",
+      "2021-10-08 17:46:40 INFO: Loading: pos\n",
+      "INFO:stanza:Loading: pos\n",
+      "2021-10-08 17:46:41 INFO: Loading: lemma\n",
+      "INFO:stanza:Loading: lemma\n",
+      "2021-10-08 17:46:41 INFO: Loading: depparse\n",
+      "INFO:stanza:Loading: depparse\n",
+      "2021-10-08 17:46:41 INFO: Done loading processors!\n",
+      "INFO:stanza:Done loading processors!\n",
+      "WARNING:root:loading NLP cache from en_nlp_cache...\n",
+      "WARNING:root:done!\n",
+      "100%|████████████████████████████████████████████████████████████████████████████| 492/492 [01:04<00:00,  7.67it/s]\n",
+      "2021-10-08 17:47:47 INFO: Loading these models for language: en (English):\n",
+      "=======================\n",
+      "| Processor | Package |\n",
+      "-----------------------\n",
+      "| tokenize  | craft   |\n",
+      "| pos       | craft   |\n",
+      "| lemma     | craft   |\n",
+      "| depparse  | craft   |\n",
+      "=======================\n",
+      "\n",
+      "INFO:stanza:Loading these models for language: en (English):\n",
+      "=======================\n",
+      "| Processor | Package |\n",
+      "-----------------------\n",
+      "| tokenize  | craft   |\n",
+      "| pos       | craft   |\n",
+      "| lemma     | craft   |\n",
+      "| depparse  | craft   |\n",
+      "=======================\n",
+      "\n",
+      "2021-10-08 17:47:47 INFO: Use device: cpu\n",
+      "INFO:stanza:Use device: cpu\n",
+      "2021-10-08 17:47:47 INFO: Loading: tokenize\n",
+      "INFO:stanza:Loading: tokenize\n",
+      "2021-10-08 17:47:47 INFO: Loading: pos\n",
+      "INFO:stanza:Loading: pos\n",
+      "2021-10-08 17:47:48 INFO: Loading: lemma\n",
+      "INFO:stanza:Loading: lemma\n",
+      "2021-10-08 17:47:48 INFO: Loading: depparse\n",
+      "INFO:stanza:Loading: depparse\n",
+      "2021-10-08 17:47:48 INFO: Done loading processors!\n",
+      "INFO:stanza:Done loading processors!\n",
+      "WARNING:root:loading NLP cache from en_nlp_cache...\n",
+      "WARNING:root:done!\n",
+      "100%|██████████████████████████████████████████████████████████████████████████████| 55/55 [00:07<00:00,  7.53it/s]\n"
+     ]
+    }
+   ],
    "source": [
     "train_sentences = [(row[1].preprocessed_sen, row[1].treat_label) for row in train_rows]\n",
     "dev_sentences = [(row[1].preprocessed_sen, row[1].treat_label) for row in dev_rows]\n",
     "\n",
-    "train_dataset = Dataset(train_sentences, label_vocab={\"TREAT\":1, \"NOT\": 0})\n",
-    "train_dataset.set_graphs(train_dataset.parse_graphs(graph_format=\"fourlang\"))\n",
+    "train_dataset = Dataset(train_sentences, label_vocab={\"TREAT\":1, \"NOT\": 0}, lang='en_bio')\n",
+    "train_dataset.set_graphs(train_dataset.parse_graphs(graph_format=\"ud\"))\n",
     "\n",
-    "dev_dataset = Dataset(dev_sentences, label_vocab={\"TREAT\":1, \"NOT\": 0})\n",
-    "dev_dataset.set_graphs(dev_dataset.parse_graphs(graph_format=\"fourlang\"))"
+    "dev_dataset = Dataset(dev_sentences, label_vocab={\"TREAT\":1, \"NOT\": 0}, lang='en_bio')\n",
+    "dev_dataset.set_graphs(dev_dataset.parse_graphs(graph_format=\"ud\"))"
    ]
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 17,
    "metadata": {},
    "outputs": [],
    "source": [
@@ -128,12 +205,12 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 18,
    "metadata": {},
    "outputs": [],
    "source": [
-    "train_df.to_pickle(\"food_train_dataset_treat_fourlang.pickle\")\n",
-    "dev_df.to_pickle(\"food_dev_dataset_treat_fourlang.pickle\")"
+    "train_df.to_pickle(\"food_train_dataset_treat_ud.pickle\")\n",
+    "dev_df.to_pickle(\"food_dev_dataset_treat_ud.pickle\")"
    ]
   },
   {
