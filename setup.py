@@ -19,6 +19,8 @@ setup(
         "matplotlib",
         "graphviz",
         "openpyxl",
+        "penman",
+        "networkx",
         "streamlit",
         "streamlit-aggrid",
     ],
