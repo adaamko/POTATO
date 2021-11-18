@@ -317,7 +317,10 @@ class FeatureEvaluator:
         for pcf in precision_recall_fscore_support(
             labels, whole_predicted, average=None
         ):
-            accuracy.append(pcf[1])
+            if len(pcf) > 1:
+                accuracy.append(pcf[1])
+            else:
+                accuracy.append(0)
 
         for feat in features:
             measure = [feat[0]]
