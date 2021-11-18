@@ -99,7 +99,7 @@ The function will return a dataframe with the matched instances:
 | 14 | all i want is for yara to survive tonight                                        |                   |                               |
 | 15 | fuck them                                                                        | HOF               | [['(u_1 / fuck)'], [], 'HOF'] |
 
-On of the core features of our tool is that we are also able to match subgraphs:
+One of the core features of our tool is that we are also able to match subgraphs:
 ```python
 #match a simple graph feature
 evaluator.match_features(df, [[["(u_1 / fuck :obj (u_2 / everything))"], [], "HOF"]])
@@ -228,18 +228,18 @@ To see the code you can check the jupyter notebook under *notebooks/examples.ipy
 If the DataFrame is ready with the parsed graphs, the UI can be started to inspect the extracted rules and modify them. The frontend is a streamlit app, the simplest way of starting it is (the training and the validation dataset must be provided):
 
 ```
-streamlit run app.py -- -t ../notebooks/train_dataset -v ../notebooks/val_dataset -g ud
+streamlit run frontend/app.py -- -t notebooks/train_dataset -v notebooks/val_dataset -g ud
 ```
 
 it can be also started with the extracted features:
 
 ```
-streamlit run app.py -- -t ../notebooks/train_dataset -v ../notebooks/val_dataset -g ud -sr ../notebooks/features.json
+streamlit run frontend/app.py -- -t notebooks/train_dataset -v notebooks/val_dataset -g ud -sr notebooks/features.json
 ```
 
 if you already used the UI and extracted the features manually and you want to load it, you can run:
 ```
-streamlit run app.py -- -t ../notebooks/train_dataset -v ../notebooks/val_dataset -g ud -sr ../notebooks/features.json -hr ../notebooks/manual_features.json
+streamlit run frontend/app.py -- -t notebooks/train_dataset -v notebooks/val_dataset -g ud -sr notebooks/features.json -hr notebooks/manual_features.json
 ```
 
 ### Unsupervised mode
@@ -269,7 +269,7 @@ sentences = [("fuck absolutely everything about today.", ""),
 
 Then, the frontend can be started:
 ```
-streamlit run app.py -- -t ../notebooks/test_dataset.pickle -g ud -m unsupervised
+streamlit run frontend/app.py -- -t notebooks/unsupervised_dataset -g ud -m unsupervised
 ```
 
 
@@ -278,7 +278,7 @@ streamlit run app.py -- -t ../notebooks/test_dataset.pickle -g ud -m unsupervise
 If you have the features ready and you want to evaluate them on a test set, you can run:
 
 ```python
-python evaluate.py -t ud -f ../frontend/saved_features.json -d ../notebooks/val_dataset
+python scripts/evaluate.py -t ud -f notebooks/features.json -d notebooks/val_dataset
 ```
 
 The result will be a _csv_ file with the labels and the matched rules:
