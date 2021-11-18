@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import Dict, List
 from typing import Union
 from math import log2, sqrt
+from rank_bm25 import BM25Okapi
 
 import eli5
 import pandas as pd
@@ -28,6 +29,19 @@ class GraphTrainer:
         self.max_features = max_features
         self.model = LogisticRegression(random_state=0)
 
+    def get_n_most_similar(self, sample, dataset=None, n=10, algorithm='bm25'):
+        corpus = self.dataset.text.tolist() if not dataset else dataset
+        if algorithm == 'bm25':
+            tokenized_corpus = [doc.split() for doc in corpus]
+            bm25 = BM25Okapi(tokenized_corpus)
+
+            query = sample.split()
+            top_n = bm25.get_top_n(query, corpus, n=n)
+
+            return top_n
+
+        return corpus[0:10]
+    
     def prepare_and_train(
         self, min_edge=0
     ) -> Dict[str, List[List[Union[List[str], str]]]]:

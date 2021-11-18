@@ -341,7 +341,10 @@ class FeatureEvaluator:
                     true_pos_s.append((sen, lab))
                 predicted.append(label)
             for pcf in precision_recall_fscore_support(labels, predicted, average=None):
-                measure.append(pcf[1])
+                if len(pcf) > 1:
+                    measure.append(pcf[1])
+                else:
+                    measure.append(0)
             measure.append(false_pos_g)
             measure.append(false_pos_s)
             measure.append(true_pos_g)

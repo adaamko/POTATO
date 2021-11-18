@@ -21,6 +21,7 @@ setup(
         "openpyxl",
         "penman",
         "networkx",
+        "rank_bm25",
         "streamlit",
         "streamlit-aggrid",
     ],
