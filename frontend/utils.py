@@ -265,9 +265,8 @@ def annotate_df(predicted):
 
 def show_ml_feature(classes, hand_made_rules):
     st.markdown(
-        f"<span>Feature: {st.session_state.ml_feature[0]}, Precision: <b>{st.session_state.ml_feature[1]:.3f}</b>, \
-                        Recall: <b>{st.session_state.ml_feature[2]:.3f}</b>, Fscore: <b>{st.session_state.ml_feature[3]:.3f}</b>, \
-                            Support: <b>{st.session_state.ml_feature[4]}</b></span>",
+        f"<span>Feature: {st.session_state.ml_feature[0]}, Retrieved True Positive samples: <b>{st.session_state.ml_feature[5]}</b>, \
+                        Retrieved False Positive samples: <b>{st.session_state.ml_feature[6]}</b></span>",
         unsafe_allow_html=True,
     )
     accept_rule = st.button("Accept")
