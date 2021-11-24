@@ -29,9 +29,15 @@ class GraphTrainer:
         self.max_features = max_features
         self.model = LogisticRegression(random_state=0)
 
-    def get_n_most_similar(self, sample, dataset=None, n=10, algorithm='bm25'):
+    def get_n_most_similar(
+        self,
+        sample: str,
+        dataset: pd.DataFrame = None,
+        n: int = 10,
+        algorithm: str = "bm25",
+    ) -> List[str]:
         corpus = self.dataset.text.tolist() if not dataset else dataset
-        if algorithm == 'bm25':
+        if algorithm == "bm25":
             tokenized_corpus = [doc.split() for doc in corpus]
             bm25 = BM25Okapi(tokenized_corpus)
 
@@ -41,9 +47,9 @@ class GraphTrainer:
             return top_n
 
         return corpus[0:10]
-    
+
     def prepare_and_train(
-        self, min_edge=0
+        self, min_edge: int = 0
     ) -> Dict[str, List[List[Union[List[str], str]]]]:
         self.prepare()
         return self.train(min_edge=min_edge)
@@ -69,7 +75,14 @@ class GraphTrainer:
         else:
             self.graph_model.select_n_best(self.max_features)
 
-    def train(self, min_edge=1) -> Dict[str, List[List[Union[List[str], str]]]]:
+    def rank(
+        self, features: Dict[str, List[List[Union[List[str], str]]]]
+    ) -> Dict[str, List[List[Union[List[str], str]]]]:
+        # TODO
+
+        return
+
+    def train(self, min_edge: int = 1) -> Dict[str, List[List[Union[List[str], str]]]]:
         label_vocab = {}
         for label in self.dataset.label.unique():
             label_vocab[label] = (

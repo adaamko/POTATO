@@ -1,16 +1,16 @@
 import argparse
 import json
 import logging
-import sys
 import os
+import sys
 from collections import defaultdict
 
 import networkx as nx
 import pandas as pd
 import stanza
-from potato.dataset.utils import default_pn_to_graph, ud_to_graph
 from graphviz import Source
 from networkx.algorithms.isomorphism import DiGraphMatcher
+from potato.dataset.utils import default_pn_to_graph, ud_to_graph
 from sklearn.metrics import precision_recall_fscore_support
 from tqdm import tqdm
 from tuw_nlp.grammar.text_to_4lang import TextTo4lang
@@ -164,43 +164,6 @@ class FeatureEvaluator:
         return self.cluster_feature(trained_features)
 
     def cluster_feature(self, trained_features):
-        def to_dot(graph, feature):
-            lines = ["digraph finite_state_machine {"]
-            lines.append("\tdpi=70;label=" + '"' + feature + '"')
-            # lines.append('\tordering=out;')
-            # sorting everything to make the process deterministic
-            node_lines = []
-            node_to_name = {}
-            for node, n_data in graph.nodes(data=True):
-                printname = node
-                if "color" in n_data and n_data["color"] == "red":
-                    node_line = '\t{0} [shape = circle, label = "{1}", \
-                            style=filled, fillcolor=red];'.format(
-                        printname, printname.split("_")[0]
-                    ).replace(
-                        "-", "_"
-                    )
-                if "color" in n_data and n_data["color"] == "green":
-                    node_line = '\t{0} [shape = circle, label = "{1}", \
-                            style="filled", fillcolor=green];'.format(
-                        printname, printname.split("_")[0]
-                    ).replace(
-                        "-", "_"
-                    )
-                node_lines.append(node_line)
-            lines += sorted(node_lines)
-
-            edge_lines = []
-            for u, v, edata in graph.edges(data=True):
-                if "color" in edata:
-                    edge_lines.append(
-                        '\t{0} -> {1} [ label = "{2}" ];'.format(u, v, edata["color"])
-                    )
-
-            lines += sorted(edge_lines)
-            lines.append("}")
-            return "\n".join(lines)
-
         graphs = {}
         if os.path.isfile("longman_zero_paths_one_exp"):
             with open("longman_zero_paths_one_exp.json") as f:
@@ -227,18 +190,12 @@ class FeatureEvaluator:
                         if hypernym == "1":
                             graph.add_edge(word, w, color=hypernym)
 
-        # Show words!
-        # d = Source(to_dot(graph, feature))
-        # d.engine = "circo"
-        # d.format = "png"
-
         selected_words = self.select_words(trained_features)
 
         word_features = []
 
         word_features.append(feature.replace(".*", "|".join(selected_words)))
 
-        # return d.render(view=True), word_features
         return word_features
 
     def select_words(self, trained_features):

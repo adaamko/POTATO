@@ -1,19 +1,9 @@
-import argparse
-import json
-import logging
-import os
-import sys
-import eli5
-
 import numpy as np
 from collections import defaultdict
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import precision_recall_fscore_support
 from collections import defaultdict
 from tuw_nlp.common.vocabulary import Vocabulary
 from tuw_nlp.graph.lexical import LexGraphs
 from tuw_nlp.graph.utils import graph_to_pn
-from tuw_nlp.text.utils import load_parsed, save_parsed
 from potato.models.utils import tree_to_code
 
 
