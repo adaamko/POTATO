@@ -24,6 +24,7 @@ setup(
         "rank_bm25",
         "streamlit",
         "streamlit-aggrid",
+        "scikit-criteria",
     ],
     packages=find_packages(),
     zip_safe=False,

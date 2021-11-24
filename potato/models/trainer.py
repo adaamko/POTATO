@@ -6,11 +6,13 @@ from rank_bm25 import BM25Okapi
 
 import eli5
 import pandas as pd
-from potato.graph_extractor.extract import GraphExtractor
+from potato.graph_extractor.extract import GraphExtractor, FeatureEvaluator
 from potato.models.model import GraphModel
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split as split
 from tqdm import tqdm
+
+from skcriteria import Data
+from skcriteria.madm import simple
 
 
 class GraphTrainer:
@@ -24,6 +26,7 @@ class GraphTrainer:
         print("Initializing trainer object...")
         self.dataset = dataset
         self.extractor = GraphExtractor(lang=lang, cache_fn="en_nlp_cache")
+        self.evaluator = FeatureEvaluator()
         self.graph_model = GraphModel()
         self.max_edge = max_edge
         self.max_features = max_features
@@ -49,10 +52,10 @@ class GraphTrainer:
         return corpus[0:10]
 
     def prepare_and_train(
-        self, min_edge: int = 0
+        self, min_edge: int = 0, rank: bool = False
     ) -> Dict[str, List[List[Union[List[str], str]]]]:
         self.prepare()
-        return self.train(min_edge=min_edge)
+        return self.train(min_edge=min_edge, rank=rank)
 
     def prepare(self) -> None:
         ids = pd.to_numeric(self.dataset.index).tolist()
@@ -78,11 +81,38 @@ class GraphTrainer:
     def rank(
         self, features: Dict[str, List[List[Union[List[str], str]]]]
     ) -> Dict[str, List[List[Union[List[str], str]]]]:
-        # TODO
 
-        return
+        ranked_features = {}
 
-    def train(self, min_edge: int = 1) -> Dict[str, List[List[Union[List[str], str]]]]:
+        for key, val in features.items():
+            stat, acc = self.evaluator.evaluate_feature(key, val, self.dataset)
+            stat_opt = pd.DataFrame(
+                {
+                    "false_positives": stat.False_positive_sens.apply(lambda x: len(x)),
+                    "true_positives": stat.True_positive_sens.apply(lambda x: len(x)),
+                }
+            )
+            criteria_data = Data(
+                stat_opt,
+                [min, max],
+                anames=val,
+                cnames=stat_opt.columns,
+                weights=[30, 70],
+            )
+            dm = simple.WeightedSum(mnorm="sum")
+
+            dec = dm.decide(criteria_data)
+
+            sorted_feats = [
+                x for _, x in sorted(zip(dec.rank_, val), key=lambda pair: pair[0])
+            ]
+            ranked_features[key] = sorted_feats
+
+        return ranked_features
+
+    def train(
+        self, min_edge: int = 1, rank: bool = False
+    ) -> Dict[str, List[List[Union[List[str], str]]]]:
         label_vocab = {}
         for label in self.dataset.label.unique():
             label_vocab[label] = (
@@ -122,5 +152,9 @@ class GraphTrainer:
                         features[inv_vocab[int(target)]].append(
                             ([g], [], inv_vocab[int(target)])
                         )
+
+        if rank:
+            print("Ranking features based on accuracy...")
+            self.rank(features)
 
         return features

@@ -61,6 +61,9 @@ def init_session_states():
     if "applied_rules" not in st.session_state:
         st.session_state.applied_rules = []
 
+    if "rank" not in st.session_state:
+        st.session_state.rank = False
+
 
 def rerun():
     raise st.experimental_rerun()
@@ -232,10 +235,10 @@ def read_val(path):
     return pd.read_pickle(path)
 
 
-def train_df(df, min_edge=0):
+def train_df(df, min_edge=0, rank=False):
     with st_stdout("code"):
         trainer = GraphTrainer(df)
-        features = trainer.prepare_and_train(min_edge=min_edge)
+        features = trainer.prepare_and_train(min_edge=min_edge, rank=rank)
 
         return features
 
@@ -400,7 +403,7 @@ def add_rule_manually(classes, hand_made_rules):
     )
 
 
-def rank_and_suggest(classes, data, evaluator):
+def rank_and_suggest(classes, data, evaluator, rank_false_negatives=True):
     suggest_new_rule = st.button("suggest new rules")
     if suggest_new_rule:
         if (
@@ -417,6 +420,9 @@ def rank_and_suggest(classes, data, evaluator):
                     st.session_state.df_statistics.iloc[0].False_negative_indices,
                 )
             suggested_feature = features_ranked[0]
+
             st.session_state.suggested_features[classes].remove(suggested_feature[0])
 
             st.session_state.ml_feature = suggested_feature
+        else:
+            st.warning("Dataset is not evaluated!")

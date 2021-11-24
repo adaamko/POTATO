@@ -20,6 +20,9 @@ def supervised_mode(
         st.session_state.min_edge = st.sidebar.number_input(
             "Min edge in features", min_value=0, max_value=3, value=0, step=1
         )
+        st.session_state.rank = st.sidebar.selectbox(
+            "Rank features based on accuracy", options=[False, True]
+        )
         if show_app:
             st.session_state.suggested_features = train_df(
                 data, st.session_state.min_edge
@@ -435,6 +438,12 @@ def unsupervised_mode(
                 rerun()
 
         train = st.button("Train!")
+        st.session_state.min_edge = st.sidebar.number_input(
+            "Min edge in features", min_value=0, max_value=3, value=0, step=1
+        )
+        st.session_state.rank = st.sidebar.selectbox(
+            "Rank features based on accuracy", options=[False, True]
+        )
         if train:
             df_to_train = st.session_state.df.copy()
             df_to_train = df_to_train[df_to_train.applied_rules.map(len) == 0]
@@ -455,7 +464,7 @@ def unsupervised_mode(
                     n=positive_size, random_state=1, replace=True
                 )
                 st.session_state.suggested_features = train_df(
-                    df_to_train, st.session_state.min_edge
+                    df_to_train, st.session_state.min_edge, st.session_state.rank
                 )
                 st.session_state.df_to_train = df_to_train
                 st.session_state.df_statistics = pd.DataFrame
@@ -644,7 +653,9 @@ def unsupervised_mode(
                         save_after_modify(hand_made_rules, classes)
 
                 add_rule_manually(classes, hand_made_rules)
-                rank_and_suggest(classes, st.session_state.df, evaluator)
+                rank_and_suggest(
+                    classes, st.session_state.df, evaluator, rank_false_negatives=False
+                )
 
                 if st.session_state.ml_feature:
                     show_ml_feature(classes, hand_made_rules)
