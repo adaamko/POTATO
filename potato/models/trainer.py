@@ -155,6 +155,6 @@ class GraphTrainer:
 
         if rank:
             print("Ranking features based on accuracy...")
-            self.rank(features)
+            features = self.rank(features)
 
         return features
