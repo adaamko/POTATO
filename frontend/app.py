@@ -23,6 +23,9 @@ def supervised_mode(
         st.session_state.rank = st.sidebar.selectbox(
             "Rank features based on accuracy", options=[False, True]
         )
+        st.session_state.download = st.sidebar.selectbox(
+            "Show download button for graphs", options=[False, True]
+        )
         if show_app:
             st.session_state.suggested_features = train_df(
                 data, st.session_state.min_edge
@@ -443,6 +446,9 @@ def unsupervised_mode(
         )
         st.session_state.rank = st.sidebar.selectbox(
             "Rank features based on accuracy", options=[False, True]
+        )
+        st.session_state.download = st.sidebar.selectbox(
+            "Show download button for graphs", options=[False, True]
         )
         if train:
             df_to_train = st.session_state.df.copy()

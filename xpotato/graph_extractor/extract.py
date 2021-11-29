@@ -117,7 +117,7 @@ class FeatureEvaluator:
                     df.iloc[i].Fscore,
                     df.iloc[i].Support,
                     len(df.iloc[i].True_positive_sens),
-                    len(df.iloc[i].False_positive_sens)
+                    len(df.iloc[i].False_positive_sens),
                 )
             )
 

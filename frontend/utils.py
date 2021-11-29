@@ -3,9 +3,11 @@ import json
 import re
 import sys
 
+from graphviz import Source
 import pandas as pd
 import streamlit as st
 from streamlit.report_thread import REPORT_CONTEXT_ATTR_NAME
+from streamlit_agraph import agraph, Node, Edge, Config
 
 from xpotato.dataset.utils import default_pn_to_graph
 from xpotato.graph_extractor.extract import FeatureEvaluator
@@ -64,6 +66,9 @@ def init_session_states():
     if "rank" not in st.session_state:
         st.session_state.rank = False
 
+    if "download" not in st.session_state:
+        st.session_state.download = False
+
 
 def rerun():
     raise st.experimental_rerun()
@@ -95,6 +100,38 @@ def st_redirect(src, dst):
 def st_stdout(dst):
     with st_redirect(sys.stdout, dst):
         yield
+
+
+def convert_to_agraph(graph, marked_nodes=set()):
+    nodes = []
+    edges = []
+
+    node_to_name = {}
+    for node, n_data in graph.nodes(data=True):
+        d_node = d_clean(n_data["name"]) if n_data["name"] else "None"
+        nodes.append(Node(id=node, label=d_node))
+        printname = d_node
+        node_to_name[node] = printname
+
+    for u, v, edata in graph.edges(data=True):
+        if "color" in edata:
+            edges.append(
+                Edge(source=u, label=edata["color"], target=v, type="CURVE_SMOOTH")
+            )
+
+    config = Config(
+        width=500,
+        height=500,
+        directed=True,
+        nodeHighlightBehavior=True,
+        highlightColor="#F7A7A6",  # or "blue"
+        collapsible=True,
+        node={"labelProperty": "label"},
+        link={"labelProperty": "label", "renderLabel": True}
+        # **kwargs e.g. node_size=1000 or node_color="blue"
+    )
+
+    return agraph(nodes=nodes, edges=edges, config=config)
 
 
 def to_dot(graph, marked_nodes=set(), integ=False):
@@ -362,11 +399,23 @@ def graph_viewer(type, graphs, sentences, nodes):
     )
     st.text(f"{type}: {len(graphs)}")
     current_graph = graphs[graph_type[type]]
+    # convert_to_agraph(current_graph)
+    dot_current_graph = to_dot(
+        current_graph,
+        marked_nodes=set(nodes),
+    )
+
+    if st.session_state.download:
+        graph_pipe = Source(dot_current_graph).pipe(format="svg")
+        st.download_button(
+            label="Download graph as SVG",
+            data=graph_pipe,
+            file_name="graph.svg",
+            mime="mage/svg+xml",
+        )
+        
     st.graphviz_chart(
-        to_dot(
-            current_graph,
-            marked_nodes=set(nodes),
-        ),
+        dot_current_graph,
         use_container_width=True,
     )
 
