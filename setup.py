@@ -26,7 +26,6 @@ setup(
         "rank_bm25",
         "streamlit",
         "streamlit-aggrid",
-        "streamlit-agraph",
         "scikit-criteria",
         "tuw-nlp",
     ],
