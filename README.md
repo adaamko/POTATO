@@ -7,15 +7,22 @@ To get started with rule-systems we provide rule-based features prebuilt with PO
 
 ## Install and Quick Start
 ### Setup
-The tool is heavily dependent upon the [tuw-nlp](https://github.com/recski/tuw-nlp) repository:
+The tool is heavily dependent upon the [tuw-nlp](https://github.com/recski/tuw-nlp) repository. You can install tuw-nlp with pip:
 
 ```
-git clone https://github.com/recski/tuw-nlp.git
-cd tuw-nlp
-pip install -e .
+pip install tuw-nlp
+```
+Then follow the [instructions](https://github.com/recski/tuw-nlp) to setup the package.
+
+
+Then install POTATO from pip:
+
+```
+pip install xpotato
 ```
 
-Then install POTATO:
+Or you can install it from source:
+
 ```
 pip install -e .
 ```
@@ -24,8 +31,8 @@ pip install -e .
 
 First import packages from potato:
 ```python
-from potato.dataset.dataset import Dataset
-from potato.models.trainer import GraphTrainer
+from xpotato.dataset.dataset import Dataset
+from xpotato.models.trainer import GraphTrainer
 ```
 
 Initialize the dataset you want to classify:
@@ -68,7 +75,7 @@ rule_to_match = [[["(u_1 / fuck)"], [], "HOF"]]
 
 Init the rule matcher:
 ```python
-from potato.graph_extractor.extract import FeatureEvaluator
+from xpotato.graph_extractor.extract import FeatureEvaluator
 evaluator = FeatureEvaluator()
 ```
 

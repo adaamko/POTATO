@@ -10,7 +10,7 @@ import pandas as pd
 import stanza
 from graphviz import Source
 from networkx.algorithms.isomorphism import DiGraphMatcher
-from potato.dataset.utils import default_pn_to_graph, ud_to_graph
+from xpotato.dataset.utils import default_pn_to_graph, ud_to_graph
 from sklearn.metrics import precision_recall_fscore_support
 from tqdm import tqdm
 from tuw_nlp.grammar.text_to_4lang import TextTo4lang
