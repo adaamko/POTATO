@@ -76,8 +76,8 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "from potato.dataset.dataset import Dataset\n",
-    "from potato.models.trainer import GraphTrainer"
+    "from xpotato.dataset.dataset import Dataset\n",
+    "from xpotato.models.trainer import GraphTrainer"
    ]
   },
   {

@@ -6,8 +6,8 @@ from rank_bm25 import BM25Okapi
 
 import eli5
 import pandas as pd
-from potato.graph_extractor.extract import GraphExtractor, FeatureEvaluator
-from potato.models.model import GraphModel
+from xpotato.graph_extractor.extract import GraphExtractor, FeatureEvaluator
+from xpotato.models.model import GraphModel
 from sklearn.linear_model import LogisticRegression
 from tqdm import tqdm
 

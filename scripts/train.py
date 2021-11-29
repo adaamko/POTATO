@@ -3,10 +3,10 @@ import sys
 import pandas as pd
 import logging
 
-from potato.dataset.hasoc_dataset import HasocDataset
-from potato.dataset.semeval_dataset import SemevalDataset
-from potato.graph_extractor.extract import GraphExtractor
-from potato.models.model import GraphModel
+from xpotato.dataset.hasoc_dataset import HasocDataset
+from xpotato.dataset.semeval_dataset import SemevalDataset
+from xpotato.graph_extractor.extract import GraphExtractor
+from xpotato.models.model import GraphModel
 
 
 def load_hasoc(path, output_graphs):

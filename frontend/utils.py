@@ -7,9 +7,9 @@ import pandas as pd
 import streamlit as st
 from streamlit.report_thread import REPORT_CONTEXT_ATTR_NAME
 
-from potato.dataset.utils import default_pn_to_graph
-from potato.graph_extractor.extract import FeatureEvaluator
-from potato.models.trainer import GraphTrainer
+from xpotato.dataset.utils import default_pn_to_graph
+from xpotato.graph_extractor.extract import FeatureEvaluator
+from xpotato.models.trainer import GraphTrainer
 
 from contextlib import contextmanager
 from io import StringIO
