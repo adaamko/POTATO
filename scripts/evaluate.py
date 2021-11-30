@@ -7,6 +7,7 @@ from collections import defaultdict
 
 import networkx as nx
 import pandas as pd
+from sklearn.metrics import classification_report
 from xpotato.dataset.utils import default_pn_to_graph
 from xpotato.graph_extractor.extract import FeatureEvaluator
 
@@ -16,6 +17,7 @@ def get_args():
     parser.add_argument("-t", "--graph-type", type=str, default="fourlang")
     parser.add_argument("-f", "--features", type=str, required=True)
     parser.add_argument("-d", "--dataset-path", type=str, default=None, required=True)
+    parser.add_argument("-m", "--mode", type=str, default="predictions")
 
     return parser.parse_args()
 
@@ -39,9 +41,32 @@ def main():
             feature_values.append(f)
     evaluator = FeatureEvaluator()
     pred_df = evaluator.match_features(df, feature_values)
-    if "label" in df:
+    if "label" in df and df['label'].iloc[0]:
         pred_df["label"] = df.label
-    pred_df.to_csv(sys.stdout, sep="\t")
+
+        label_to_id = {}
+
+        for label in df.groupby('label').size().keys().tolist():
+            if label in label_to_id:
+                continue
+            else:
+                label_to_id[label] = df[df.label == 'HOF'].iloc[1].label_id
+        
+        predicted_label = []
+        gold = df.label_id.tolist()
+
+        for label in pred_df["Predicted label"]:
+            if label in label_to_id:
+                predicted_label.append(label_to_id[label])
+            else:
+                predicted_label.append(0)
+        
+        report = classification_report(gold, predicted_label, digits=3)
+        
+    if args.mode == "predictions":
+        pred_df.to_csv(sys.stdout, sep="\t")
+    elif args.mode == "report":
+        print(report)
 
 
 if __name__ == "__main__":
