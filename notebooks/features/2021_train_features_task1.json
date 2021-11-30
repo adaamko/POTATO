@@ -1,1 +1,200 @@
-{"HOF": [[["(u_2 / fuck)"], [], "HOF"], [["(u_401 / asshole)"], [], "HOF"], [["(u_764 / whore)"], [], "HOF"], [["(u_1132 / fucking)"], [], "HOF"], [["(u_859 / motherfucker)"], [], "HOF"], [["(u_1 / dick)"], [], "HOF"], [["(u_1 / act :prepagainst (u_2 / country))"], [], "HOF"], [["(u_1 / QUOTEBitchQUOTE)"], [], "HOF"], [["(u_1 / bitch)"], [], "HOF"], [["(u_1 / useless)"], [], "HOF"], [["(u_1 / fuckHYPHENoff)"], [], "HOF"], [["(u_1 / QUOTEDickQUOTE)"], [], "HOF"], [["(u_1 / shit)"], [], "HOF"], [["(u_1 / wank)"], [], "HOF"], [["(u_1 / bullshit)"], [], "HOF"], [["(u_1 / shame :ARG1 (u_2 / media|person|publication|they|you|party|have|government))"], [], "HOF"], [["(u_1 / shame :ARG0 (u_2 / shame|vulture|amr|elect|i|media|it|expose|you|have|obligate|support|nation|result|tell|person|get|vote|possible|religious|bastard|this|know|democracy|let|we|pull|and))"], [], "HOF"], [["(u_1 / penis)"], [], "HOF"], [["(u_1 / bastard)"], [], "HOF"], [["(u_1 / shameless)"], [], "HOF"], [["(u_1 / fucker)"], [], "HOF"], [["(u_1 / wanker :mod (u_2 / .*))"], [], "HOF"], [["(u_1 / pissHYPHENoff)"], [], "HOF"], [["(u_1 / piss)"], [], "HOF"], [["(u_1 / embarrass :ARG1 (u_2 / you))"], [], "HOF"], [["(u_1 / person :mod (u_2 / horrible))"], [], "HOF"], [["(u_1 / kill :ARG1 (u_2 / person))"], [], "HOF"], [["(u_1 / clown)"], [], "HOF"], [["(u_1 / shame)"], [], "HOF"], [["(u_1 / wanker)"], [], "HOF"]]}
+{
+    "HOF": [
+        [
+            [
+                "(u_2 / fuck)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_401 / asshole)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_764 / whore)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1132 / fucking)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_859 / motherfucker)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / dick)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / act :prepagainst (u_2 / country))"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / QUOTEBitchQUOTE)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / bitch)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / useless)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / fuckHYPHENoff)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / QUOTEDickQUOTE)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / shit)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / wank)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / bullshit)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / shame :ARG1 (u_2 / media|person|publication|they|you|party|have|government))"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / shame :ARG0 (u_2 / shame|vulture|amr|elect|i|media|it|expose|you|have|obligate|support|nation|result|tell|person|get|vote|possible|religious|bastard|this|know|democracy|let|we|pull|and))"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / penis)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / bastard)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / shameless)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / fucker)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / wanker :mod (u_2 / .*))"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / pissHYPHENoff)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / piss)"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / embarrass :ARG1 (u_2 / you))"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / person :mod (u_2 / horrible))"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / kill :ARG1 (u_2 / person))"
+            ],
+            [],
+            "HOF"
+        ],
+        [
+            [
+                "(u_1 / clown)"
+            ],
+            [],
+            "HOF"
+        ]
+    ]
+}
