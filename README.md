@@ -7,6 +7,8 @@ To get started with rule-systems we provide rule-based features prebuilt with PO
 
 ## Install and Quick Start
 ### Setup
+__WARNING: EXPLICIT CONTENT! The examples are from the HASOC shared task of identifying offensive text.__
+
 The tool is heavily dependent upon the [tuw-nlp](https://github.com/recski/tuw-nlp) repository. You can install tuw-nlp with pip:
 
 ```
