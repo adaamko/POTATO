@@ -41,17 +41,18 @@ def main():
             feature_values.append(f)
     evaluator = FeatureEvaluator()
     pred_df = evaluator.match_features(df, feature_values)
-    if "label" in df and df['label'].iloc[0]:
+    report = None
+    if "label" in df and df["label"].iloc[0]:
         pred_df["label"] = df.label
 
         label_to_id = {}
 
-        for label in df.groupby('label').size().keys().tolist():
+        for label in df.groupby("label").size().keys().tolist():
             if label in label_to_id:
                 continue
             else:
-                label_to_id[label] = df[df.label == 'HOF'].iloc[1].label_id
-        
+                label_to_id[label] = df[df.label == label].iloc[1].label_id
+
         predicted_label = []
         gold = df.label_id.tolist()
 
@@ -60,13 +61,15 @@ def main():
                 predicted_label.append(label_to_id[label])
             else:
                 predicted_label.append(0)
-        
+
         report = classification_report(gold, predicted_label, digits=3)
-        
+
     if args.mode == "predictions":
         pred_df.to_csv(sys.stdout, sep="\t")
     elif args.mode == "report":
+        assert report, "There are no labels in the dataset, we cannot generate a classification report. Are you evaluating a test set?"
         print(report)
+
 
 
 if __name__ == "__main__":
