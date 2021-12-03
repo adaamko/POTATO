@@ -1,14 +1,13 @@
 # POTATO: exPlainable infOrmation exTrAcTion framewOrk
-POTATO is a human-in-the-loop XAI framework for extracting and evaluating interpretable graph features for any classification problem  
+POTATO is a human-in-the-loop XAI framework for extracting and evaluating interpretable graph features for any classification problem in Natural Language Processing.
 
 ## Built systems
 
-To get started with rule-systems we provide rule-based features prebuilt with POTATO on different datasets (e.g. our paper _Offensive text detection on English Twitter with deep learning models and rule-based systems_ for the HASOC2021 shared task). If you are interested in that, you can go under _features/_ for more info!
+To get started with rule-systems we provide rule-based features prebuilt with POTATO on different datasets (e.g. our paper _Offensive text detection on Englis
+h Twitter with deep learning models and rule-based systems_ for the HASOC2021 shared task). If you are interested in that, you can go under _features/_ for more info!
 
 ## Install and Quick Start
 ### Setup
-__WARNING: EXPLICIT CONTENT! The examples are from the HASOC shared task of identifying offensive text.__
-
 The tool is heavily dependent upon the [tuw-nlp](https://github.com/recski/tuw-nlp) repository. You can install tuw-nlp with pip:
 
 ```
@@ -31,38 +30,70 @@ pip install -e .
 
 ### Usage
 
+- POTATO is an IE tool that works on graphs, currently we support three types of graphs: AMR, UD and [Fourlang](https://github.com/kornai/4lang). 
+
+- In the README we provide examples with fourlang semantic graphs. Make sure to follow the instructions in the [tuw_nlp](https://github.com/recski/tuw-nlp) repo to be able to build fourlang graphs. 
+
+- If you are interested in AMR graphs, you can go to the [hasoc](https://github.com/adaamko/POTATO/tree/main/features/hasoc) folder To get started with rule-systems prebuilt with POTATO on the HASOC dataset (we also presented a paper named _Offensive text detection on English Twitter with deep learning models and rule-based systems_ for the HASOC2021 shared task). 
+
+- We also provide experiments on the [CrowdTruth](https://github.com/CrowdTruth/Medical-Relation-Extraction) medical relation extraction datasets with UD graphs, go to the [crowdtruth](https://github.com/adaamko/POTATO/tree/main/features/crowdtruth) folder for more info!
+
+
+
+__To see complete working examples go under the _notebooks/_ folder to see experiments on HASOC and on the Semeval relation extraction dataset.__
+
 First import packages from potato:
 ```python
 from xpotato.dataset.dataset import Dataset
 from xpotato.models.trainer import GraphTrainer
 ```
 
-Initialize the dataset you want to classify:
+First we demonstrate POTATO's capabilities with a few sentences manually picked from the dataset.
+
+__Note that we replaced the two entitites in question with _XXX_ and _YYY_.__
+
 ```python
-sentences = [("fuck absolutely everything about today.", "HOF"),
-            ("I just made food and I'm making myself sick to my stomach. Lol, wtf is this shit", "HOF"),
-            ("RT [USER]: America is the most fucked up country [URL]", "HOF"),
-            ("you'd be blind to not see the heart eyes i have for you.", "NOT"),
-            ("It's hard for me to give a fuck now", "HOF"),
-            ("tell me everything", "NOT"),
-            ("Bitch YES [URL]", "HOF"),
-            ("Eight people a minute....", "NOT"),
-            ("RT [USER]: im not fine, i need you", "NOT"),
-            ("Holy shit.. 3 months and I'll be in Italy", "HOF"),
-            ("Now I do what I want 🤪", "NOT"),
-            ("[USER] you'd immediately stop", "NOT"),
-            ("Just... shut the fuck up", "HOF"),
-            ("RT [USER]: ohhhh shit a [USER] [URL]", "HOF"),
-            ("all i want is for yara to survive tonight", "NOT"),
-            ("fuck them", "HOF")]
+sentences = [("Governments and industries in nations around the world are pouring XXX into YYY.", "Entity-Destination(e1,e2)"),
+            ("The scientists poured XXX into pint YYY.", "Entity-Destination(e1,e2)"),
+            ("The suspect pushed the XXX into a deep YYY.", "Entity-Destination(e1,e2)"),
+            ("The Nepalese government sets up a XXX to inquire into the alleged YYY of diplomatic passports.", "Other"),
+            ("The entity1 to buy papers is pushed into the next entity2.", "Entity-Destination(e1,e2)"),
+            ("An unnamed XXX was pushed into the YYY.", "Entity-Destination(e1,e2)"),
+            ("Since then, numerous independent feature XXX have journeyed into YYY.", "Other"),
+            ("For some reason, the XXX was blinded from his own YYY about the incommensurability of time.", "Other"),
+            ("Sparky Anderson is making progress in his XXX from YYY and could return to managing the Detroit Tigers within a week.", "Other"),
+            ("Olympics have already poured one XXX into the YYY.", "Entity-Destination(e1,e2)"),
+            ("After wrapping him in a light blanket, they placed the XXX in the YYY his father had carved for him.", "Entity-Destination(e1,e2)"),
+            ("I placed the XXX in a natural YYY, at the base of a part of the fallen arch.", "Entity-Destination(e1,e2)"),
+            ("The XXX was delivered from the YYY of Lincoln Memorial on August 28, 1963 as part of his famous March on Washington.", "Other"),
+            ("The XXX leaked from every conceivable YYY.", "Other"),
+            ("The scientists placed the XXX in a tiny YYY which gets channelled into cancer cells, and is then unpacked with a laser impulse.", "Entity-Destination(e1,e2)"),
+            ("The level surface closest to the MSS, known as the XXX, departs from an YYY by about 100 m in each direction.", "Other"),
+            ("Gaza XXX recover from three YYY of war.", "Other"),
+            ("This latest XXX from the animation YYY at Pixar is beautiful, masterly, inspired - and delivers a powerful ecological message.", "Other")]
 ```
 
 Initialize the dataset and also provide a label encoding. Then parse the sentences into graphs. Currently we provide three types of graphs: _ud_, _fourlang_, _amr_.
 
 ```python
-dataset = Dataset(sentences, label_vocab={"NOT":0, "HOF": 1})
-dataset.set_graphs(dataset.parse_graphs(graph_format="ud"))
+dataset = Dataset(sentences, label_vocab={"Other":0, "Entity-Destination(e1,e2)": 1})
+dataset.set_graphs(dataset.parse_graphs(graph_format=graph_format))
 ```
+
+Check the dataset:
+```python
+df = dataset.to_dataframe()
+```
+
+We can also check any of the graphs:
+# We can also check any of the graphs
+```python
+from xpotato.models.utils import to_dot
+from graphviz import Source
+
+Source(to_dot(dataset.graphs[0]))
+```
+![graph](https://raw.githubusercontent.com/adaamko/POTATO/main/files/re_example.svg)
 
 ### Rules
 
@@ -71,8 +102,8 @@ them automatically (POTATO also provides a frontend that tries to do both).
 
 The simplest rule would be just a node in the graph:
 ```python
-#the syntax of the rules is List[List[rules that we want to match], List[rules that shouldn't be in the matched graphs], Label of the rule]
-rule_to_match = [[["(u_1 / fuck)"], [], "HOF"]]
+# The syntax of the rules is List[List[rules that we want to match], List[rules that shouldn't be in the matched graphs], Label of the rule]
+rule_to_match = [[["(u_1 / into)"], [], "Entity-Destination(e1,e2)"]]
 ```
 
 Init the rule matcher:
@@ -88,113 +119,125 @@ df = dataset.to_dataframe()
 evaluator.match_features(df, rule_to_match)
 ```
 
-The function will return a dataframe with the matched instances:
-|    | Sentence                                                                         | Predicted label   | Matched rule                  |
-|---:|:---------------------------------------------------------------------------------|:------------------|:------------------------------|
-|  0 | fuck absolutely everything about today.                                          | HOF               | [['(u_1 / fuck)'], [], 'HOF'] |
-|  1 | I just made food and I'm making myself sick to my stomach. Lol, wtf is this shit |                   |                               |
-|  2 | RT [USER]: America is the most fucked up country [URL]                           |                   |                               |
-|  3 | you'd be blind to not see the heart eyes i have for you.                         |                   |                               |
-|  4 | It's hard for me to give a fuck now                                              | HOF               | [['(u_1 / fuck)'], [], 'HOF'] |
-|  5 | tell me everything                                                               |                   |                               |
-|  6 | Bitch YES [URL]                                                                  |                   |                               |
-|  7 | Eight people a minute....                                                        |                   |                               |
-|  8 | RT [USER]: im not fine, i need you                                               |                   |                               |
-|  9 | Holy shit.. 3 months and I'll be in Italy                                        |                   |                               |
-| 10 | Now I do what I want 🤪                                                          |                   |                               |
-| 11 | [USER] you'd immediately stop                                                    |                   |                               |
-| 12 | Just... shut the fuck up                                                         | HOF               | [['(u_1 / fuck)'], [], 'HOF'] |
-| 13 | RT [USER]: ohhhh shit a [USER] [URL]                                             |                   |                               |
-| 14 | all i want is for yara to survive tonight                                        |                   |                               |
-| 15 | fuck them                                                                        | HOF               | [['(u_1 / fuck)'], [], 'HOF'] |
+|    | Sentence                                                                                                                        | Predicted label           | Matched rule                                        |
+|---:|:--------------------------------------------------------------------------------------------------------------------------------|:--------------------------|:----------------------------------------------------|
+|  0 | Governments and industries in nations around the world are pouring XXX into YYY.                                                | Entity-Destination(e1,e2) | [['(u_1 / into)'], [], 'Entity-Destination(e1,e2)'] |
+|  1 | The scientists poured XXX into pint YYY.                                                                                        | Entity-Destination(e1,e2) | [['(u_1 / into)'], [], 'Entity-Destination(e1,e2)'] |
+|  2 | The suspect pushed the XXX into a deep YYY.                                                                                     | Entity-Destination(e1,e2) | [['(u_1 / into)'], [], 'Entity-Destination(e1,e2)'] |
+|  3 | The Nepalese government sets up a XXX to inquire into the alleged YYY of diplomatic passports.                                  | Entity-Destination(e1,e2) | [['(u_1 / into)'], [], 'Entity-Destination(e1,e2)'] |
+|  4 | The entity1 to buy papers is pushed into the next entity2.                                                                      | Entity-Destination(e1,e2) | [['(u_1 / into)'], [], 'Entity-Destination(e1,e2)'] |
+|  5 | An unnamed XXX was pushed into the YYY.                                                                                         | Entity-Destination(e1,e2) | [['(u_1 / into)'], [], 'Entity-Destination(e1,e2)'] |
+|  6 | Since then, numerous independent feature XXX have journeyed into YYY.                                                           | Entity-Destination(e1,e2) | [['(u_1 / into)'], [], 'Entity-Destination(e1,e2)'] |
+|  7 | For some reason, the XXX was blinded from his own YYY about the incommensurability of time.                                     |                           |                                                     |
+|  8 | Sparky Anderson is making progress in his XXX from YYY and could return to managing the Detroit Tigers within a week.           |                           |                                                     |
+|  9 | Olympics have already poured one XXX into the YYY.                                                                              | Entity-Destination(e1,e2) | [['(u_1 / into)'], [], 'Entity-Destination(e1,e2)'] |
+| 10 | After wrapping him in a light blanket, they placed the XXX in the YYY his father had carved for him.                            |                           |                                                     |
+| 11 | I placed the XXX in a natural YYY, at the base of a part of the fallen arch.                                                    |                           |                                                     |
+| 12 | The XXX was delivered from the YYY of Lincoln Memorial on August 28, 1963 as part of his famous March on Washington.            |                           |                                                     |
+| 13 | The XXX leaked from every conceivable YYY.                                                                                      |                           |                                                     |
+| 14 | The scientists placed the XXX in a tiny YYY which gets channelled into cancer cells, and is then unpacked with a laser impulse. | Entity-Destination(e1,e2) | [['(u_1 / into)'], [], 'Entity-Destination(e1,e2)'] |
+| 15 | The level surface closest to the MSS, known as the XXX, departs from an YYY by about 100 m in each direction.                   |                           |                                                     |
+| 16 | Gaza XXX recover from three YYY of war.                                                                                         |                           |                                                     |
+| 17 | This latest XXX from the animation YYY at Pixar is beautiful, masterly, inspired - and delivers a powerful ecological message.  |                           |                                                     |
 
-One of the core features of our tool is that we are also able to match subgraphs:
+
+
+You can see in the dataset that the rules only matched the instances where the "into" node was present.
+
+One of the core features of our tool is that we are also able to match subgraphs. To describe a graph, we use the [PENMAN](https://github.com/goodmami/penman) notation. 
+
+E.g. the string _(u_1 / into :1 (u_3 / pour))_ would describe a graph with two nodes ("into" and "pour") and a single directed edge with the label "1" between them.
 ```python
 #match a simple graph feature
-evaluator.match_features(df, [[["(u_1 / fuck :obj (u_2 / everything))"], [], "HOF"]])
+evaluator.match_features(df, [[["(u_1 / into :1 (u_2 / pour) :2 (u_3 / YYY))"], [], "Entity-Destination(e1,e2)"]])
 ```
 
-This will only return one match instead of three:
-|    | Sentence                                                                         | Predicted label   | Matched rule                                          |
-|---:|:---------------------------------------------------------------------------------|:------------------|:------------------------------------------------------|
-|  0 | fuck absolutely everything about today.                                          | HOF               | [['(u_1 / fuck :obj (u_2 / everything))'], [], 'HOF'] |
-|  1 | I just made food and I'm making myself sick to my stomach. Lol, wtf is this shit |                   |                                                       |
-|  2 | RT [USER]: America is the most fucked up country [URL]                           |                   |                                                       |
-|  3 | you'd be blind to not see the heart eyes i have for you.                         |                   |                                                       |
-|  4 | It's hard for me to give a fuck now                                              |                   |                                                       |
-|  5 | tell me everything                                                               |                   |                                                       |
-|  6 | Bitch YES [URL]                                                                  |                   |                                                       |
-|  7 | Eight people a minute....                                                        |                   |                                                       |
-|  8 | RT [USER]: im not fine, i need you                                               |                   |                                                       |
-|  9 | Holy shit.. 3 months and I'll be in Italy                                        |                   |                                                       |
-| 10 | Now I do what I want 🤪                                                          |                   |                                                       |
-| 11 | [USER] you'd immediately stop                                                    |                   |                                                       |
-| 12 | Just... shut the fuck up                                                         |                   |                                                       |
-| 13 | RT [USER]: ohhhh shit a [USER] [URL]                                             |                   |                                                       |
-| 14 | all i want is for yara to survive tonight                                        |                   |                                                       |
-| 15 | fuck them                                                                        |                   |                                                       |                                                                   | HOF               | [['(u_1 / fuck)'], ['(u_2 / absolutely)'], 'HOF'] |
+Describing a subgraph with the string "(u_1 / into :1 (u_2 / pour) :2 (u_3 / YYY))" will return only three examples instead of 9, when we only had a single node as a feature
+|    | Sentence                                                                                                                        | Predicted label           | Matched rule                                                                       |
+|---:|:--------------------------------------------------------------------------------------------------------------------------------|:--------------------------|:-----------------------------------------------------------------------------------|
+|  0 | Governments and industries in nations around the world are pouring XXX into YYY.                                                | Entity-Destination(e1,e2) | [['(u_1 / into :1 (u_2 / pour) :2 (u_3 / YYY))'], [], 'Entity-Destination(e1,e2)'] |
+|  1 | The scientists poured XXX into pint YYY.                                                                                        | Entity-Destination(e1,e2) | [['(u_1 / into :1 (u_2 / pour) :2 (u_3 / YYY))'], [], 'Entity-Destination(e1,e2)'] |
+|  2 | The suspect pushed the XXX into a deep YYY.                                                                                     |                           |                                                                                    |
+|  3 | The Nepalese government sets up a XXX to inquire into the alleged YYY of diplomatic passports.                                  |                           |                                                                                    |
+|  4 | The entity1 to buy papers is pushed into the next entity2.                                                                      |                           |                                                                                    |
+|  5 | An unnamed XXX was pushed into the YYY.                                                                                         |                           |                                                                                    |
+|  6 | Since then, numerous independent feature XXX have journeyed into YYY.                                                           |                           |                                                                                    |
+|  7 | For some reason, the XXX was blinded from his own YYY about the incommensurability of time.                                     |                           |                                                                                    |
+|  8 | Sparky Anderson is making progress in his XXX from YYY and could return to managing the Detroit Tigers within a week.           |                           |                                                                                    |
+|  9 | Olympics have already poured one XXX into the YYY.                                                                              | Entity-Destination(e1,e2) | [['(u_1 / into :1 (u_2 / pour) :2 (u_3 / YYY))'], [], 'Entity-Destination(e1,e2)'] |
+| 10 | After wrapping him in a light blanket, they placed the XXX in the YYY his father had carved for him.                            |                           |                                                                                    |
+| 11 | I placed the XXX in a natural YYY, at the base of a part of the fallen arch.                                                    |                           |                                                                                    |
+| 12 | The XXX was delivered from the YYY of Lincoln Memorial on August 28, 1963 as part of his famous March on Washington.            |                           |                                                                                    |
+| 13 | The XXX leaked from every conceivable YYY.                                                                                      |                           |                                                                                    |
+| 14 | The scientists placed the XXX in a tiny YYY which gets channelled into cancer cells, and is then unpacked with a laser impulse. |                           |                                                                                    |
+| 15 | The level surface closest to the MSS, known as the XXX, departs from an YYY by about 100 m in each direction.                   |                           |                                                                                    |
+| 16 | Gaza XXX recover from three YYY of war.                                                                                         |                           |                                                                                    |
+| 17 | This latest XXX from the animation YYY at Pixar is beautiful, masterly, inspired - and delivers a powerful ecological message.  |                           |                                                                                    |
 
 
-We can also add negated features that we don't want to match (this won't match the first row where 'absolutely' is present):
+We can also add negated features that we don't want to match (this won't match the first row where 'pour' is present):
 ```python
 #match a simple graph feature
 evaluator.match_features(df, [[["(u_1 / fuck)"], ["(u_2 / absolutely)"], "HOF"]])
 ```
 
-|    | Sentence                                                                         | Predicted label   | Matched rule                                      |
-|---:|:---------------------------------------------------------------------------------|:------------------|:--------------------------------------------------|
-|  0 | fuck absolutely everything about today.                                          |                   |                                                   |
-|  1 | I just made food and I'm making myself sick to my stomach. Lol, wtf is this shit |                   |                                                   |
-|  2 | RT [USER]: America is the most fucked up country [URL]                           |                   |                                                   |
-|  3 | you'd be blind to not see the heart eyes i have for you.                         |                   |                                                   |
-|  4 | It's hard for me to give a fuck now                                              | HOF               | [['(u_1 / fuck)'], ['(u_2 / absolutely)'], 'HOF'] |
-|  5 | tell me everything                                                               |                   |                                                   |
-|  6 | Bitch YES [URL]                                                                  |                   |                                                   |
-|  7 | Eight people a minute....                                                        |                   |                                                   |
-|  8 | RT [USER]: im not fine, i need you                                               |                   |                                                   |
-|  9 | Holy shit.. 3 months and I'll be in Italy                                        |                   |                                                   |
-| 10 | Now I do what I want 🤪                                                          |                   |                                                   |
-| 11 | [USER] you'd immediately stop                                                    |                   |                                                   |
-| 12 | Just... shut the fuck up                                                         | HOF               | [['(u_1 / fuck)'], ['(u_2 / absolutely)'], 'HOF'] |
-| 13 | RT [USER]: ohhhh shit a [USER] [URL]                                             |                   |                                                   |
-| 14 | all i want is for yara to survive tonight                                        |                   |                                                   |
-| 15 | fuck them                                                                        | HOF               | [['(u_1 / fuck)'], ['(u_2 / absolutely)'], 'HOF'] |
+|    | Sentence                                                                                                                        | Predicted label           | Matched rule                                                                     |
+|---:|:--------------------------------------------------------------------------------------------------------------------------------|:--------------------------|:---------------------------------------------------------------------------------|
+|  0 | Governments and industries in nations around the world are pouring XXX into YYY.                                                |                           |                                                                                  |
+|  1 | The scientists poured XXX into pint YYY.                                                                                        |                           |                                                                                  |
+|  2 | The suspect pushed the XXX into a deep YYY.                                                                                     | Entity-Destination(e1,e2) | [['(u_1 / into :2 (u_3 / YYY))'], ['(u_2 / pour)'], 'Entity-Destination(e1,e2)'] |
+|  3 | The Nepalese government sets up a XXX to inquire into the alleged YYY of diplomatic passports.                                  | Entity-Destination(e1,e2) | [['(u_1 / into :2 (u_3 / YYY))'], ['(u_2 / pour)'], 'Entity-Destination(e1,e2)'] |
+|  4 | The entity1 to buy papers is pushed into the next entity2.                                                                      |                           |                                                                                  |
+|  5 | An unnamed XXX was pushed into the YYY.                                                                                         | Entity-Destination(e1,e2) | [['(u_1 / into :2 (u_3 / YYY))'], ['(u_2 / pour)'], 'Entity-Destination(e1,e2)'] |
+|  6 | Since then, numerous independent feature XXX have journeyed into YYY.                                                           | Entity-Destination(e1,e2) | [['(u_1 / into :2 (u_3 / YYY))'], ['(u_2 / pour)'], 'Entity-Destination(e1,e2)'] |
+|  7 | For some reason, the XXX was blinded from his own YYY about the incommensurability of time.                                     |                           |                                                                                  |
+|  8 | Sparky Anderson is making progress in his XXX from YYY and could return to managing the Detroit Tigers within a week.           |                           |                                                                                  |
+|  9 | Olympics have already poured one XXX into the YYY.                                                                              |                           |                                                                                  |
+| 10 | After wrapping him in a light blanket, they placed the XXX in the YYY his father had carved for him.                            |                           |                                                                                  |
+| 11 | I placed the XXX in a natural YYY, at the base of a part of the fallen arch.                                                    |                           |                                                                                  |
+| 12 | The XXX was delivered from the YYY of Lincoln Memorial on August 28, 1963 as part of his famous March on Washington.            |                           |                                                                                  |
+| 13 | The XXX leaked from every conceivable YYY.                                                                                      |                           |                                                                                  |
+| 14 | The scientists placed the XXX in a tiny YYY which gets channelled into cancer cells, and is then unpacked with a laser impulse. |                           |                                                                                  |
+| 15 | The level surface closest to the MSS, known as the XXX, departs from an YYY by about 100 m in each direction.                   |                           |                                                                                  |
+| 16 | Gaza XXX recover from three YYY of war.                                                                                         |                           |                                                                                  |
+| 17 | This latest XXX from the animation YYY at Pixar is beautiful, masterly, inspired - and delivers a powerful ecological message.  |                           |                                                                                  |
 
 If we don't want to specify nodes, regex can also be used in place of the node and edge-names:
 
 ```python
-#regex can be used to match any node (this will match instances where 'fuck' is connected to any node with 'obj' edge)
+#regex can be used to match any node (this will match instances where 'into' is connected to any node with '1' edge)
 evaluator.match_features(df, [[["(u_1 / fuck :obj (u_2 / .*))"], [], "HOF"]])
 ```
 
-|    | Sentence                                                                         | Predicted label   | Matched rule                                  |
-|---:|:---------------------------------------------------------------------------------|:------------------|:----------------------------------------------|
-|  0 | fuck absolutely everything about today.                                          | HOF               | [['(u_1 / fuck :obj (u_2 / .*))'], [], 'HOF'] |
-|  1 | I just made food and I'm making myself sick to my stomach. Lol, wtf is this shit |                   |                                               |
-|  2 | RT [USER]: America is the most fucked up country [URL]                           |                   |                                               |
-|  3 | you'd be blind to not see the heart eyes i have for you.                         |                   |                                               |
-|  4 | It's hard for me to give a fuck now                                              |                   |                                               |
-|  5 | tell me everything                                                               |                   |                                               |
-|  6 | Bitch YES [URL]                                                                  |                   |                                               |
-|  7 | Eight people a minute....                                                        |                   |                                               |
-|  8 | RT [USER]: im not fine, i need you                                               |                   |                                               |
-|  9 | Holy shit.. 3 months and I'll be in Italy                                        |                   |                                               |
-| 10 | Now I do what I want 🤪                                                          |                   |                                               |
-| 11 | [USER] you'd immediately stop                                                    |                   |                                               |
-| 12 | Just... shut the fuck up                                                         |                   |                                               |
-| 13 | RT [USER]: ohhhh shit a [USER] [URL]                                             |                   |                                               |
-| 14 | all i want is for yara to survive tonight                                        |                   |                                               |
-| 15 | fuck them                                                                        | HOF               | [['(u_1 / fuck :obj (u_2 / .*))'], [], 'HOF'] |
+|    | Sentence                                                                                                                        | Predicted label           | Matched rule                                                                     |
+|---:|:--------------------------------------------------------------------------------------------------------------------------------|:--------------------------|:---------------------------------------------------------------------------------|
+|  0 | Governments and industries in nations around the world are pouring XXX into YYY.                                                | Entity-Destination(e1,e2) | [['(u_1 / into :1 (u_2 / .*) :2 (u_3 / YYY))'], [], 'Entity-Destination(e1,e2)'] |
+|  1 | The scientists poured XXX into pint YYY.                                                                                        | Entity-Destination(e1,e2) | [['(u_1 / into :1 (u_2 / .*) :2 (u_3 / YYY))'], [], 'Entity-Destination(e1,e2)'] |
+|  2 | The suspect pushed the XXX into a deep YYY.                                                                                     | Entity-Destination(e1,e2) | [['(u_1 / into :1 (u_2 / .*) :2 (u_3 / YYY))'], [], 'Entity-Destination(e1,e2)'] |
+|  3 | The Nepalese government sets up a XXX to inquire into the alleged YYY of diplomatic passports.                                  | Entity-Destination(e1,e2) | [['(u_1 / into :1 (u_2 / .*) :2 (u_3 / YYY))'], [], 'Entity-Destination(e1,e2)'] |
+|  4 | The entity1 to buy papers is pushed into the next entity2.                                                                      |                           |                                                                                  |
+|  5 | An unnamed XXX was pushed into the YYY.                                                                                         | Entity-Destination(e1,e2) | [['(u_1 / into :1 (u_2 / .*) :2 (u_3 / YYY))'], [], 'Entity-Destination(e1,e2)'] |
+|  6 | Since then, numerous independent feature XXX have journeyed into YYY.                                                           | Entity-Destination(e1,e2) | [['(u_1 / into :1 (u_2 / .*) :2 (u_3 / YYY))'], [], 'Entity-Destination(e1,e2)'] |
+|  7 | For some reason, the XXX was blinded from his own YYY about the incommensurability of time.                                     |                           |                                                                                  |
+|  8 | Sparky Anderson is making progress in his XXX from YYY and could return to managing the Detroit Tigers within a week.           |                           |                                                                                  |
+|  9 | Olympics have already poured one XXX into the YYY.                                                                              | Entity-Destination(e1,e2) | [['(u_1 / into :1 (u_2 / .*) :2 (u_3 / YYY))'], [], 'Entity-Destination(e1,e2)'] |
+| 10 | After wrapping him in a light blanket, they placed the XXX in the YYY his father had carved for him.                            |                           |                                                                                  |
+| 11 | I placed the XXX in a natural YYY, at the base of a part of the fallen arch.                                                    |                           |                                                                                  |
+| 12 | The XXX was delivered from the YYY of Lincoln Memorial on August 28, 1963 as part of his famous March on Washington.            |                           |                                                                                  |
+| 13 | The XXX leaked from every conceivable YYY.                                                                                      |                           |                                                                                  |
+| 14 | The scientists placed the XXX in a tiny YYY which gets channelled into cancer cells, and is then unpacked with a laser impulse. |                           |                                                                                  |
+| 15 | The level surface closest to the MSS, known as the XXX, departs from an YYY by about 100 m in each direction.                   |                           |                                                                                  |
+| 16 | Gaza XXX recover from three YYY of war.                                                                                         |                           |                                                                                  |
+| 17 | This latest XXX from the animation YYY at Pixar is beautiful, masterly, inspired - and delivers a powerful ecological message.  |                           |                                                                                  |
 
 We can also train regex rules from a training data, this will automatically replace regex '.*' with nodes that are 
 'good enough' statistically based on the provided dataframe.
 
 ```python
-#regex can be used to match any node (this will match instances where 'fuck' is connected to any node with 'obj' edge)
-evaluator.train_feature("HOF", "(u_1 / fuck :obj (u_2 / .*))", df)
+evaluator.train_feature("Entity-Destination(e1,e2)", "(u_1 / into :1 (u_2 / .*) :2 (u_3 / YYY))", df)
 ```
 
-This will return '(u_1 / fuck :obj (u_2 / everything|they))'] (replaced '.*' with _everything_ and _they_)
+This returns '(u_1 / into :1 (u_2 / push|pour) :2 (u_3 / YYY))' (replaced '.*' with _push_ and _pour_)
 
 ### Learning rules
 
@@ -230,8 +273,6 @@ with open("graphs.pickle", "wb") as f:
     pickle.dump(val.graph, f)
 ```
 
-To see the code you can check the jupyter notebook under *notebooks/examples.ipynb*
-
 ## Frontend
 
 If the DataFrame is ready with the parsed graphs, the UI can be started to inspect the extracted rules and modify them. The frontend is a streamlit app, the simplest way of starting it is (the training and the validation dataset must be provided):
@@ -258,23 +299,26 @@ If labels are not or just partially provided, the frontend can be started also i
 
 Dataset without labels can be initialized with:
 ```python
-sentences = [("fuck absolutely everything about today.", ""),
-            ("I just made food and I'm making myself sick to my stomach. Lol, wtf is this shit", ""),
-            ("RT [USER]: America is the most fucked up country [URL]", ""),
-            ("you'd be blind to not see the heart eyes i have for you.", ""),
-            ("It's hard for me to give a fuck now", ""),
-            ("tell me everything", ""),
-            ("Bitch YES [URL]", ""),
-            ("Eight people a minute....", ""),
-            ("RT [USER]: im not fine, i need you", ""),
-            ("Holy shit.. 3 months and I'll be in Italy", ""),
-            ("Now I do what I want 🤪", ""),
-            ("[USER] you'd immediately stop", ""),
-            ("Just... shut the fuck up", ""),
-            ("RT [USER]: ohhhh shit a [USER] [URL]", ""),
-            ("all i want is for yara to survive tonight", ""),
-            ("fuck them", "")]
+sentences = [("Governments and industries in nations around the world are pouring XXX into YYY.", ""),
+            ("The scientists poured XXX into pint YYY.", ""),
+            ("The suspect pushed the XXX into a deep YYY.", ""),
+            ("The Nepalese government sets up a XXX to inquire into the alleged YYY of diplomatic passports.", ""),
+            ("The entity1 to buy papers is pushed into the next entity2.", ""),
+            ("An unnamed XXX was pushed into the YYY.", ""),
+            ("Since then, numerous independent feature XXX have journeyed into YYY.", ""),
+            ("For some reason, the XXX was blinded from his own YYY about the incommensurability of time.", ""),
+            ("Sparky Anderson is making progress in his XXX from YYY and could return to managing the Detroit Tigers within a week.", ""),
+            ("Olympics have already poured one XXX into the YYY.", ""),
+            ("After wrapping him in a light blanket, they placed the XXX in the YYY his father had carved for him.", ""),
+            ("I placed the XXX in a natural YYY, at the base of a part of the fallen arch.", ""),
+            ("The XXX was delivered from the YYY of Lincoln Memorial on August 28, 1963 as part of his famous March on Washington.", ""),
+            ("The XXX leaked from every conceivable YYY.", ""),
+            ("The scientists placed the XXX in a tiny YYY which gets channelled into cancer cells, and is then unpacked with a laser impulse.", ""),
+            ("The level surface closest to the MSS, known as the XXX, departs from an YYY by about 100 m in each direction.", ""),
+            ("Gaza XXX recover from three YYY of war.", ""),
+            ("This latest XXX from the animation YYY at Pixar is beautiful, masterly, inspired - and delivers a powerful ecological message.", "")]
 ```
+
 
 Then, the frontend can be started:
 ```
@@ -290,12 +334,7 @@ If you have the features ready and you want to evaluate them on a test set, you 
 python scripts/evaluate.py -t ud -f notebooks/features.json -d notebooks/val_dataset
 ```
 
-The result will be a _csv_ file with the labels and the matched rules:
-|     | Sentence                                | Predicted label | Matched rule                          |     |
-| --- | --------------------------------------- | --------------- | ------------------------------------- | --- |
-| 0   | RT [USER]: ohhhh shit a [USER] [URL]    | HOF             | ['(u_48 / shit)']                     |     |
-| 1   | [USER] you'd immediately stop           | HOF             | ['(u_40 / user :punct (u_42 / LSB))'] |     |
-| 2   | fuck absolutely everything about today. | HOF             |  ['(u_1 / fuck)']                            |     |
+The result will be a _csv_ file with the labels and the matched rules.
 
 ## Contributing
 

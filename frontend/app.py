@@ -114,7 +114,7 @@ def supervised_mode(
                     | GridUpdateMode.VALUE_CHANGED,
                     width="100%",
                     theme="material",
-                    fit_columns_on_grid_load=True,
+                    fit_columns_on_grid_load=False,
                 )
 
                 delete_or_train = st.radio(
