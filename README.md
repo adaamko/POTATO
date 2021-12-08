@@ -38,6 +38,7 @@ pip install -e .
 
 - We also provide experiments on the [CrowdTruth](https://github.com/CrowdTruth/Medical-Relation-Extraction) medical relation extraction datasets with UD graphs, go to the [crowdtruth](https://github.com/adaamko/POTATO/tree/main/features/crowdtruth) folder for more info!
 
+- You can read about the use of the bootstrap mode in the [docs](https://github.com/adaamko/POTATO/tree/main/docs/README_unsupervised.md)
 
 
 __To see complete working examples go under the _notebooks/_ folder to see experiments on HASOC and on the Semeval relation extraction dataset.__
