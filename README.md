@@ -37,9 +37,7 @@ pip install -e .
 - If you are interested in AMR graphs, you can go to the [hasoc](https://github.com/adaamko/POTATO/tree/main/features/hasoc) folder To get started with rule-systems prebuilt with POTATO on the HASOC dataset (we also presented a paper named _Offensive text detection on English Twitter with deep learning models and rule-based systems_ for the HASOC2021 shared task). 
 
 - We also provide experiments on the [CrowdTruth](https://github.com/CrowdTruth/Medical-Relation-Extraction) medical relation extraction datasets with UD graphs, go to the [crowdtruth](https://github.com/adaamko/POTATO/tree/main/features/crowdtruth) folder for more info!
-
-- You can read about the use of the bootstrap mode in the [docs](https://github.com/adaamko/POTATO/tree/main/docs/README_unsupervised.md)
-
+- 
 
 __To see complete working examples go under the _notebooks/_ folder to see experiments on HASOC and on the Semeval relation extraction dataset.__
 
@@ -293,9 +291,9 @@ if you already used the UI and extracted the features manually and you want to l
 streamlit run frontend/app.py -- -t notebooks/train_dataset -v notebooks/val_dataset -g ud -sr notebooks/features.json -hr notebooks/manual_features.json
 ```
 
-### Unsupervised mode
+### Advanced mode
 
-If labels are not or just partially provided, the frontend can be started also in _unsupervised_ mode, where the user can _annotate_ a few examples at the start, then the system gradually offers rules based on the provided examples. 
+If labels are not or just partially provided, the frontend can be started also in _advanced_ mode, where the user can _annotate_ a few examples at the start, then the system gradually offers rules based on the provided examples. 
 
 
 Dataset without labels can be initialized with:
@@ -323,9 +321,14 @@ sentences = [("Governments and industries in nations around the world are pourin
 
 Then, the frontend can be started:
 ```
-streamlit run frontend/app.py -- -t notebooks/unsupervised_dataset -g ud -m unsupervised
+streamlit run frontend/app.py -- -t notebooks/unsupervised_dataset -g ud -m advanced
 ```
 
+Once the frontend starts up and you define the labels, you are faced with the annotation interface. You can search elements by clicking on the appropriate column name and applying the desired filter. You can annotate instances by checking the checkbox at the beginning of the line. You can check multiple checkboxs at a time. Once you've selected the utterances you want to annotate, click on the _Annotate_ button. The annotated samples will appear in the lower table. You can clear the annotation of certain elements by selecting them in the second table and clicking _Clear annotation_.
+
+Once you have some annotated data, you can train rules by clicking the _Train!_ button. It is recommended to set the _Rank features based on accuracy_ to True, if you have just a few samples. You will get a similar interface as in supervised mode, you can generate rule suggestions, and write your own rules as usual. Once you are satisfied with the rules, select each of them and click _annotate based on selected_. This process might take a while if you are working with large data. You should get all the rule matches marked in the first and the second tables. You can order the tables by each column, so it's easier to check. You will have to manually accept the annotations generated this way for them to appear in the second table.
+
+- You can read about the use of the advanced mode in the [docs](https://github.com/adaamko/POTATO/tree/main/docs/README_advanced_mode.md)
 
 
 ## Evaluate
