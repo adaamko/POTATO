@@ -7,9 +7,7 @@ from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 from utils import *
 
 
-def supervised_mode(
-    evaluator, data, val_data, graph_format, feature_path, hand_made_rules
-):
+def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made_rules):
     if hand_made_rules:
         with open(hand_made_rules) as f:
             st.session_state.features = json.load(f)
@@ -233,8 +231,7 @@ def supervised_mode(
                     nodes, option = rule_chooser()
                 st.markdown(
                     f"<span>Result of using all the rules: Precision: <b>{st.session_state.whole_accuracy[0]:.3f}</b>, \
-                        Recall: <b>{st.session_state.whole_accuracy[1]:.3f}</b>, Fscore: <b>{st.session_state.whole_accuracy[2]:.3f}</b>, \
-                            Support: <b>{st.session_state.whole_accuracy[3]}</b></span>",
+                        Recall: <b>{st.session_state.whole_accuracy[1]:.3f}</b>, Fscore: <b>{st.session_state.whole_accuracy[2]:.3f}</b></span>",
                     unsafe_allow_html=True,
                 )
                 (
@@ -253,7 +250,7 @@ def supervised_mode(
 
                 st.markdown(
                     f"<span>The rule's result: Precision: <b>{prec:.3f}</b>, Recall: <b>{recall:.3f}</b>, \
-                        Fscore: <b>{fscore:.3f}</b>, Support: <b>{support}</b></span>",
+                        Fscore: <b>{fscore:.3f}</b>, True positives: <b>{len(tp_graphs)}</b>, False positives: <b>{len(fp_graphs)}</b></span>",
                     unsafe_allow_html=True,
                 )
 
@@ -304,9 +301,7 @@ def supervised_mode(
                         graph_viewer("FN", fn_graphs, fn_sentences, nodes)
 
 
-def unsupervised_mode(
-    evaluator, train_data, graph_format, feature_path, hand_made_rules
-):
+def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_rules):
     data = read_train(train_data)
     if hand_made_rules:
         with open(hand_made_rules) as f:
@@ -669,12 +664,13 @@ def unsupervised_mode(
                 if not st.session_state.df_statistics.empty and st.session_state.sens:
                     if st.session_state.sens:
                         nodes, option = rule_chooser()
+
                     st.markdown(
                         f"<span>Result of using all the rules: Precision: <b>{st.session_state.whole_accuracy[0]:.3f}</b>, \
-                            Recall: <b>{st.session_state.whole_accuracy[1]:.3f}</b>, Fscore: <b>{st.session_state.whole_accuracy[2]:.3f}</b>, \
-                                Support: <b>{st.session_state.whole_accuracy[3]}</b></span>",
+                            Recall: <b>{st.session_state.whole_accuracy[1]:.3f}</b>, Fscore: <b>{st.session_state.whole_accuracy[2]:.3f}</b></span>",
                         unsafe_allow_html=True,
                     )
+
                     (
                         fn_graphs,
                         fn_sentences,
@@ -691,7 +687,7 @@ def unsupervised_mode(
 
                     st.markdown(
                         f"<span>The rule's result: Precision: <b>{prec:.3f}</b>, Recall: <b>{recall:.3f}</b>, \
-                            Fscore: <b>{fscore:.3f}</b>, Support: <b>{support}</b></span>",
+                            Fscore: <b>{fscore:.3f}</b>, True positives: <b>{len(tp_graphs)}</b>, False positives: <b>{len(fp_graphs)}</b></span>",
                         unsafe_allow_html=True,
                     )
 
@@ -774,7 +770,7 @@ def get_args():
         type=str,
         help="Rules extracted with the UI. If provided, the UI will load them.",
     )
-    parser.add_argument("-m", "--mode", default="supervised", type=str)
+    parser.add_argument("-m", "--mode", default="simple", type=str)
     parser.add_argument("-g", "--graph-format", default="fourlang", type=str)
     return parser.parse_args()
 
@@ -795,13 +791,13 @@ def main(args):
     feature_path = args.suggested_rules
     hand_made_rules = args.hand_rules
     mode = args.mode
-    if mode == "supervised":
+    if mode == "simple":
         assert args.val_data
-        supervised_mode(
+        simple_mode(
             evaluator, data, val_data, graph_format, feature_path, hand_made_rules
         )
-    elif mode == "unsupervised":
-        unsupervised_mode(
+    elif mode == "advanced":
+        advanced_mode(
             evaluator, args.train_data, graph_format, feature_path, hand_made_rules
         )
 

@@ -67,9 +67,10 @@ def main():
     if args.mode == "predictions":
         pred_df.to_csv(sys.stdout, sep="\t")
     elif args.mode == "report":
-        assert report, "There are no labels in the dataset, we cannot generate a classification report. Are you evaluating a test set?"
+        assert (
+            report
+        ), "There are no labels in the dataset, we cannot generate a classification report. Are you evaluating a test set?"
         print(report)
-
 
 
 if __name__ == "__main__":
