@@ -1,14 +1,11 @@
 import argparse
-import logging
-import pickle
-import sys
 import json
-from collections import defaultdict
+import logging
+import sys
 
-import networkx as nx
 import pandas as pd
 from sklearn.metrics import classification_report
-from xpotato.dataset.utils import default_pn_to_graph
+
 from xpotato.graph_extractor.extract import FeatureEvaluator
 
 

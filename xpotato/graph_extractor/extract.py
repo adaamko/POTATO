@@ -1,27 +1,20 @@
-import argparse
 import json
-import logging
 import os
-import sys
 from collections import defaultdict
 
 import networkx as nx
 import pandas as pd
 import stanza
-from graphviz import Source
 from networkx.algorithms.isomorphism import DiGraphMatcher
-from xpotato.dataset.utils import default_pn_to_graph, ud_to_graph
 from sklearn.metrics import precision_recall_fscore_support
 from tqdm import tqdm
 from tuw_nlp.grammar.text_to_4lang import TextTo4lang
 from tuw_nlp.graph.utils import (
     GraphFormulaMatcher,
-    GraphMatcher,
-    graph_to_isi,
-    graph_to_pn,
-    pn_to_graph,
 )
 from tuw_nlp.text.pipeline import CachedStanzaPipeline
+
+from xpotato.dataset.utils import default_pn_to_graph, ud_to_graph
 
 
 class GraphExtractor:
