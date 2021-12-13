@@ -5,6 +5,7 @@ import time
 import json
 import streamlit as st
 import pandas as pd
+from graphviz import Source
 
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 from utils import (
@@ -33,6 +34,14 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
     if hand_made_rules:
         with open(hand_made_rules) as f:
             st.session_state.features = json.load(f)
+
+    if "df" not in st.session_state:
+        st.session_state.df = data.copy()
+        if "index" not in st.session_state.df:
+            # First reset the index, so it starts from 0 and increments sequentially
+            # Then reset again and add the index as a column
+            st.session_state.df.reset_index(level=0, inplace=True, drop=True)
+            st.session_state.df.reset_index(level=0, inplace=True)
 
     if not feature_path and not st.session_state.trained:
         st.sidebar.title("Train your dataset!")
@@ -73,6 +82,30 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
         )
 
     if st.session_state.trained or feature_path:
+
+        with st.expander("Browse dataset:"):
+            gb = GridOptionsBuilder.from_dataframe(st.session_state.df)
+            gb.configure_default_column(
+                editable=False,
+                resizable=True,
+                sorteable=True,
+                wrapText=True,
+                autoHeight=True,
+            )
+            gb.configure_column("graph", hide=True)
+
+            go = gb.build()
+            selected_df = AgGrid(
+                st.session_state.df,
+                gridOptions=go,
+                allow_unsafe_jscode=True,
+                reload_data=False,
+                update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
+                width="100%",
+                theme="material",
+                fit_columns_on_grid_load=True,
+            )
+
         col1, col2 = st.columns(2)
 
         if (
@@ -248,6 +281,31 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                 show_ml_feature(classes, hand_made_rules)
 
         with col2:
+            # THIS IS HERE BECAUSE STREAMLIT IS BUGGY AND DOESN'T DISPLAY TWO DOT GRAPHS IN DIFFERENT CONTAINERS
+            # NEXT RELEASE WILL FIX IT
+            with st.expander("Browse graphs:"):
+                graph_id = st.number_input(
+                    label="Input the ID of the graph you want to view", min_value=0
+                )
+
+                dot_current_graph = to_dot(
+                    st.session_state.df[st.session_state.df.index == graph_id]
+                    .iloc[0]
+                    .graph
+                )
+                if st.session_state.download:
+                    graph_pipe = Source(dot_current_graph).pipe(format="svg")
+                    st.download_button(
+                        label="Download graph as SVG",
+                        data=graph_pipe,
+                        file_name="graph.svg",
+                        mime="mage/svg+xml",
+                    )
+
+                st.graphviz_chart(
+                    dot_current_graph,
+                    use_container_width=True,
+                )
             if not st.session_state.df_statistics.empty and st.session_state.sens:
                 if st.session_state.sens:
                     nodes, option = rule_chooser()
@@ -340,6 +398,9 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                 [] for _ in range(len(st.session_state.df))
             ]
         if "index" not in st.session_state.df:
+            # First reset the index, so it starts from 0 and increments sequentially
+            # Then reset again and add the index as a column
+            st.session_state.df.reset_index(level=0, inplace=True, drop=True)
             st.session_state.df.reset_index(level=0, inplace=True)
 
     df_annotated = st.session_state.df[st.session_state.df.annotated == True][
@@ -351,116 +412,128 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
 
     if "labels" not in st.session_state:
         st.text("Before we start, please provide labels you want to train")
-        user_input = st.text_input("label encoding", "NOT:0,OFF:1")
+        user_input = st.text_input("label encoding", placeholder="NOT:0,OFF:1")
 
-        st.session_state.labels = {
-            label.split(":")[0]: int(label.split(":")[1])
-            for label in user_input.split(",")
-        }
+        if st.button("Add labels"):
+            if user_input:
+                try:
+                    st.session_state.labels = {
+                        label.split(":")[0]: int(label.split(":")[1])
+                        for label in user_input.split(",")
+                    }
 
-        st.write(st.session_state.labels)
-        st.session_state.inverse_labels = {
-            v: k for (k, v) in st.session_state.labels.items()
-        }
+                    st.write(st.session_state.labels)
+                    st.session_state.inverse_labels = {
+                        v: k for (k, v) in st.session_state.labels.items()
+                    }
+                    rerun()
+                except Exception as e:
+                    st.write(e)
+                    st.write("Bad format, the right format is NOT:0,OFF:1")
+            else:
+                st.write("No labels provided!")
     else:
-        st.markdown(
-            f"<span><b>Annotate samples here:</b></span>",
-            unsafe_allow_html=True,
-        )
-
-        if st.session_state.applied_rules:
+        with st.expander("Annotation/Dataset browser:"):
             st.markdown(
-                f"<span>Currently the following rules are applied:</span>",
+                f"<span><b>Annotate samples here:</b></span>",
                 unsafe_allow_html=True,
             )
-            st.write(st.session_state.applied_rules)
-        with st.form("annotate form") as f:
-            gb = GridOptionsBuilder.from_dataframe(df_unannotated)
-            gb.configure_default_column(
-                editable=True,
-                resizable=True,
-                sorteable=True,
-                wrapText=True,
-                autoHeight=True,
-            )
-            # make all columns editable
-            gb.configure_selection(
-                "multiple",
-                use_checkbox=True,
-                groupSelectsChildren=True,
-                groupSelectsFiltered=True,
-            )
-            go = gb.build()
-            ag = AgGrid(
-                df_unannotated,
-                gridOptions=go,
-                key="grid2",
-                allow_unsafe_jscode=True,
-                reload_data=True,
-                update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
-                width="100%",
-                theme="material",
-                fit_columns_on_grid_load=True,
-            )
 
-            annotate = st.form_submit_button("Annotate")
+            if st.session_state.applied_rules:
+                st.markdown(
+                    f"<span>Currently the following rules are applied:</span>",
+                    unsafe_allow_html=True,
+                )
+                st.write(st.session_state.applied_rules)
+            with st.form("annotate form") as f:
+                gb = GridOptionsBuilder.from_dataframe(df_unannotated)
+                gb.configure_default_column(
+                    editable=True,
+                    resizable=True,
+                    sorteable=True,
+                    wrapText=True,
+                    autoHeight=True,
+                )
+                # make all columns editable
+                gb.configure_selection(
+                    "multiple",
+                    use_checkbox=True,
+                    groupSelectsChildren=True,
+                    groupSelectsFiltered=True,
+                )
+                go = gb.build()
+                ag = AgGrid(
+                    df_unannotated,
+                    gridOptions=go,
+                    key="grid2",
+                    allow_unsafe_jscode=True,
+                    reload_data=True,
+                    update_mode=GridUpdateMode.MODEL_CHANGED
+                    | GridUpdateMode.VALUE_CHANGED,
+                    width="100%",
+                    theme="material",
+                    fit_columns_on_grid_load=True,
+                )
 
-        if annotate:
-            if ag["selected_rows"]:
-                for row in ag["selected_rows"]:
-                    st.session_state.df.loc[
-                        row["index"], "label"
-                    ] = st.session_state.inverse_labels[1]
-                    st.session_state.df.loc[row["index"], "annotated"] = True
-                save_dataframe(st.session_state.df, train_data)
-                rerun()
+                annotate = st.form_submit_button("Annotate")
 
-        st.markdown(
-            f"<span>Samples you have already annotated:</span>",
-            unsafe_allow_html=True,
-        )
-        with st.form("annotated form") as f:
-            gb = GridOptionsBuilder.from_dataframe(df_annotated)
-            gb.configure_default_column(
-                editable=True,
-                resizable=True,
-                sorteable=True,
-                wrapText=True,
+            if annotate:
+                if ag["selected_rows"]:
+                    for row in ag["selected_rows"]:
+                        st.session_state.df.loc[
+                            row["index"], "label"
+                        ] = st.session_state.inverse_labels[1]
+                        st.session_state.df.loc[row["index"], "annotated"] = True
+                    save_dataframe(st.session_state.df, train_data)
+                    rerun()
+
+            st.markdown(
+                f"<span>Samples you have already annotated:</span>",
+                unsafe_allow_html=True,
             )
-            # make all columns editable
-            gb.configure_selection(
-                "multiple",
-                use_checkbox=True,
-                groupSelectsChildren=True,
-                groupSelectsFiltered=True,
-            )
-            go = gb.build()
-            ag_ann = AgGrid(
-                df_annotated,
-                gridOptions=go,
-                key="grid3",
-                allow_unsafe_jscode=True,
-                reload_data=True,
-                update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
-                width="100%",
-                theme="material",
-                fit_columns_on_grid_load=True,
-            )
+            with st.form("annotated form") as f:
+                gb = GridOptionsBuilder.from_dataframe(df_annotated)
+                gb.configure_default_column(
+                    editable=True,
+                    resizable=True,
+                    sorteable=True,
+                    wrapText=True,
+                )
+                # make all columns editable
+                gb.configure_selection(
+                    "multiple",
+                    use_checkbox=True,
+                    groupSelectsChildren=True,
+                    groupSelectsFiltered=True,
+                )
+                go = gb.build()
+                ag_ann = AgGrid(
+                    df_annotated,
+                    gridOptions=go,
+                    key="grid3",
+                    allow_unsafe_jscode=True,
+                    reload_data=True,
+                    update_mode=GridUpdateMode.MODEL_CHANGED
+                    | GridUpdateMode.VALUE_CHANGED,
+                    width="100%",
+                    theme="material",
+                    fit_columns_on_grid_load=True,
+                )
 
-            clear_annotate = st.form_submit_button("Clear annotation")
+                clear_annotate = st.form_submit_button("Clear annotation")
 
-        if clear_annotate:
-            if ag_ann["selected_rows"]:
-                for row in ag_ann["selected_rows"]:
-                    st.session_state.df.loc[
-                        row["index"], "label"
-                    ] = st.session_state.inverse_labels[1]
-                    st.session_state.df.loc[row["index"], "annotated"] = False
-                    st.session_state.df.loc[row["index"], "label"] = ""
-                save_dataframe(st.session_state.df, train_data)
-                rerun()
+            if clear_annotate:
+                if ag_ann["selected_rows"]:
+                    for row in ag_ann["selected_rows"]:
+                        st.session_state.df.loc[
+                            row["index"], "label"
+                        ] = st.session_state.inverse_labels[1]
+                        st.session_state.df.loc[row["index"], "annotated"] = False
+                        st.session_state.df.loc[row["index"], "label"] = ""
+                    save_dataframe(st.session_state.df, train_data)
+                    rerun()
 
-        train = st.button("Train!")
+        train = st.sidebar.button("Train!")
         st.session_state.min_edge = st.sidebar.number_input(
             "Min edge in features", min_value=0, max_value=3, value=0, step=1
         )
@@ -470,6 +543,7 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
         st.session_state.download = st.sidebar.selectbox(
             "Show download button for graphs", options=[False, True]
         )
+
         if train:
             df_to_train = st.session_state.df.copy()
             df_to_train = df_to_train[df_to_train.applied_rules.map(len) == 0]
@@ -685,6 +759,30 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                 if st.session_state.ml_feature:
                     show_ml_feature(classes, hand_made_rules)
             with col2:
+                with st.expander("Browse dataset/graphs"):
+                    graph_id = st.number_input(
+                        label="Input the ID of the graph you want to view", min_value=0
+                    )
+
+                    browse_current_graph = to_dot(
+                        st.session_state.df[st.session_state.df.index == graph_id]
+                        .iloc[0]
+                        .graph
+                    )
+                    if st.session_state.download:
+                        graph_pipe = Source(browse_current_graph).pipe(format="svg")
+                        st.download_button(
+                            label="Download graph as SVG",
+                            data=graph_pipe,
+                            file_name="graph.svg",
+                            mime="mage/svg+xml",
+                        )
+
+                    st.graphviz_chart(
+                        browse_current_graph,
+                        use_container_width=True,
+                    )
+
                 if not st.session_state.df_statistics.empty and st.session_state.sens:
                     if st.session_state.sens:
                         nodes, option = rule_chooser()

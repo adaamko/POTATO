@@ -243,7 +243,8 @@ def rule_chooser():
     option = st.selectbox("Choose from the rules", st.session_state.sens)
     G, _ = default_pn_to_graph(option.split(";")[0])
     text_G, _ = default_pn_to_graph(option.split(";")[0])
-    st.graphviz_chart(to_dot(text_G), use_container_width=True)
+    dot_graph = to_dot(text_G)
+    st.graphviz_chart(dot_graph, use_container_width=True)
     nodes = [d_clean(n[1]["name"].split("_")[0]) for n in text_G.nodes(data=True)]
     return nodes, option
 
