@@ -5,6 +5,7 @@ import sys
 
 from graphviz import Source
 import pandas as pd
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 import streamlit as st
 from streamlit.report_thread import REPORT_CONTEXT_ATTR_NAME
 
@@ -18,14 +19,6 @@ from threading import current_thread
 
 
 def init_session_states():
-    if "false_graph_number" not in st.session_state:
-        st.session_state.false_graph_number = 0
-    if "true_graph_number" not in st.session_state:
-        st.session_state.true_graph_number = 0
-    if "false_neg_number" not in st.session_state:
-        st.session_state.false_neg_number = 0
-    if "predicted_num" not in st.session_state:
-        st.session_state.predicted_num = 0
     if "whole_accuracy" not in st.session_state:
         st.session_state.whole_accuracy = []
     if "df_statistics" not in st.session_state:
@@ -194,7 +187,6 @@ def d_clean(string):
 
 def get_df_from_rules(rules, negated_rules):
     data = {"rules": rules, "negated_rules": negated_rules}
-    # Create DataFrame.
     df = pd.DataFrame(data)
 
     return df
@@ -298,18 +290,27 @@ def extract_data_from_dataframe(option):
     fp_sentences = st.session_state.df_statistics.iloc[
         st.session_state.sens.index(option)
     ].False_positive_sens
+    fp_indices = st.session_state.df_statistics.iloc[
+        st.session_state.sens.index(option)
+    ].False_positive_indices
     tp_graphs = st.session_state.df_statistics.iloc[
         st.session_state.sens.index(option)
     ].True_positive_graphs
     tp_sentences = st.session_state.df_statistics.iloc[
         st.session_state.sens.index(option)
     ].True_positive_sens
+    tp_indices = st.session_state.df_statistics.iloc[
+        st.session_state.sens.index(option)
+    ].True_positive_indices
     fn_graphs = st.session_state.df_statistics.iloc[
         st.session_state.sens.index(option)
     ].False_negative_graphs
     fn_sentences = st.session_state.df_statistics.iloc[
         st.session_state.sens.index(option)
     ].False_negative_sens
+    fn_indices = st.session_state.df_statistics.iloc[
+        st.session_state.sens.index(option)
+    ].False_negative_indices
     prec = st.session_state.df_statistics.iloc[
         st.session_state.sens.index(option)
     ].Precision
@@ -328,8 +329,10 @@ def extract_data_from_dataframe(option):
     return (
         fn_graphs,
         fn_sentences,
+        fn_indices,
         fp_graphs,
         fp_sentences,
+        fp_indices,
         fscore,
         prec,
         predicted,
@@ -337,60 +340,81 @@ def extract_data_from_dataframe(option):
         support,
         tp_graphs,
         tp_sentences,
+        tp_indices,
     )
 
 
-def graph_viewer(type, graphs, sentences, nodes):
+def graph_viewer(type, graphs, sentences, ids, nodes):
+    df = pd.DataFrame(
+        {
+            "id": ids,
+            "sentence": [sen[0] for sen in sentences],
+            "label": [sen[1] for sen in sentences],
+            "graph": [i for i in range(len(graphs))],
+        }
+    )
+    gb = GridOptionsBuilder.from_dataframe(df)
+    gb.configure_default_column(
+        editable=False,
+        resizable=True,
+        sorteable=True,
+        wrapText=True,
+        autoHeight=True,
+    )
+    gb.configure_column("graph", hide=True)
+    gb.configure_column("label", hide=True)
+    gb.configure_selection(
+        "single",
+        use_checkbox=True,
+        groupSelectsChildren=True,
+        groupSelectsFiltered=True,
+    )
+    go = gb.build()
+    selected_df = AgGrid(
+        df,
+        gridOptions=go,
+        allow_unsafe_jscode=True,
+        reload_data=False,
+        update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
+        width="100%",
+        theme="material",
+        fit_columns_on_grid_load=True,
+    )
 
-    graph_type = {
-        "FP": st.session_state.false_graph_number,
-        "TP": st.session_state.true_graph_number,
-        "FN": st.session_state.false_neg_number,
-    }
-    if st.button(f"Previous {type}"):
-        graph_type[type] = max(0, graph_type[type] - 1)
-    if st.button(f"Next {type}"):
-        graph_type[type] = min(
-            graph_type[type] + 1,
-            len(graphs) - 1,
+    if selected_df["selected_rows"]:
+        sel_row = selected_df["selected_rows"][0]
+        st.markdown(
+            f"<span><b>Sentence:</b> {sel_row['sentence']}</span>",
+            unsafe_allow_html=True,
         )
-    if graph_type[type] > len(graphs) - 1:
-        graph_type[type] = 0
-    st.markdown(
-        f"<span><b>Sentence:</b> {sentences[graph_type[type]][0]}</span>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f"<span><b>Gold label:</b> {sentences[graph_type[type]][1]}</span>",
-        unsafe_allow_html=True,
-    )
-    st.text(f"{type}: {len(graphs)}")
-    current_graph = graphs[graph_type[type]]
-    dot_current_graph = to_dot(
-        current_graph,
-        marked_nodes=set(nodes),
-    )
-
-    if st.session_state.download:
-        graph_pipe = Source(dot_current_graph).pipe(format="svg")
-        st.download_button(
-            label="Download graph as SVG",
-            data=graph_pipe,
-            file_name="graph.svg",
-            mime="mage/svg+xml",
+        st.markdown(
+            f"<span><b>Sentence ID:</b> {sel_row['id']}</span>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f"<span><b>Gold label:</b> {sel_row['label']}</span>",
+            unsafe_allow_html=True,
+        )
+        st.text(f"{type}: {len(graphs)}")
+        current_graph = graphs[sel_row["graph"]]
+        dot_current_graph = to_dot(
+            current_graph,
+            marked_nodes=set(nodes),
         )
 
-    st.graphviz_chart(
-        dot_current_graph,
-        use_container_width=True,
-    )
+        if st.session_state.download:
+            graph_pipe = Source(dot_current_graph).pipe(format="svg")
+            st.download_button(
+                label="Download graph as SVG",
+                data=graph_pipe,
+                file_name="graph.svg",
+                mime="mage/svg+xml",
+            )
 
-    if type == "FP":
-        st.session_state.false_graph_number = graph_type[type]
-    elif type == "TP":
-        st.session_state.true_graph_number = graph_type[type]
-    elif type == "FN":
-        st.session_state.false_neg_number = graph_type[type]
+        st.graphviz_chart(
+            dot_current_graph,
+            use_container_width=True,
+        )
 
 
 def add_rule_manually(classes, hand_made_rules):

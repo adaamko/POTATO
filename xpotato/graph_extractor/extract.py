@@ -278,8 +278,10 @@ class FeatureEvaluator:
             measure = [feat[0]]
             false_pos_g = []
             false_pos_s = []
+            false_pos_indices = []
             true_pos_g = []
             true_pos_s = []
+            true_pos_indices = []
             predicted = []
             for i, g in enumerate(graphs):
                 feats = matched[i]
@@ -289,11 +291,13 @@ class FeatureEvaluator:
                     sen = data.iloc[i].text
                     lab = data.iloc[i].label
                     false_pos_s.append((sen, lab))
+                    false_pos_indices.append(i)
                 if label == 1 and labels[i] == 1:
                     true_pos_g.append(g)
                     sen = data.iloc[i].text
                     lab = data.iloc[i].label
                     true_pos_s.append((sen, lab))
+                    true_pos_indices.append(i)
                 predicted.append(label)
             for pcf in precision_recall_fscore_support(labels, predicted, average=None):
                 if len(pcf) > 1:
@@ -302,8 +306,10 @@ class FeatureEvaluator:
                     measure.append(0)
             measure.append(false_pos_g)
             measure.append(false_pos_s)
+            measure.append(false_pos_indices)
             measure.append(true_pos_g)
             measure.append(true_pos_s)
+            measure.append(true_pos_indices)
             measure.append(false_neg_g)
             measure.append(false_neg_s)
             measure.append(false_neg_indices)
@@ -320,8 +326,10 @@ class FeatureEvaluator:
                 "Support",
                 "False_positive_graphs",
                 "False_positive_sens",
+                "False_positive_indices",
                 "True_positive_graphs",
                 "True_positive_sens",
+                "True_positive_indices",
                 "False_negative_graphs",
                 "False_negative_sens",
                 "False_negative_indices",

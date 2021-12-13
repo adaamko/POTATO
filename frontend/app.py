@@ -259,8 +259,10 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                 (
                     fn_graphs,
                     fn_sentences,
+                    fn_indices,
                     fp_graphs,
                     fp_sentences,
+                    fp_indices,
                     fscore,
                     prec,
                     predicted,
@@ -268,6 +270,7 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                     support,
                     tp_graphs,
                     tp_sentences,
+                    tp_indices,
                 ) = extract_data_from_dataframe(option)
 
                 st.markdown(
@@ -312,15 +315,15 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                 )
                 if tp_fp_fn == "False Positive graphs":
                     if fp_graphs:
-                        graph_viewer("FP", fp_graphs, fp_sentences, nodes)
+                        graph_viewer("FP", fp_graphs, fp_sentences, fp_indices, nodes)
 
                 elif tp_fp_fn == "True Positive graphs":
                     if tp_graphs:
-                        graph_viewer("TP", tp_graphs, tp_sentences, nodes)
+                        graph_viewer("TP", tp_graphs, tp_sentences, tp_indices, nodes)
 
                 elif tp_fp_fn == "False Negative graphs":
                     if fn_graphs:
-                        graph_viewer("FN", fn_graphs, fn_sentences, nodes)
+                        graph_viewer("FN", fn_graphs, fn_sentences, fn_indices, nodes)
 
 
 def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_rules):
@@ -533,7 +536,6 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                         use_checkbox=True,
                         groupSelectsChildren=True,
                         groupSelectsFiltered=True,
-                        # ◙pre_selected_rows=[1,2]
                     )
                     go = gb.build()
                     ag = AgGrid(
@@ -696,8 +698,10 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                     (
                         fn_graphs,
                         fn_sentences,
+                        fn_indices,
                         fp_graphs,
                         fp_sentences,
+                        fp_indices,
                         fscore,
                         prec,
                         predicted,
@@ -705,6 +709,7 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                         support,
                         tp_graphs,
                         tp_sentences,
+                        tp_indices,
                     ) = extract_data_from_dataframe(option)
 
                     st.markdown(
@@ -723,55 +728,41 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                         "Select the option you want to view", tp_fp_fn_choice
                     )
 
-                    current_graph = None
                     if tp_fp_fn == "Predicted":
                         predicted_inds = [
                             i for i, pred in enumerate(predicted) if pred == 1
                         ]
-                        if st.button("Previous Predicted"):
-                            st.session_state.predicted_num = max(
-                                0, st.session_state.predicted_num - 1
+                        filt_df = st.session_state.df[
+                            st.session_state.df.index.isin(predicted_inds)
+                        ]
+                        pred_graphs = filt_df.graph.tolist()
+                        pred_sentences = [
+                            (sen[0], sen[1])
+                            for sen in zip(
+                                filt_df.text.tolist(), filt_df.label.tolist()
                             )
-                        if st.button("Next Predicted"):
-                            st.session_state.predicted_num = min(
-                                st.session_state.predicted_num + 1,
-                                len(predicted_inds) - 1,
-                            )
-
-                        if st.session_state.predicted_num > len(predicted_inds) - 1:
-                            st.session_state.predicted_inds = 0
-
-                        st.markdown(
-                            f"<span><b>Sentence:</b> {st.session_state.df.iloc[predicted_inds[st.session_state.predicted_num]].text}</span>",
-                            unsafe_allow_html=True,
-                        )
-                        st.markdown(
-                            f"<span><b>Gold label:</b> {st.session_state.df.iloc[predicted_inds[st.session_state.predicted_num]].label}</span>",
-                            unsafe_allow_html=True,
-                        )
-                        st.text(f"Predicted: {len(predicted_inds)}")
-                        current_graph = st.session_state.df.iloc[
-                            predicted_inds[st.session_state.predicted_num]
-                        ].graph
-                        st.graphviz_chart(
-                            to_dot(
-                                current_graph,
-                                marked_nodes=set(nodes),
-                            ),
-                            use_container_width=True,
+                        ]
+                        graph_viewer(
+                            "PD", pred_graphs, pred_sentences, predicted_inds, nodes
                         )
 
                     elif tp_fp_fn == "False Positive graphs":
                         if fp_graphs:
-                            graph_viewer("FP", fp_graphs, fp_sentences, nodes)
+                            graph_viewer(
+                                "FP", fp_graphs, fp_sentences, fp_indices, nodes
+                            )
 
                     elif tp_fp_fn == "True Positive graphs":
                         if tp_graphs:
-                            graph_viewer("TP", tp_graphs, tp_sentences, nodes)
+                            graph_viewer(
+                                "TP", tp_graphs, tp_sentences, tp_indices, nodes
+                            )
 
                     elif tp_fp_fn == "False Negative graphs":
                         if fn_graphs:
-                            graph_viewer("FN", fn_graphs, fn_sentences, nodes)
+                            graph_viewer(
+                                "FN", fn_graphs, fn_sentences, fn_indices, nodes
+                            )
 
 
 def get_args():
