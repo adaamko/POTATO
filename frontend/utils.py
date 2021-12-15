@@ -261,15 +261,69 @@ def annotate_df(predicted):
 
 
 def show_ml_feature(classes, hand_made_rules):
-    st.markdown(
-        f"<span>Feature: {st.session_state.ml_feature[0]}, Retrieved True Positive samples: <b>{st.session_state.ml_feature[5]}</b>, \
-                        Retrieved False Positive samples: <b>{st.session_state.ml_feature[6]}</b></span>",
-        unsafe_allow_html=True,
+    """This function shows an AgGrid dataframe with the top10 features ranked. 
+    It also shows the precision, recall and f1-score of the rules along with the number of the TP and FP samples retrieved.
+
+    Args:
+        classes (string): The chosen class.
+        hand_made_rules (string): Where to save the rules.
+    """
+    features = [feat[0][0][0] for feat in st.session_state.ml_feature]
+    precisions = [f"{feat[1]:.3f}" for feat in st.session_state.ml_feature]
+    recalls = [f"{feat[2]:.3f}" for feat in st.session_state.ml_feature]
+    fscores = [f"{feat[3]:.3f}" for feat in st.session_state.ml_feature]
+
+    true_positive_samples = [feat[5] for feat in st.session_state.ml_feature]
+    false_positive_samples = [feat[6] for feat in st.session_state.ml_feature]
+
+    ranked_df = pd.DataFrame(
+        {
+            "feature": features,
+            "precision": precisions,
+            "recall": recalls,
+            "fscore": fscores,
+            "TP": true_positive_samples,
+            "FP": false_positive_samples,
+        }
     )
-    accept_rule = st.button("Accept")
-    decline_rule = st.button("Decline")
-    if accept_rule:
-        st.session_state.features[classes].append(st.session_state.ml_feature[0])
+    with st.form("rule_chooser") as f:
+        gb = GridOptionsBuilder.from_dataframe(ranked_df)
+        gb.configure_default_column(
+            editable=False,
+            resizable=True,
+            sorteable=True,
+            wrapText=True,
+            autoHeight=True,
+        )
+        gb.configure_selection(
+            "multiple",
+            use_checkbox=True,
+            groupSelectsChildren=True,
+            groupSelectsFiltered=True,
+        )
+
+        go = gb.build()
+        rule_grid = AgGrid(
+            ranked_df,
+            gridOptions=go,
+            allow_unsafe_jscode=True,
+            reload_data=False,
+            update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
+            theme="material",
+            fit_columns_on_grid_load=False,
+        )
+
+        accept_rules = st.form_submit_button(label="accept_rules")
+
+    if accept_rules:
+        selected_rules = (
+            rule_grid["selected_rows"]
+            if rule_grid["selected_rows"]
+            else rule_grid["data"].to_dict(orient="records")
+        )
+        for rule in selected_rules:
+            st.session_state.features[classes].append([[rule["feature"]], [], classes])
+
         st.session_state.ml_feature = None
         if st.session_state.features[classes]:
             st.session_state.feature_df = get_df_from_rules(
@@ -279,9 +333,6 @@ def show_ml_feature(classes, hand_made_rules):
             save_rules = hand_made_rules or "saved_features.json"
             save_ruleset(save_rules, st.session_state.features)
             rerun()
-    elif decline_rule:
-        st.session_state.ml_feature = None
-        rerun()
 
 
 def extract_data_from_dataframe(option):
@@ -442,26 +493,30 @@ def add_rule_manually(classes, hand_made_rules):
     )
 
 
-def rank_and_suggest(classes, data, evaluator, rank_false_negatives=True):
+def rank_and_suggest(classes, data, evaluator):
     suggest_new_rule = st.button("suggest new rules")
     if suggest_new_rule:
-        if (
-            not st.session_state.df_statistics.empty
-            and st.session_state.sens
-            and st.session_state.suggested_features[classes]
-        ):
-            features_to_rank = st.session_state.suggested_features[classes][:5]
+        if st.session_state.suggested_features[classes]:
+            features_to_rank = st.session_state.suggested_features[classes][:10]
             with st.spinner("Ranking rules..."):
-                features_ranked = evaluator.rank_features(
-                    classes,
-                    features_to_rank,
-                    data,
-                    st.session_state.df_statistics.iloc[0].False_negative_indices,
-                )
-            suggested_feature = features_ranked[0]
+                if not st.session_state.df_statistics.empty and st.session_state.sens:
+                    features_ranked = evaluator.rank_features(
+                        classes,
+                        features_to_rank,
+                        data,
+                        st.session_state.df_statistics.iloc[0].False_negative_indices,
+                    )
+                else:
+                    features_ranked = evaluator.rank_features(
+                        classes,
+                        features_to_rank,
+                        data,
+                        [],
+                    )
 
-            st.session_state.suggested_features[classes].remove(suggested_feature[0])
+            for feat in features_ranked:
+                st.session_state.suggested_features[classes].remove(feat[0])
 
-            st.session_state.ml_feature = suggested_feature
+            st.session_state.ml_feature = features_ranked
         else:
             st.warning("Dataset is not evaluated!")
