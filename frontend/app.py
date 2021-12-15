@@ -5,9 +5,11 @@ import time
 import json
 import streamlit as st
 import pandas as pd
+import penman
 from graphviz import Source
 
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+from tuw_nlp.graph.utils import graph_to_pn
 from utils import (
     train_df,
     add_rule_manually,
@@ -288,13 +290,14 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                     label="Input the ID of the graph you want to view", min_value=0
                 )
 
-                dot_current_graph = to_dot(
+                browse_current_graph_nx = (
                     st.session_state.df[st.session_state.df.index == graph_id]
                     .iloc[0]
                     .graph
                 )
+                browse_current_graph = to_dot(browse_current_graph_nx)
                 if st.session_state.download:
-                    graph_pipe = Source(dot_current_graph).pipe(format="svg")
+                    graph_pipe = Source(browse_current_graph).pipe(format="svg")
                     st.download_button(
                         label="Download graph as SVG",
                         data=graph_pipe,
@@ -303,9 +306,18 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                     )
 
                 st.graphviz_chart(
-                    dot_current_graph,
+                    browse_current_graph,
                     use_container_width=True,
                 )
+
+                st.write("Penman format:")
+                st.text(
+                    penman.encode(
+                        penman.decode(graph_to_pn(browse_current_graph_nx)), indent=10
+                    )
+                )
+                st.write("In one line format:")
+                st.write(graph_to_pn(browse_current_graph_nx))
             if not st.session_state.df_statistics.empty and st.session_state.sens:
                 if st.session_state.sens:
                     nodes, option = rule_chooser()
@@ -762,11 +774,12 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                     label="Input the ID of the graph you want to view", min_value=0
                 )
 
-                browse_current_graph = to_dot(
+                browse_current_graph_nx = (
                     st.session_state.df[st.session_state.df.index == graph_id]
                     .iloc[0]
                     .graph
                 )
+                browse_current_graph = to_dot(browse_current_graph_nx)
                 if st.session_state.download:
                     graph_pipe = Source(browse_current_graph).pipe(format="svg")
                     st.download_button(
@@ -780,6 +793,14 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                     browse_current_graph,
                     use_container_width=True,
                 )
+                st.write("Penman format:")
+                st.text(
+                    penman.encode(
+                        penman.decode(graph_to_pn(browse_current_graph_nx)), indent=10
+                    )
+                )
+                st.write("In one line format:")
+                st.write(graph_to_pn(browse_current_graph_nx))
 
             if not st.session_state.df_statistics.empty and st.session_state.sens:
                 if st.session_state.sens:

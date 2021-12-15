@@ -7,11 +7,13 @@ from graphviz import Source
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 import streamlit as st
+import penman
 from streamlit.report_thread import REPORT_CONTEXT_ATTR_NAME
 
 from xpotato.dataset.utils import default_pn_to_graph
 from xpotato.graph_extractor.extract import FeatureEvaluator
 from xpotato.models.trainer import GraphTrainer
+from tuw_nlp.graph.utils import graph_to_pn
 
 from contextlib import contextmanager
 from io import StringIO
@@ -261,7 +263,7 @@ def annotate_df(predicted):
 
 
 def show_ml_feature(classes, hand_made_rules):
-    """This function shows an AgGrid dataframe with the top10 features ranked. 
+    """This function shows an AgGrid dataframe with the top10 features ranked.
     It also shows the precision, recall and f1-score of the rules along with the number of the TP and FP samples retrieved.
 
     Args:
@@ -467,6 +469,11 @@ def graph_viewer(type, graphs, sentences, ids, nodes):
             dot_current_graph,
             use_container_width=True,
         )
+
+        st.write("Penman format:")
+        st.text(penman.encode(penman.decode(graph_to_pn(current_graph)), indent=10))
+        st.write("In one line format:")
+        st.write(graph_to_pn(current_graph))
 
 
 def add_rule_manually(classes, hand_made_rules):
