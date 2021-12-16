@@ -8,6 +8,8 @@ from collections import defaultdict
 import networkx as nx
 import pandas as pd
 from sklearn.metrics import classification_report
+
+from frontend.utils import read_val
 from xpotato.dataset.utils import default_pn_to_graph
 from xpotato.graph_extractor.extract import FeatureEvaluator
 
@@ -18,7 +20,13 @@ def get_args():
     parser.add_argument("-f", "--features", type=str, required=True)
     parser.add_argument("-d", "--dataset-path", type=str, default=None, required=True)
     parser.add_argument("-m", "--mode", type=str, default="predictions")
-
+    parser.add_argument(
+        "-l",
+        "--label",
+        default=None,
+        type=str,
+        help="Specify label for OneVsAll multi-label classification. Datasets require a labels column with all valid labels.",
+    )
     return parser.parse_args()
 
 
@@ -30,7 +38,7 @@ def main():
     )
 
     args = get_args()
-    df = pd.read_pickle(args.dataset_path)
+    df = read_val(args.dataset_path, args.label)
 
     with open(args.features) as f:
         features = json.load(f)
