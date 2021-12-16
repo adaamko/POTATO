@@ -514,7 +514,10 @@ def add_rule_manually(classes, hand_made_rules):
 def rank_and_suggest(classes, data, evaluator):
     suggest_new_rule = st.button("suggest new rules")
     if suggest_new_rule:
-        if st.session_state.suggested_features[classes]:
+        if (
+            st.session_state.suggested_features
+            and st.session_state.suggested_features[classes]
+        ):
             features_to_rank = st.session_state.suggested_features[classes][:10]
             with st.spinner("Ranking rules..."):
                 if not st.session_state.df_statistics.empty and st.session_state.sens:
@@ -537,4 +540,6 @@ def rank_and_suggest(classes, data, evaluator):
 
             st.session_state.ml_feature = features_ranked
         else:
-            st.warning("Dataset is not evaluated!")
+            st.warning(
+                "No suggestions available, maybe you don't have the dataset trained?"
+            )
