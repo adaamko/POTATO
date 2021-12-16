@@ -111,9 +111,9 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
         col1, col2 = st.columns(2)
 
         if (
-            feature_path
-            and os.path.exists(feature_path)
-            and not st.session_state.suggested_features
+                feature_path
+                and os.path.exists(feature_path)
+                and not st.session_state.suggested_features
         ):
             with open(feature_path) as f:
                 st.session_state.suggested_features = json.load(f)
@@ -165,7 +165,7 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                     allow_unsafe_jscode=True,
                     reload_data=True,
                     update_mode=GridUpdateMode.MODEL_CHANGED
-                    | GridUpdateMode.VALUE_CHANGED,
+                                | GridUpdateMode.VALUE_CHANGED,
                     width="100%",
                     theme="material",
                     fit_columns_on_grid_load=False,
@@ -635,7 +635,7 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                         allow_unsafe_jscode=True,
                         reload_data=True,
                         update_mode=GridUpdateMode.MODEL_CHANGED
-                        | GridUpdateMode.VALUE_CHANGED,
+                                    | GridUpdateMode.VALUE_CHANGED,
                         width="100%",
                         theme="material",
                         fit_columns_on_grid_load=True,
@@ -907,6 +907,13 @@ def get_args():
     )
     parser.add_argument("-m", "--mode", default="simple", type=str)
     parser.add_argument("-g", "--graph-format", default="fourlang", type=str)
+    parser.add_argument(
+        "-l",
+        "--label",
+        default=None,
+        type=str,
+        help="Specify label for OneVsAll multi-label classification. Datasets require a labels column with all valid labels.",
+    )
     return parser.parse_args()
 
 
@@ -919,9 +926,9 @@ def main(args):
 
     init_session_states()
     evaluator = init_evaluator()
-    data = read_train(args.train_data)
+    data = read_train(args.train_data, args.label)
     if args.val_data:
-        val_data = read_val(args.val_data)
+        val_data = read_val(args.val_data, args.label)
     graph_format = args.graph_format
     feature_path = args.suggested_rules
     hand_made_rules = args.hand_rules
