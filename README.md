@@ -37,7 +37,8 @@ pip install -e .
 - If you are interested in AMR graphs, you can go to the [hasoc](https://github.com/adaamko/POTATO/tree/main/features/hasoc) folder To get started with rule-systems prebuilt with POTATO on the HASOC dataset (we also presented a paper named _Offensive text detection on English Twitter with deep learning models and rule-based systems_ for the HASOC2021 shared task). 
 
 - We also provide experiments on the [CrowdTruth](https://github.com/CrowdTruth/Medical-Relation-Extraction) medical relation extraction datasets with UD graphs, go to the [crowdtruth](https://github.com/adaamko/POTATO/tree/main/features/crowdtruth) folder for more info!
-- 
+
+- POTATO can also handle unlabeled, or partially labeled data, see [advanced](###advanced-mode) mode to get to know more.
 
 __To see complete working examples go under the _notebooks/_ folder to see experiments on HASOC and on the Semeval relation extraction dataset.__
 
@@ -72,11 +73,11 @@ sentences = [("Governments and industries in nations around the world are pourin
             ("This latest XXX from the animation YYY at Pixar is beautiful, masterly, inspired - and delivers a powerful ecological message.", "Other")]
 ```
 
-Initialize the dataset and also provide a label encoding. Then parse the sentences into graphs. Currently we provide three types of graphs: _ud_, _fourlang_, _amr_.
+Initialize the dataset and also provide a label encoding. Then parse the sentences into graphs. Currently we provide three types of graphs: _ud_, _fourlang_, _amr_. Also provide the language you want to parse, currently we support English (en) and German (de).
 
 ```python
 dataset = Dataset(sentences, label_vocab={"Other":0, "Entity-Destination(e1,e2)": 1})
-dataset.set_graphs(dataset.parse_graphs(graph_format=graph_format))
+dataset.set_graphs(dataset.parse_graphs(graph_format="ud"), lang="en")
 ```
 
 Check the dataset:
@@ -85,7 +86,8 @@ df = dataset.to_dataframe()
 ```
 
 We can also check any of the graphs:
-# We can also check any of the graphs
+### Check any of the graphs parsed
+
 ```python
 from xpotato.models.utils import to_dot
 from graphviz import Source
@@ -151,7 +153,7 @@ E.g. the string _(u_1 / into :1 (u_3 / pour))_ would describe a graph with two n
 evaluator.match_features(df, [[["(u_1 / into :1 (u_2 / pour) :2 (u_3 / YYY))"], [], "Entity-Destination(e1,e2)"]])
 ```
 
-Describing a subgraph with the string "(u_1 / into :1 (u_2 / pour) :2 (u_3 / YYY))" will return only three examples instead of 9, when we only had a single node as a feature
+Describing a subgraph with the string "(u_1 / into :1 (u_2 / pour) :2 (u_3 / YYY))" will return only three examples instead of 9 (when we only had a single node as a feature)
 |    | Sentence                                                                                                                        | Predicted label           | Matched rule                                                                       |
 |---:|:--------------------------------------------------------------------------------------------------------------------------------|:--------------------------|:-----------------------------------------------------------------------------------|
 |  0 | Governments and industries in nations around the world are pouring XXX into YYY.                                                | Entity-Destination(e1,e2) | [['(u_1 / into :1 (u_2 / pour) :2 (u_3 / YYY))'], [], 'Entity-Destination(e1,e2)'] |
@@ -174,10 +176,10 @@ Describing a subgraph with the string "(u_1 / into :1 (u_2 / pour) :2 (u_3 / YYY
 | 17 | This latest XXX from the animation YYY at Pixar is beautiful, masterly, inspired - and delivers a powerful ecological message.  |                           |                                                                                    |
 
 
-We can also add negated features that we don't want to match (this won't match the first row where 'pour' is present):
+We can also add negated features that we don't want to match (e.g. this won't match the first row where 'pour' is present):
 ```python
 #match a simple graph feature
-evaluator.match_features(df, [[["(u_1 / fuck)"], ["(u_2 / absolutely)"], "HOF"]])
+evaluator.match_features(df, [[["(u_1 / into :2 (u_3 / YYY))"], ["(u_2 / pour)"], "Entity-Destination(e1,e2)"]])
 ```
 
 |    | Sentence                                                                                                                        | Predicted label           | Matched rule                                                                     |
@@ -205,7 +207,7 @@ If we don't want to specify nodes, regex can also be used in place of the node a
 
 ```python
 #regex can be used to match any node (this will match instances where 'into' is connected to any node with '1' edge)
-evaluator.match_features(df, [[["(u_1 / fuck :obj (u_2 / .*))"], [], "HOF"]])
+evaluator.match_features(df, [[["(u_1 / into :1 (u_2 / .*) :2 (u_3 / YYY))"], [], "Entity-Destination(e1,e2)"]])
 ```
 
 |    | Sentence                                                                                                                        | Predicted label           | Matched rule                                                                     |
