@@ -11,8 +11,10 @@ from xpotato.models.model import GraphModel
 from sklearn.linear_model import LogisticRegression
 from tqdm import tqdm
 
-from skcriteria import Data
+import skcriteria as skc
 from skcriteria.madm import simple
+from skcriteria.pipeline import mkpipe
+from skcriteria.preprocessing import invert_objectives, scalers
 
 
 class GraphTrainer:
@@ -92,16 +94,21 @@ class GraphTrainer:
                     "true_positives": stat.True_positive_sens.apply(lambda x: len(x)),
                 }
             )
-            criteria_data = Data(
-                stat_opt,
-                [min, max],
-                anames=val,
-                cnames=stat_opt.columns,
+
+            criteria_data = skc.mkdm(
+                matrix=stat_opt,
+                objectives=[min, max],
+                criteria=stat_opt.columns,
                 weights=[30, 70],
             )
-            dm = simple.WeightedSum(mnorm="sum")
 
-            dec = dm.decide(criteria_data)
+            dm = mkpipe(
+                invert_objectives.MinimizeToMaximize(),
+                scalers.SumScaler(target="both"),
+                simple.WeightedSumModel(),
+            )
+
+            dec = dm.evaluate(criteria_data)
 
             sorted_feats = [
                 x for _, x in sorted(zip(dec.rank_, val), key=lambda pair: pair[0])
