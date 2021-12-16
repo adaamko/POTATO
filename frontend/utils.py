@@ -225,9 +225,17 @@ def init_evaluator():
     return FeatureEvaluator()
 
 
+def filter_label(df, label):
+    df["label"] = df.apply(lambda x: label if label in x["labels"] else "NOT", axis=1)
+    df["label_id"] = df.apply(lambda x: 0 if x["label"] == "NOT" else 1, axis=1)
+
+
 @st.cache(allow_output_mutation=True)
-def read_train(path):
-    return pd.read_pickle(path)
+def read_train(path, label=None):
+    df = pd.read_pickle(path)
+    if label is not None:
+        filter_label(df, label)
+    return df
 
 
 def save_dataframe(data, path):
@@ -235,8 +243,11 @@ def save_dataframe(data, path):
 
 
 @st.cache(allow_output_mutation=True)
-def read_val(path):
-    return pd.read_pickle(path)
+def read_val(path, label=None):
+    df = pd.read_pickle(path)
+    if label is not None:
+        filter_label(df, label)
+    return df
 
 
 def train_df(df, min_edge=0, rank=False):
@@ -341,7 +352,6 @@ def extract_data_from_dataframe(option):
 
 
 def graph_viewer(type, graphs, sentences, nodes):
-
     graph_type = {
         "FP": st.session_state.false_graph_number,
         "TP": st.session_state.true_graph_number,
@@ -421,9 +431,9 @@ def rank_and_suggest(classes, data, evaluator, rank_false_negatives=True):
     suggest_new_rule = st.button("suggest new rules")
     if suggest_new_rule:
         if (
-            not st.session_state.df_statistics.empty
-            and st.session_state.sens
-            and st.session_state.suggested_features[classes]
+                not st.session_state.df_statistics.empty
+                and st.session_state.sens
+                and st.session_state.suggested_features[classes]
         ):
             features_to_rank = st.session_state.suggested_features[classes][:5]
             with st.spinner("Ranking rules..."):
