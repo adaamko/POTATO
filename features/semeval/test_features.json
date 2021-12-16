@@ -1,0 +1,18 @@
+{
+    "Entity-Destination(e1,e2)": [
+        [
+            [
+                "(u_5 / yyy  :case (u_17 / into))"
+            ],
+            [],
+            "Entity-Destination(e1,e2)"
+        ],
+        [
+            [
+                "(u_1 / xxx  :det (u_0 / the))"
+            ],
+            [],
+            "Entity-Destination(e1,e2)"
+        ]
+    ]
+}

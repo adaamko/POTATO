@@ -9,6 +9,25 @@ from sklearn.metrics import classification_report
 from xpotato.graph_extractor.extract import FeatureEvaluator
 
 
+# TODO Adam: This is not the best place for these functions but I didn't want it to be in the frontend.utils
+# ------------------------------------------------------
+
+
+def filter_label(df, label):
+    df["label"] = df.apply(lambda x: label if label in x["labels"] else "NOT", axis=1)
+    df["label_id"] = df.apply(lambda x: 0 if x["label"] == "NOT" else 1, axis=1)
+
+
+def read_val(path, label=None):
+    df = pd.read_pickle(path)
+    if label is not None:
+        filter_label(df, label)
+    return df
+
+
+# ------------------------------------------------------
+
+
 def get_args():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-t", "--graph-type", type=str, default="fourlang")

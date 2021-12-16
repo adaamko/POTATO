@@ -28,6 +28,7 @@ setup(
         "streamlit-aggrid",
         "scikit-criteria >= 0.5",
         "tuw-nlp",
+        "amrlib",
     ],
     packages=find_packages(),
     classifiers=[

@@ -346,6 +346,40 @@ python scripts/evaluate.py -t ud -f notebooks/features.json -d notebooks/val_dat
 
 The result will be a _csv_ file with the labels and the matched rules.
 
+## Service
+If you are ready with the extracted features and want to use our package in production for inference (generating predictions for sentences), we also provide a REST API built on POTATO (based on [fastapi](https://github.com/tiangolo/fastapi)).
+
+First install FastAPI and [Uvicorn](https://www.uvicorn.org/)
+```bash
+pip install fastapi
+pip install "uvicorn[standard]"
+```
+
+To start the service, you should set _language_, _graph\_type_ and the _features_  for the service. This can be done through enviroment variables.
+
+Example:
+```bash
+export FEATURE_PATH=/home/adaamko/projects/POTATO/features/semeval/test_features.json
+export GRAPH_FORMAT=ud
+export LANG=en
+```
+
+Then, start the REST API:
+```python
+python services/main.py
+```
+
+It will start a service running on _localhost_ on port _8000_ (it will also initialize the correct models).
+
+Then you can use any client to make post requests:
+```bash
+curl -X POST localhost:8000 -H 'Content-Type: application/json' -d '{"text":"The suspect pushed the XXX into a deep YYY.\nSparky Anderson is making progress in his XXX from YYY and could return to managing the Detroit Tigers within a week."}'
+```
+
+The answer will be a list with the predicted labels (if none of the rules match, it will return "NONE"):
+```bash
+["Entity-Destination(e1,e2)","NONE"]
+```
 ## Contributing
 
 We welcome all contributions! Please fork this repository and create a branch for your modifications. We suggest getting in touch with us first, by opening an issue or by writing an email to Adam Kovacs or Gabor Recski at firstname.lastname@tuwien.ac.at

@@ -14,7 +14,7 @@ from tuw_nlp.graph.utils import (
 )
 from tuw_nlp.text.pipeline import CachedStanzaPipeline
 
-from xpotato.dataset.utils import default_pn_to_graph, ud_to_graph
+from xpotato.dataset.utils import default_pn_to_graph, ud_to_graph, amr_pn_to_graph
 
 
 class GraphExtractor:
@@ -24,13 +24,21 @@ class GraphExtractor:
         self.lang = lang
         self.nlp = None
         self.matcher = None
+        self.amr_stog = None
+
+    def init_amr(self):
+        if self.amr_stog == None:
+            import amrlib
+
+            self.amr_stog = amrlib.load_stog_model()
 
     def init_nlp(self):
-        if self.lang == "en_bio":
-            nlp = stanza.Pipeline("en", package="craft")
-        else:
-            nlp = stanza.Pipeline(self.lang)
-        self.nlp = CachedStanzaPipeline(nlp, self.cache_fn)
+        if self.nlp == None:
+            if self.lang == "en_bio":
+                nlp = stanza.Pipeline("en", package="craft")
+            else:
+                nlp = stanza.Pipeline(self.lang)
+            self.nlp = CachedStanzaPipeline(nlp, self.cache_fn)
 
     def parse_iterable(self, iterable, graph_type="fourlang"):
         if graph_type == "fourlang":
@@ -44,7 +52,7 @@ class GraphExtractor:
                         g = nx.compose(g, n)
                     yield g
 
-        if graph_type == "ud":
+        elif graph_type == "ud":
             self.init_nlp()
             for sen in tqdm(iterable):
                 doc = self.nlp(sen)
@@ -52,6 +60,13 @@ class GraphExtractor:
                 for doc_sen in doc.sentences[1:]:
                     n, _ = ud_to_graph(doc_sen)
                     g = nx.compose(g, n)
+                yield g
+
+        elif graph_type == "amr":
+            self.init_amr()
+            for sen in tqdm(iterable):
+                graphs = self.stog.parse_sents([sen])
+                g, _ = amr_pn_to_graph(graphs[0])
                 yield g
 
 
