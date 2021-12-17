@@ -1,9 +1,9 @@
+import pickle
 from typing import List, Tuple, Dict
 
-import pandas as pd
 import networkx as nx
-import stanza
-import pickle
+import pandas as pd
+
 from xpotato.dataset.sample import Sample
 from xpotato.graph_extractor.extract import GraphExtractor
 
@@ -14,7 +14,8 @@ class Dataset:
     ) -> None:
         self.label_vocab = label_vocab
         self._dataset = self.read_dataset(examples)
-        self.extractor = GraphExtractor(lang=lang, cache_fn="en_nlp_cache")
+        self.extractor = GraphExtractor(lang=lang, cache_fn=f"{lang}_nlp_cache")
+        self.graphs = None
 
     def read_dataset(self, examples: List[Tuple[str, str]]) -> List[Sample]:
         return [Sample(example) for example in examples]

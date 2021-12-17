@@ -253,9 +253,9 @@ if you already used the UI and extracted the features manually and you want to l
 streamlit run frontend/app.py -- -t notebooks/train_dataset -v notebooks/val_dataset -g ud -sr notebooks/features.json -hr notebooks/manual_features.json
 ```
 
-### Unsupervised mode
+### Advanced mode
 
-If labels are not or just partially provided, the frontend can be started also in _unsupervised_ mode, where the user can _annotate_ a few examples at the start, then the system gradually offers rules based on the provided examples. 
+If labels are not or just partially provided, the frontend can be started also in _advanced_ mode, where the user can _annotate_ a few examples at the start, then the system gradually offers rules based on the provided examples. 
 
 
 Dataset without labels can be initialized with:
@@ -280,7 +280,7 @@ sentences = [("fuck absolutely everything about today.", ""),
 
 Then, the frontend can be started:
 ```
-streamlit run frontend/app.py -- -t notebooks/unsupervised_dataset -g ud -m unsupervised
+streamlit run frontend/app.py -- -t notebooks/unsupervised_dataset -g ud -m advanced
 ```
 
 

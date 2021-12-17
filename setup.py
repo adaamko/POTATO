@@ -26,8 +26,9 @@ setup(
         "rank_bm25",
         "streamlit",
         "streamlit-aggrid",
-        "scikit-criteria",
+        "scikit-criteria >= 0.5",
         "tuw-nlp",
+        "amrlib",
     ],
     packages=find_packages(),
     classifiers=[

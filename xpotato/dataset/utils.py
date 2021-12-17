@@ -2,8 +2,7 @@ from collections import defaultdict
 
 import networkx as nx
 import penman as pn
-import re
-from tuw_nlp.graph.utils import preprocess_node_alto, preprocess_edge_alto
+from tuw_nlp.graph.utils import preprocess_node_alto
 
 
 def ud_to_graph(sen, edge_attr="color"):

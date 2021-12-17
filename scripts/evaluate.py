@@ -1,17 +1,31 @@
 import argparse
-import logging
-import pickle
-import sys
 import json
-from collections import defaultdict
+import logging
+import sys
 
-import networkx as nx
 import pandas as pd
 from sklearn.metrics import classification_report
 
-from frontend.utils import read_val
-from xpotato.dataset.utils import default_pn_to_graph
 from xpotato.graph_extractor.extract import FeatureEvaluator
+
+
+# TODO Adam: This is not the best place for these functions but I didn't want it to be in the frontend.utils
+# ------------------------------------------------------
+
+
+def filter_label(df, label):
+    df["label"] = df.apply(lambda x: label if label in x["labels"] else "NOT", axis=1)
+    df["label_id"] = df.apply(lambda x: 0 if x["label"] == "NOT" else 1, axis=1)
+
+
+def read_val(path, label=None):
+    df = pd.read_pickle(path)
+    if label is not None:
+        filter_label(df, label)
+    return df
+
+
+# ------------------------------------------------------
 
 
 def get_args():
@@ -75,9 +89,10 @@ def main():
     if args.mode == "predictions":
         pred_df.to_csv(sys.stdout, sep="\t")
     elif args.mode == "report":
-        assert report, "There are no labels in the dataset, we cannot generate a classification report. Are you evaluating a test set?"
+        assert (
+            report
+        ), "There are no labels in the dataset, we cannot generate a classification report. Are you evaluating a test set?"
         print(report)
-
 
 
 if __name__ == "__main__":

@@ -5,12 +5,15 @@ import sys
 
 from graphviz import Source
 import pandas as pd
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 import streamlit as st
+import penman
 from streamlit.report_thread import REPORT_CONTEXT_ATTR_NAME
 
 from xpotato.dataset.utils import default_pn_to_graph
 from xpotato.graph_extractor.extract import FeatureEvaluator
 from xpotato.models.trainer import GraphTrainer
+from tuw_nlp.graph.utils import graph_to_pn
 
 from contextlib import contextmanager
 from io import StringIO
@@ -18,14 +21,6 @@ from threading import current_thread
 
 
 def init_session_states():
-    if "false_graph_number" not in st.session_state:
-        st.session_state.false_graph_number = 0
-    if "true_graph_number" not in st.session_state:
-        st.session_state.true_graph_number = 0
-    if "false_neg_number" not in st.session_state:
-        st.session_state.false_neg_number = 0
-    if "predicted_num" not in st.session_state:
-        st.session_state.predicted_num = 0
     if "whole_accuracy" not in st.session_state:
         st.session_state.whole_accuracy = []
     if "df_statistics" not in st.session_state:
@@ -194,7 +189,6 @@ def d_clean(string):
 
 def get_df_from_rules(rules, negated_rules):
     data = {"rules": rules, "negated_rules": negated_rules}
-    # Create DataFrame.
     df = pd.DataFrame(data)
 
     return df
@@ -262,7 +256,8 @@ def rule_chooser():
     option = st.selectbox("Choose from the rules", st.session_state.sens)
     G, _ = default_pn_to_graph(option.split(";")[0])
     text_G, _ = default_pn_to_graph(option.split(";")[0])
-    st.graphviz_chart(to_dot(text_G), use_container_width=True)
+    dot_graph = to_dot(text_G)
+    st.graphviz_chart(dot_graph, use_container_width=True)
     nodes = [d_clean(n[1]["name"].split("_")[0]) for n in text_G.nodes(data=True)]
     return nodes, option
 
@@ -279,15 +274,69 @@ def annotate_df(predicted):
 
 
 def show_ml_feature(classes, hand_made_rules):
-    st.markdown(
-        f"<span>Feature: {st.session_state.ml_feature[0]}, Retrieved True Positive samples: <b>{st.session_state.ml_feature[5]}</b>, \
-                        Retrieved False Positive samples: <b>{st.session_state.ml_feature[6]}</b></span>",
-        unsafe_allow_html=True,
+    """This function shows an AgGrid dataframe with the top10 features ranked.
+    It also shows the precision, recall and f1-score of the rules along with the number of the TP and FP samples retrieved.
+
+    Args:
+        classes (string): The chosen class.
+        hand_made_rules (string): Where to save the rules.
+    """
+    features = [feat[0][0][0] for feat in st.session_state.ml_feature]
+    precisions = [f"{feat[1]:.3f}" for feat in st.session_state.ml_feature]
+    recalls = [f"{feat[2]:.3f}" for feat in st.session_state.ml_feature]
+    fscores = [f"{feat[3]:.3f}" for feat in st.session_state.ml_feature]
+
+    true_positive_samples = [feat[5] for feat in st.session_state.ml_feature]
+    false_positive_samples = [feat[6] for feat in st.session_state.ml_feature]
+
+    ranked_df = pd.DataFrame(
+        {
+            "feature": features,
+            "precision": precisions,
+            "recall": recalls,
+            "fscore": fscores,
+            "TP": true_positive_samples,
+            "FP": false_positive_samples,
+        }
     )
-    accept_rule = st.button("Accept")
-    decline_rule = st.button("Decline")
-    if accept_rule:
-        st.session_state.features[classes].append(st.session_state.ml_feature[0])
+    with st.form("rule_chooser") as f:
+        gb = GridOptionsBuilder.from_dataframe(ranked_df)
+        gb.configure_default_column(
+            editable=False,
+            resizable=True,
+            sorteable=True,
+            wrapText=True,
+            autoHeight=True,
+        )
+        gb.configure_selection(
+            "multiple",
+            use_checkbox=True,
+            groupSelectsChildren=True,
+            groupSelectsFiltered=True,
+        )
+
+        go = gb.build()
+        rule_grid = AgGrid(
+            ranked_df,
+            gridOptions=go,
+            allow_unsafe_jscode=True,
+            reload_data=False,
+            update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
+            theme="material",
+            fit_columns_on_grid_load=False,
+        )
+
+        accept_rules = st.form_submit_button(label="accept_rules")
+
+    if accept_rules:
+        selected_rules = (
+            rule_grid["selected_rows"]
+            if rule_grid["selected_rows"]
+            else rule_grid["data"].to_dict(orient="records")
+        )
+        for rule in selected_rules:
+            st.session_state.features[classes].append([[rule["feature"]], [], classes])
+
         st.session_state.ml_feature = None
         if st.session_state.features[classes]:
             st.session_state.feature_df = get_df_from_rules(
@@ -297,9 +346,6 @@ def show_ml_feature(classes, hand_made_rules):
             save_rules = hand_made_rules or "saved_features.json"
             save_ruleset(save_rules, st.session_state.features)
             rerun()
-    elif decline_rule:
-        st.session_state.ml_feature = None
-        rerun()
 
 
 def extract_data_from_dataframe(option):
@@ -309,18 +355,27 @@ def extract_data_from_dataframe(option):
     fp_sentences = st.session_state.df_statistics.iloc[
         st.session_state.sens.index(option)
     ].False_positive_sens
+    fp_indices = st.session_state.df_statistics.iloc[
+        st.session_state.sens.index(option)
+    ].False_positive_indices
     tp_graphs = st.session_state.df_statistics.iloc[
         st.session_state.sens.index(option)
     ].True_positive_graphs
     tp_sentences = st.session_state.df_statistics.iloc[
         st.session_state.sens.index(option)
     ].True_positive_sens
+    tp_indices = st.session_state.df_statistics.iloc[
+        st.session_state.sens.index(option)
+    ].True_positive_indices
     fn_graphs = st.session_state.df_statistics.iloc[
         st.session_state.sens.index(option)
     ].False_negative_graphs
     fn_sentences = st.session_state.df_statistics.iloc[
         st.session_state.sens.index(option)
     ].False_negative_sens
+    fn_indices = st.session_state.df_statistics.iloc[
+        st.session_state.sens.index(option)
+    ].False_negative_indices
     prec = st.session_state.df_statistics.iloc[
         st.session_state.sens.index(option)
     ].Precision
@@ -339,8 +394,10 @@ def extract_data_from_dataframe(option):
     return (
         fn_graphs,
         fn_sentences,
+        fn_indices,
         fp_graphs,
         fp_sentences,
+        fp_indices,
         fscore,
         prec,
         predicted,
@@ -348,59 +405,86 @@ def extract_data_from_dataframe(option):
         support,
         tp_graphs,
         tp_sentences,
+        tp_indices,
     )
 
 
-def graph_viewer(type, graphs, sentences, nodes):
-    graph_type = {
-        "FP": st.session_state.false_graph_number,
-        "TP": st.session_state.true_graph_number,
-        "FN": st.session_state.false_neg_number,
-    }
-    if st.button(f"Previous {type}"):
-        graph_type[type] = max(0, graph_type[type] - 1)
-    if st.button(f"Next {type}"):
-        graph_type[type] = min(
-            graph_type[type] + 1,
-            len(graphs) - 1,
+def graph_viewer(type, graphs, sentences, ids, nodes):
+    df = pd.DataFrame(
+        {
+            "id": ids,
+            "sentence": [sen[0] for sen in sentences],
+            "label": [sen[1] for sen in sentences],
+            "graph": [i for i in range(len(graphs))],
+        }
+    )
+    gb = GridOptionsBuilder.from_dataframe(df)
+    gb.configure_default_column(
+        editable=False,
+        resizable=True,
+        sorteable=True,
+        wrapText=True,
+        autoHeight=True,
+    )
+    gb.configure_column("graph", hide=True)
+    gb.configure_column("label", hide=True)
+    gb.configure_selection(
+        "single",
+        use_checkbox=True,
+        groupSelectsChildren=True,
+        groupSelectsFiltered=True,
+    )
+    go = gb.build()
+    selected_df = AgGrid(
+        df,
+        gridOptions=go,
+        allow_unsafe_jscode=True,
+        reload_data=False,
+        update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
+        width="100%",
+        theme="material",
+        fit_columns_on_grid_load=True,
+    )
+
+    if selected_df["selected_rows"]:
+        sel_row = selected_df["selected_rows"][0]
+        st.markdown(
+            f"<span><b>Sentence:</b> {sel_row['sentence']}</span>",
+            unsafe_allow_html=True,
         )
-    if graph_type[type] > len(graphs) - 1:
-        graph_type[type] = 0
-    st.markdown(
-        f"<span><b>Sentence:</b> {sentences[graph_type[type]][0]}</span>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f"<span><b>Gold label:</b> {sentences[graph_type[type]][1]}</span>",
-        unsafe_allow_html=True,
-    )
-    st.text(f"{type}: {len(graphs)}")
-    current_graph = graphs[graph_type[type]]
-    dot_current_graph = to_dot(
-        current_graph,
-        marked_nodes=set(nodes),
-    )
-
-    if st.session_state.download:
-        graph_pipe = Source(dot_current_graph).pipe(format="svg")
-        st.download_button(
-            label="Download graph as SVG",
-            data=graph_pipe,
-            file_name="graph.svg",
-            mime="mage/svg+xml",
+        st.markdown(
+            f"<span><b>Sentence ID:</b> {sel_row['id']}</span>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            f"<span><b>Gold label:</b> {sel_row['label']}</span>",
+            unsafe_allow_html=True,
+        )
+        st.text(f"{type}: {len(graphs)}")
+        current_graph = graphs[sel_row["graph"]]
+        dot_current_graph = to_dot(
+            current_graph,
+            marked_nodes=set(nodes),
         )
 
-    st.graphviz_chart(
-        dot_current_graph,
-        use_container_width=True,
-    )
+        if st.session_state.download:
+            graph_pipe = Source(dot_current_graph).pipe(format="svg")
+            st.download_button(
+                label="Download graph as SVG",
+                data=graph_pipe,
+                file_name="graph.svg",
+                mime="mage/svg+xml",
+            )
 
-    if type == "FP":
-        st.session_state.false_graph_number = graph_type[type]
-    elif type == "TP":
-        st.session_state.true_graph_number = graph_type[type]
-    elif type == "FN":
-        st.session_state.false_neg_number = graph_type[type]
+        st.graphviz_chart(
+            dot_current_graph,
+            use_container_width=True,
+        )
+
+        st.write("Penman format:")
+        st.text(penman.encode(penman.decode(graph_to_pn(current_graph)), indent=10))
+        st.write("In one line format:")
+        st.write(graph_to_pn(current_graph))
 
 
 def add_rule_manually(classes, hand_made_rules):
@@ -427,26 +511,35 @@ def add_rule_manually(classes, hand_made_rules):
     )
 
 
-def rank_and_suggest(classes, data, evaluator, rank_false_negatives=True):
+def rank_and_suggest(classes, data, evaluator):
     suggest_new_rule = st.button("suggest new rules")
     if suggest_new_rule:
         if (
-                not st.session_state.df_statistics.empty
-                and st.session_state.sens
-                and st.session_state.suggested_features[classes]
+            st.session_state.suggested_features
+            and st.session_state.suggested_features[classes]
         ):
-            features_to_rank = st.session_state.suggested_features[classes][:5]
+            features_to_rank = st.session_state.suggested_features[classes][:10]
             with st.spinner("Ranking rules..."):
-                features_ranked = evaluator.rank_features(
-                    classes,
-                    features_to_rank,
-                    data,
-                    st.session_state.df_statistics.iloc[0].False_negative_indices,
-                )
-            suggested_feature = features_ranked[0]
+                if not st.session_state.df_statistics.empty and st.session_state.sens:
+                    features_ranked = evaluator.rank_features(
+                        classes,
+                        features_to_rank,
+                        data,
+                        st.session_state.df_statistics.iloc[0].False_negative_indices,
+                    )
+                else:
+                    features_ranked = evaluator.rank_features(
+                        classes,
+                        features_to_rank,
+                        data,
+                        [],
+                    )
 
-            st.session_state.suggested_features[classes].remove(suggested_feature[0])
+            for feat in features_ranked:
+                st.session_state.suggested_features[classes].remove(feat[0])
 
-            st.session_state.ml_feature = suggested_feature
+            st.session_state.ml_feature = features_ranked
         else:
-            st.warning("Dataset is not evaluated!")
+            st.warning(
+                "No suggestions available, maybe you don't have the dataset trained?"
+            )

@@ -1,27 +1,20 @@
-import argparse
 import json
-import logging
 import os
-import sys
 from collections import defaultdict
 
 import networkx as nx
 import pandas as pd
 import stanza
-from graphviz import Source
 from networkx.algorithms.isomorphism import DiGraphMatcher
-from xpotato.dataset.utils import default_pn_to_graph, ud_to_graph
 from sklearn.metrics import precision_recall_fscore_support
 from tqdm import tqdm
 from tuw_nlp.grammar.text_to_4lang import TextTo4lang
 from tuw_nlp.graph.utils import (
     GraphFormulaMatcher,
-    GraphMatcher,
-    graph_to_isi,
-    graph_to_pn,
-    pn_to_graph,
 )
 from tuw_nlp.text.pipeline import CachedStanzaPipeline
+
+from xpotato.dataset.utils import default_pn_to_graph, ud_to_graph, amr_pn_to_graph
 
 
 class GraphExtractor:
@@ -31,13 +24,21 @@ class GraphExtractor:
         self.lang = lang
         self.nlp = None
         self.matcher = None
+        self.amr_stog = None
+
+    def init_amr(self):
+        if self.amr_stog == None:
+            import amrlib
+
+            self.amr_stog = amrlib.load_stog_model()
 
     def init_nlp(self):
-        if self.lang == "en_bio":
-            nlp = stanza.Pipeline("en", package="craft")
-        else:
-            nlp = stanza.Pipeline(self.lang)
-        self.nlp = CachedStanzaPipeline(nlp, self.cache_fn)
+        if self.nlp == None:
+            if self.lang == "en_bio":
+                nlp = stanza.Pipeline("en", package="craft")
+            else:
+                nlp = stanza.Pipeline(self.lang)
+            self.nlp = CachedStanzaPipeline(nlp, self.cache_fn)
 
     def parse_iterable(self, iterable, graph_type="fourlang"):
         if graph_type == "fourlang":
@@ -51,7 +52,7 @@ class GraphExtractor:
                         g = nx.compose(g, n)
                     yield g
 
-        if graph_type == "ud":
+        elif graph_type == "ud":
             self.init_nlp()
             for sen in tqdm(iterable):
                 doc = self.nlp(sen)
@@ -59,6 +60,13 @@ class GraphExtractor:
                 for doc_sen in doc.sentences[1:]:
                     n, _ = ud_to_graph(doc_sen)
                     g = nx.compose(g, n)
+                yield g
+
+        elif graph_type == "amr":
+            self.init_amr()
+            for sen in tqdm(iterable):
+                graphs = self.stog.parse_sents([sen])
+                g, _ = amr_pn_to_graph(graphs[0])
                 yield g
 
 
@@ -103,7 +111,10 @@ class FeatureEvaluator:
         return one_versus_rest_df
 
     def rank_features(self, cl, features, orig_data, false_negatives):
-        subset_data = orig_data.iloc[false_negatives]
+        if false_negatives:
+            subset_data = orig_data.iloc[false_negatives]
+        else:
+            subset_data = orig_data
         df, accuracy = self.evaluate_feature(cl, features, subset_data)
 
         features_stat = []
@@ -285,8 +296,10 @@ class FeatureEvaluator:
             measure = [feat[0]]
             false_pos_g = []
             false_pos_s = []
+            false_pos_indices = []
             true_pos_g = []
             true_pos_s = []
+            true_pos_indices = []
             predicted = []
             for i, g in enumerate(graphs):
                 feats = matched[i]
@@ -296,11 +309,13 @@ class FeatureEvaluator:
                     sen = data.iloc[i].text
                     lab = data.iloc[i].label
                     false_pos_s.append((sen, lab))
+                    false_pos_indices.append(i)
                 if label == 1 and labels[i] == 1:
                     true_pos_g.append(g)
                     sen = data.iloc[i].text
                     lab = data.iloc[i].label
                     true_pos_s.append((sen, lab))
+                    true_pos_indices.append(i)
                 predicted.append(label)
             for pcf in precision_recall_fscore_support(labels, predicted, average=None):
                 if len(pcf) > 1:
@@ -309,8 +324,10 @@ class FeatureEvaluator:
                     measure.append(0)
             measure.append(false_pos_g)
             measure.append(false_pos_s)
+            measure.append(false_pos_indices)
             measure.append(true_pos_g)
             measure.append(true_pos_s)
+            measure.append(true_pos_indices)
             measure.append(false_neg_g)
             measure.append(false_neg_s)
             measure.append(false_neg_indices)
@@ -327,8 +344,10 @@ class FeatureEvaluator:
                 "Support",
                 "False_positive_graphs",
                 "False_positive_sens",
+                "False_positive_indices",
                 "True_positive_graphs",
                 "True_positive_sens",
+                "True_positive_indices",
                 "False_negative_graphs",
                 "False_negative_sens",
                 "False_negative_indices",
