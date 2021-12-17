@@ -24,20 +24,12 @@ assert LANG, "LANG is not set"
 def match_texts(text):
     texts = text.split("\n")
 
-    graphs = list(EXTRACTOR.parse_iterable(
-        [text for text in texts], GRAPH_FORMAT))
+    graphs = list(EXTRACTOR.parse_iterable([text for text in texts], GRAPH_FORMAT))
 
     predicted = []
 
-    feature_values = []
-    for k in FEATURES:
-        for f in FEATURES[k]:
-            feature_values.append(f)
-    matcher = GraphFormulaMatcher(
-        feature_values, converter=default_pn_to_graph)
-
     for i, g in enumerate(graphs):
-        feats = matcher.match(g)
+        feats = MATCHER.match(g)
         label = "NONE"
         for key, feature in feats:
             label = key
@@ -53,11 +45,12 @@ class Item(BaseModel):
 app = FastAPI()
 
 
-@app.on_event('startup')
+@app.on_event("startup")
 def init_data():
     global EXTRACTOR
     global FEATURES
     global EVALUATOR
+    global MATCHER
     EXTRACTOR = GraphExtractor(lang=LANG, cache_fn=f"{LANG}_nlp_cache")
 
     if GRAPH_FORMAT == "ud":
@@ -69,6 +62,12 @@ def init_data():
         FEATURES = json.load(f)
 
     EVALUATOR = FeatureEvaluator()
+
+    feature_values = []
+    for k in FEATURES:
+        for f in FEATURES[k]:
+            feature_values.append(f)
+    MATCHER = GraphFormulaMatcher(feature_values, converter=default_pn_to_graph)
 
 
 @app.post("/")
