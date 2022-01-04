@@ -9,9 +9,7 @@ import penman
 from graphviz import Source
 
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
-from tuw_nlp.graph.utils import (
-    graph_to_pn
-)
+from tuw_nlp.graph.utils import graph_to_pn
 
 from utils import (
     train_df,
@@ -37,15 +35,20 @@ from utils import (
     to_dot,
 )
 
+
 def inference_mode(evaluator, hand_made_rules):
     st.sidebar.title("Inference Mode")
-    st.sidebar.markdown("""
+    st.sidebar.markdown(
+        """
     ## Select the graph format
-    """)
+    """
+    )
     graph_format = st.sidebar.selectbox("", ["ud", "fourlang", "amr"])
-    st.sidebar.markdown("""
+    st.sidebar.markdown(
+        """
     ## Select the language
-    """)
+    """
+    )
     lang = st.sidebar.selectbox("", ["en", "de"])
     if lang == "de" and graph_format == "amr":
         st.error("Currently AMR does not support German")
@@ -54,9 +57,9 @@ def inference_mode(evaluator, hand_made_rules):
     if hand_made_rules:
         with open(hand_made_rules) as f:
             st.session_state.features = json.load(f)
-    
+
     extractor = init_extractor(lang, graph_format)
-    
+
     col1, col2 = st.columns(2)
 
     col1.header("Rules to apply")
@@ -70,15 +73,17 @@ def inference_mode(evaluator, hand_made_rules):
                 features_merged.append(j)
 
         st.session_state.feature_df = get_df_from_rules(
-                [";".join(feat[0]) for feat in features_merged],
-                [";".join(feat[1]) for feat in features_merged],
-                [feat[2] for feat in features_merged],
-            )
+            [";".join(feat[0]) for feat in features_merged],
+            [";".join(feat[1]) for feat in features_merged],
+            [feat[2] for feat in features_merged],
+        )
 
         with st.form("example form") as f:
             gb = GridOptionsBuilder.from_dataframe(st.session_state.feature_df)
             # make all columns editable
-            gb.configure_columns(["rules", "negated_rules", "predicted_label"], editable=True)
+            gb.configure_columns(
+                ["rules", "negated_rules", "predicted_label"], editable=True
+            )
             gb.configure_selection(
                 "multiple",
                 use_checkbox=True,
@@ -92,8 +97,7 @@ def inference_mode(evaluator, hand_made_rules):
                 key="grid1",
                 allow_unsafe_jscode=True,
                 reload_data=True,
-                update_mode=GridUpdateMode.MODEL_CHANGED
-                | GridUpdateMode.VALUE_CHANGED,
+                update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
                 width="100%",
                 theme="material",
                 fit_columns_on_grid_load=False,
@@ -107,9 +111,7 @@ def inference_mode(evaluator, hand_made_rules):
         if submit:
             delete = delete_or_train == "delete"
 
-            st.session_state.rows_to_delete = [
-                r["rules"] for r in ag["selected_rows"]
-            ]
+            st.session_state.rows_to_delete = [r["rules"] for r in ag["selected_rows"]]
             st.session_state.rls_after_delete = []
 
             negated_list = ag["data"]["negated_rules"].tolist()
@@ -155,14 +157,14 @@ def inference_mode(evaluator, hand_made_rules):
                 negated_features = negated_text.split(";")
             if not label_text.strip():
                 with st_stdout("error"):
-                        print(
-                            "Please provide label for your rule!"
-                        )
+                    print("Please provide label for your rule!")
             else:
                 if label_text.strip() not in st.session_state.features:
                     st.session_state.features[label_text.strip()] = []
 
-                st.session_state.features[label_text].append([[text], negated_features, label_text])
+                st.session_state.features[label_text].append(
+                    [[text], negated_features, label_text]
+                )
                 if st.session_state.features[label_text]:
                     features_merged = []
                     for i in st.session_state.features:
@@ -170,16 +172,18 @@ def inference_mode(evaluator, hand_made_rules):
                             features_merged.append(j)
 
                     st.session_state.feature_df = get_df_from_rules(
-                            [";".join(feat[0]) for feat in features_merged],
-                            [";".join(feat[1]) for feat in features_merged],
-                            [feat[2] for feat in features_merged],
-                        )
+                        [";".join(feat[0]) for feat in features_merged],
+                        [";".join(feat[1]) for feat in features_merged],
+                        [feat[2] for feat in features_merged],
+                    )
                     save_rules = hand_made_rules or "saved_features.json"
                     save_ruleset(save_rules, st.session_state.features)
                     rerun()
 
     with col2:
-        text_input = st.text_area("Provide the text here you want to parse and apply rules to!")
+        text_input = st.text_area(
+            "Provide the text here you want to parse and apply rules to!"
+        )
 
         if text_input:
             graphs, predicted = match_texts(text_input, extractor, graph_format)
@@ -210,6 +214,7 @@ def inference_mode(evaluator, hand_made_rules):
             st.text(penman.encode(penman.decode(graph_to_pn(graphs[0])), indent=10))
             st.write("In one line format:")
             st.write(graph_to_pn(graphs[0]))
+
 
 def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made_rules):
     if hand_made_rules:
@@ -1103,9 +1108,7 @@ def main(args):
     # For inference mode you don't need any training data as we will use the model
     # to predict the labels on-the-fly
     elif mode == "inference":
-        inference_mode(
-            evaluator, hand_made_rules
-        )
+        inference_mode(evaluator, hand_made_rules)
 
 
 if __name__ == "__main__":

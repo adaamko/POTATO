@@ -16,10 +16,7 @@ from xpotato.dataset.utils import default_pn_to_graph
 from xpotato.graph_extractor.extract import FeatureEvaluator, GraphExtractor
 from xpotato.models.trainer import GraphTrainer
 from xpotato.dataset.utils import default_pn_to_graph
-from tuw_nlp.graph.utils import (
-    GraphFormulaMatcher,
-    graph_to_pn
-)
+from tuw_nlp.graph.utils import GraphFormulaMatcher, graph_to_pn
 
 from contextlib import contextmanager
 from io import StringIO
@@ -29,7 +26,11 @@ from threading import current_thread
 def rerun():
     raise st.experimental_rerun()
 
-@st.cache(hash_funcs={torch.nn.parameter.Parameter: lambda parameter: parameter.data.numpy()}, allow_output_mutation=True)
+
+@st.cache(
+    hash_funcs={torch.nn.parameter.Parameter: lambda parameter: parameter.data.numpy()},
+    allow_output_mutation=True,
+)
 def match_texts(text_input, extractor, graph_format):
     texts = text_input.split("\n")
     feature_values = []
@@ -49,9 +50,12 @@ def match_texts(text_input, extractor, graph_format):
         for key, feature in feats:
             label = key
             pattern = feature
-        predicted.append((label, feature_values[pattern][0] if pattern is not None else None))
+        predicted.append(
+            (label, feature_values[pattern][0] if pattern is not None else None)
+        )
 
     return graphs, predicted
+
 
 @contextmanager
 def st_redirect(src, dst):
@@ -174,7 +178,11 @@ def d_clean(string):
 
 def get_df_from_rules(rules, negated_rules, classes=None):
     if classes:
-        data = {"rules": rules, "negated_rules": negated_rules, "predicted_label": classes}
+        data = {
+            "rules": rules,
+            "negated_rules": negated_rules,
+            "predicted_label": classes,
+        }
     else:
         data = {"rules": rules, "negated_rules": negated_rules}
     df = pd.DataFrame(data)
@@ -204,10 +212,10 @@ def save_after_modify(hand_made_rules, classes=None):
                 features_merged.append(copy.deepcopy(j))
 
         st.session_state.feature_df = get_df_from_rules(
-                [";".join(feat[0]) for feat in features_merged],
-                [";".join(feat[1]) for feat in features_merged],
-                [feat[2] for feat in features_merged],
-            )
+            [";".join(feat[0]) for feat in features_merged],
+            [";".join(feat[1]) for feat in features_merged],
+            [feat[2] for feat in features_merged],
+        )
 
     save_rules = hand_made_rules or "saved_features.json"
     save_ruleset(save_rules, st.session_state.features)
@@ -540,13 +548,18 @@ def rank_and_suggest(classes, data, evaluator):
                 "No suggestions available, maybe you don't have the dataset trained?"
             )
 
+
 ###############################################################################
 # Init classes
 @st.cache()
 def init_evaluator():
     return FeatureEvaluator()
 
-@st.cache(hash_funcs={torch.nn.parameter.Parameter: lambda parameter: parameter.data.numpy()}, allow_output_mutation=True)
+
+@st.cache(
+    hash_funcs={torch.nn.parameter.Parameter: lambda parameter: parameter.data.numpy()},
+    allow_output_mutation=True,
+)
 def init_extractor(lang, graph_format):
     extractor = GraphExtractor(lang=lang, cache_fn=f"{lang}_nlp_cache")
 
@@ -556,6 +569,7 @@ def init_extractor(lang, graph_format):
         extractor.init_amr()
 
     return extractor
+
 
 def init_session_states():
     if "whole_accuracy" not in st.session_state:
@@ -599,4 +613,6 @@ def init_session_states():
 
     if "download" not in st.session_state:
         st.session_state.download = False
+
+
 ###############################################################################
