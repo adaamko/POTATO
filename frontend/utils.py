@@ -3,70 +3,55 @@ import json
 import re
 import sys
 
+from collections import defaultdict
 from graphviz import Source
 import pandas as pd
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 import streamlit as st
 import penman
+import torch
 from streamlit.report_thread import REPORT_CONTEXT_ATTR_NAME
 
 from xpotato.dataset.utils import default_pn_to_graph
-from xpotato.graph_extractor.extract import FeatureEvaluator
+from xpotato.graph_extractor.extract import FeatureEvaluator, GraphExtractor
 from xpotato.models.trainer import GraphTrainer
-from tuw_nlp.graph.utils import graph_to_pn
+from xpotato.dataset.utils import default_pn_to_graph
+from tuw_nlp.graph.utils import (
+    GraphFormulaMatcher,
+    graph_to_pn
+)
 
 from contextlib import contextmanager
 from io import StringIO
 from threading import current_thread
 
 
-def init_session_states():
-    if "whole_accuracy" not in st.session_state:
-        st.session_state.whole_accuracy = []
-    if "df_statistics" not in st.session_state:
-        st.session_state.df_statistics = pd.DataFrame
-    if "val_dataframe" not in st.session_state:
-        st.session_state.val_dataframe = pd.DataFrame
-    if "whole_accuracy_val" not in st.session_state:
-        st.session_state.whole_accuracy_val = []
-    if "feature_df" not in st.session_state:
-        st.session_state.feature_df = pd.DataFrame
-    if "clustered_words_path" not in st.session_state:
-        st.session_state.clustered_words_path = None
-    if "features" not in st.session_state:
-        st.session_state.features = {}
-    if "suggested_features" not in st.session_state:
-        st.session_state.suggested_features = {}
-    if "trained" not in st.session_state:
-        st.session_state.trained = False
-    if "ml_feature" not in st.session_state:
-        st.session_state.ml_feature = None
-    if "sens" not in st.session_state:
-        st.session_state.sens = []
-    if "min_edge" not in st.session_state:
-        st.session_state.min_edge = 0
-
-    if "rows_to_delete" not in st.session_state:
-        st.session_state.rows_to_delete = []
-    if "rls_after_delete" not in st.session_state:
-        st.session_state.rls_after_delete = []
-
-    if "df_to_train" not in st.session_state:
-        st.session_state.df_to_train = pd.DataFrame
-
-    if "applied_rules" not in st.session_state:
-        st.session_state.applied_rules = []
-
-    if "rank" not in st.session_state:
-        st.session_state.rank = False
-
-    if "download" not in st.session_state:
-        st.session_state.download = False
-
-
 def rerun():
     raise st.experimental_rerun()
 
+@st.cache(hash_funcs={torch.nn.parameter.Parameter: lambda parameter: parameter.data.numpy()}, allow_output_mutation=True)
+def match_texts(text_input, extractor, graph_format):
+    texts = text_input.split("\n")
+    feature_values = []
+    for k in st.session_state.features:
+        for f in st.session_state.features[k]:
+            feature_values.append(f)
+    matcher = GraphFormulaMatcher(feature_values, converter=default_pn_to_graph)
+
+    graphs = list(extractor.parse_iterable([text for text in texts], graph_format))
+
+    predicted = []
+
+    for i, g in enumerate(graphs):
+        feats = matcher.match(g)
+        label = "NONE"
+        pattern = None
+        for key, feature in feats:
+            label = key
+            pattern = feature
+        predicted.append((label, feature_values[pattern][0] if pattern is not None else None))
+
+    return graphs, predicted
 
 @contextmanager
 def st_redirect(src, dst):
@@ -187,36 +172,47 @@ def d_clean(string):
     return s
 
 
-def get_df_from_rules(rules, negated_rules):
-    data = {"rules": rules, "negated_rules": negated_rules}
+def get_df_from_rules(rules, negated_rules, classes=None):
+    if classes:
+        data = {"rules": rules, "negated_rules": negated_rules, "predicted_label": classes}
+    else:
+        data = {"rules": rules, "negated_rules": negated_rules}
     df = pd.DataFrame(data)
 
     return df
 
 
-def save_after_modify(hand_made_rules, classes):
-    st.session_state.features[classes] = copy.deepcopy(
-        st.session_state.rls_after_delete
-    )
-    st.session_state.feature_df = get_df_from_rules(
-        [";".join(feat[0]) for feat in st.session_state.features[classes]],
-        [";".join(feat[1]) for feat in st.session_state.features[classes]],
-    )
+def save_after_modify(hand_made_rules, classes=None):
+    if classes:
+        st.session_state.features[classes] = copy.deepcopy(
+            st.session_state.rls_after_delete
+        )
+        st.session_state.feature_df = get_df_from_rules(
+            [";".join(feat[0]) for feat in st.session_state.features[classes]],
+            [";".join(feat[1]) for feat in st.session_state.features[classes]],
+        )
+    else:
+        features_temp = defaultdict(list)
+        for k in st.session_state.rls_after_delete:
+            features_temp[k[2]].append(copy.deepcopy(k))
+
+        st.session_state.features = features_temp
+
+        features_merged = []
+        for i in st.session_state.features:
+            for j in st.session_state.features[i]:
+                features_merged.append(copy.deepcopy(j))
+
+        st.session_state.feature_df = get_df_from_rules(
+                [";".join(feat[0]) for feat in features_merged],
+                [";".join(feat[1]) for feat in features_merged],
+                [feat[2] for feat in features_merged],
+            )
+
     save_rules = hand_made_rules or "saved_features.json"
     save_ruleset(save_rules, st.session_state.features)
     st.session_state.rows_to_delete = []
     rerun()
-
-
-@st.cache(allow_output_mutation=True)
-def load_text_to_4lang():
-    tfl = TextTo4lang("en", "en_nlp_cache")
-    return tfl
-
-
-@st.cache()
-def init_evaluator():
-    return FeatureEvaluator()
 
 
 def filter_label(df, label):
@@ -543,3 +539,64 @@ def rank_and_suggest(classes, data, evaluator):
             st.warning(
                 "No suggestions available, maybe you don't have the dataset trained?"
             )
+
+###############################################################################
+# Init classes
+@st.cache()
+def init_evaluator():
+    return FeatureEvaluator()
+
+@st.cache(hash_funcs={torch.nn.parameter.Parameter: lambda parameter: parameter.data.numpy()}, allow_output_mutation=True)
+def init_extractor(lang, graph_format):
+    extractor = GraphExtractor(lang=lang, cache_fn=f"{lang}_nlp_cache")
+
+    if graph_format == "ud":
+        extractor.init_nlp()
+    elif graph_format == "amr":
+        extractor.init_amr()
+
+    return extractor
+
+def init_session_states():
+    if "whole_accuracy" not in st.session_state:
+        st.session_state.whole_accuracy = []
+    if "df_statistics" not in st.session_state:
+        st.session_state.df_statistics = pd.DataFrame
+    if "val_dataframe" not in st.session_state:
+        st.session_state.val_dataframe = pd.DataFrame
+    if "whole_accuracy_val" not in st.session_state:
+        st.session_state.whole_accuracy_val = []
+    if "feature_df" not in st.session_state:
+        st.session_state.feature_df = pd.DataFrame
+    if "clustered_words_path" not in st.session_state:
+        st.session_state.clustered_words_path = None
+    if "features" not in st.session_state:
+        st.session_state.features = {}
+    if "suggested_features" not in st.session_state:
+        st.session_state.suggested_features = {}
+    if "trained" not in st.session_state:
+        st.session_state.trained = False
+    if "ml_feature" not in st.session_state:
+        st.session_state.ml_feature = None
+    if "sens" not in st.session_state:
+        st.session_state.sens = []
+    if "min_edge" not in st.session_state:
+        st.session_state.min_edge = 0
+
+    if "rows_to_delete" not in st.session_state:
+        st.session_state.rows_to_delete = []
+    if "rls_after_delete" not in st.session_state:
+        st.session_state.rls_after_delete = []
+
+    if "df_to_train" not in st.session_state:
+        st.session_state.df_to_train = pd.DataFrame
+
+    if "applied_rules" not in st.session_state:
+        st.session_state.applied_rules = []
+
+    if "rank" not in st.session_state:
+        st.session_state.rank = False
+
+    if "download" not in st.session_state:
+        st.session_state.download = False
+###############################################################################

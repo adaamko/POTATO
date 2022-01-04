@@ -9,7 +9,10 @@ import penman
 from graphviz import Source
 
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
-from tuw_nlp.graph.utils import graph_to_pn
+from tuw_nlp.graph.utils import (
+    graph_to_pn
+)
+
 from utils import (
     train_df,
     add_rule_manually,
@@ -18,19 +21,195 @@ from utils import (
     get_df_from_rules,
     graph_viewer,
     init_evaluator,
+    init_extractor,
     init_session_states,
     rank_and_suggest,
     read_train,
     read_val,
     rerun,
     rule_chooser,
+    save_ruleset,
     save_after_modify,
     save_dataframe,
+    match_texts,
     show_ml_feature,
     st_stdout,
     to_dot,
 )
 
+def inference_mode(evaluator, hand_made_rules):
+    st.sidebar.title("Inference Mode")
+    st.sidebar.markdown("""
+    ## Select the graph format
+    """)
+    graph_format = st.sidebar.selectbox("", ["ud", "fourlang", "amr"])
+    st.sidebar.markdown("""
+    ## Select the language
+    """)
+    lang = st.sidebar.selectbox("", ["en", "de"])
+    if lang == "de" and graph_format == "amr":
+        st.error("Currently AMR does not support German")
+        return
+
+    if hand_made_rules:
+        with open(hand_made_rules) as f:
+            st.session_state.features = json.load(f)
+    
+    extractor = init_extractor(lang, graph_format)
+    
+    col1, col2 = st.columns(2)
+
+    col1.header("Rules to apply")
+
+    col2.header("Graphs and predicted labels")
+
+    with col1:
+        features_merged = []
+        for i in st.session_state.features:
+            for j in st.session_state.features[i]:
+                features_merged.append(j)
+
+        st.session_state.feature_df = get_df_from_rules(
+                [";".join(feat[0]) for feat in features_merged],
+                [";".join(feat[1]) for feat in features_merged],
+                [feat[2] for feat in features_merged],
+            )
+
+        with st.form("example form") as f:
+            gb = GridOptionsBuilder.from_dataframe(st.session_state.feature_df)
+            # make all columns editable
+            gb.configure_columns(["rules", "negated_rules", "predicted_label"], editable=True)
+            gb.configure_selection(
+                "multiple",
+                use_checkbox=True,
+                groupSelectsChildren=True,
+                groupSelectsFiltered=True,
+            )
+            go = gb.build()
+            ag = AgGrid(
+                st.session_state.feature_df,
+                gridOptions=go,
+                key="grid1",
+                allow_unsafe_jscode=True,
+                reload_data=True,
+                update_mode=GridUpdateMode.MODEL_CHANGED
+                | GridUpdateMode.VALUE_CHANGED,
+                width="100%",
+                theme="material",
+                fit_columns_on_grid_load=False,
+            )
+
+            delete_or_train = st.radio(
+                "Delete or Train selected rules", ("none", "delete")
+            )
+            submit = st.form_submit_button(label="save updates")
+
+        if submit:
+            delete = delete_or_train == "delete"
+
+            st.session_state.rows_to_delete = [
+                r["rules"] for r in ag["selected_rows"]
+            ]
+            st.session_state.rls_after_delete = []
+
+            negated_list = ag["data"]["negated_rules"].tolist()
+            predicted_labels = ag["data"]["predicted_label"].tolist()
+            feature_list = []
+            for i, rule in enumerate(ag["data"]["rules"].tolist()):
+                if not negated_list[i].strip():
+                    feature_list.append([rule.split(";"), [], predicted_labels[i]])
+                else:
+                    feature_list.append(
+                        [
+                            rule.split(";"),
+                            negated_list[i].strip().split(";"),
+                            predicted_labels[i],
+                        ]
+                    )
+            if st.session_state.rows_to_delete and delete:
+                for r in feature_list:
+                    if ";".join(r[0]) not in st.session_state.rows_to_delete:
+                        st.session_state.rls_after_delete.append(r)
+            else:
+                st.session_state.rls_after_delete = copy.deepcopy(feature_list)
+
+            if st.session_state.rls_after_delete and not delete:
+                save_after_modify(hand_made_rules)
+
+        if st.session_state.rows_to_delete and delete_or_train == "delete":
+            with st.form("Delete form"):
+                st.write("The following rules will be deleted, do you accept it?")
+                st.write(st.session_state.rows_to_delete)
+                save_button = st.form_submit_button("Accept Delete")
+
+            if save_button:
+                save_after_modify(hand_made_rules)
+        text = st.text_area("You can add a new rule here manually")
+        negated_text = st.text_area("You can modify the negated features here")
+        label_text = st.text_area("You can modify the label here")
+        agree = st.button("Add rule to the ruleset")
+        if agree:
+            if not negated_text.strip():
+                negated_features = []
+            else:
+                negated_features = negated_text.split(";")
+            if not label_text.strip():
+                with st_stdout("error"):
+                        print(
+                            "Please provide label for your rule!"
+                        )
+            else:
+                if label_text.strip() not in st.session_state.features:
+                    st.session_state.features[label_text.strip()] = []
+
+                st.session_state.features[label_text].append([[text], negated_features, label_text])
+                if st.session_state.features[label_text]:
+                    features_merged = []
+                    for i in st.session_state.features:
+                        for j in st.session_state.features[i]:
+                            features_merged.append(j)
+
+                    st.session_state.feature_df = get_df_from_rules(
+                            [";".join(feat[0]) for feat in features_merged],
+                            [";".join(feat[1]) for feat in features_merged],
+                            [feat[2] for feat in features_merged],
+                        )
+                    save_rules = hand_made_rules or "saved_features.json"
+                    save_ruleset(save_rules, st.session_state.features)
+                    rerun()
+
+    with col2:
+        text_input = st.text_area("Provide the text here you want to parse and apply rules to!")
+
+        if text_input:
+            graphs, predicted = match_texts(text_input, extractor, graph_format)
+            dot_current_graph = to_dot(
+                graphs[0],
+            )
+
+            st.markdown("__The predicted labels are:__")
+            st.write(predicted[0][0])
+
+            st.markdown("__The matched patterns are:__")
+            st.write(predicted[0][1])
+            if st.session_state.download:
+                graph_pipe = Source(dot_current_graph).pipe(format="svg")
+                st.download_button(
+                    label="Download graph as SVG",
+                    data=graph_pipe,
+                    file_name="graph.svg",
+                    mime="mage/svg+xml",
+                )
+
+            st.graphviz_chart(
+                dot_current_graph,
+                use_container_width=True,
+            )
+
+            st.write("Penman format:")
+            st.text(penman.encode(penman.decode(graph_to_pn(graphs[0])), indent=10))
+            st.write("In one line format:")
+            st.write(graph_to_pn(graphs[0]))
 
 def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made_rules):
     if hand_made_rules:
@@ -133,9 +312,6 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
         col1.header("Rule to apply")
 
         col2.header("Graphs and results")
-
-        # if graph_format == "fourlang":
-        #    tfl = load_text_to_4lang()
 
         with col1:
             classes = st.selectbox(
@@ -868,7 +1044,7 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
 
 def get_args():
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument("-t", "--train-data", type=str, required=True)
+    parser.add_argument("-t", "--train-data", type=str)
     parser.add_argument("-v", "--val-data", type=str)
     parser.add_argument(
         "-sr",
@@ -905,7 +1081,8 @@ def main(args):
 
     init_session_states()
     evaluator = init_evaluator()
-    data = read_train(args.train_data, args.label)
+    if args.train_data:
+        data = read_train(args.train_data, args.label)
     if args.val_data:
         val_data = read_val(args.val_data, args.label)
     graph_format = args.graph_format
@@ -913,13 +1090,21 @@ def main(args):
     hand_made_rules = args.hand_rules
     mode = args.mode
     if mode == "simple":
-        assert args.val_data
+        assert args.train_data, "Train data is required for simple mode"
+        assert args.val_data, "Validation data is required for simple mode"
         simple_mode(
             evaluator, data, val_data, graph_format, feature_path, hand_made_rules
         )
     elif mode == "advanced":
+        assert args.train_data, "Train data is required for advanced mode"
         advanced_mode(
             evaluator, args.train_data, graph_format, feature_path, hand_made_rules
+        )
+    # For inference mode you don't need any training data as we will use the model
+    # to predict the labels on-the-fly
+    elif mode == "inference":
+        inference_mode(
+            evaluator, hand_made_rules
         )
 
 
