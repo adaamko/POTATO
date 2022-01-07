@@ -10,6 +10,7 @@ from graphviz import Source
 
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 from tuw_nlp.graph.utils import graph_to_pn
+
 from utils import (
     train_df,
     add_rule_manually,
@@ -18,18 +19,201 @@ from utils import (
     get_df_from_rules,
     graph_viewer,
     init_evaluator,
+    init_extractor,
     init_session_states,
     rank_and_suggest,
     read_train,
     read_val,
     rerun,
     rule_chooser,
+    save_ruleset,
     save_after_modify,
     save_dataframe,
+    match_texts,
     show_ml_feature,
     st_stdout,
     to_dot,
 )
+
+
+def inference_mode(evaluator, hand_made_rules):
+    st.sidebar.title("Inference Mode")
+    st.sidebar.markdown(
+        """
+    ## Select the graph format
+    """
+    )
+    graph_format = st.sidebar.selectbox("", ["ud", "fourlang", "amr"])
+    st.sidebar.markdown(
+        """
+    ## Select the language
+    """
+    )
+    lang = st.sidebar.selectbox("", ["en", "de"])
+    if lang == "de" and graph_format == "amr":
+        st.error("Currently AMR does not support German")
+        return
+
+    if hand_made_rules:
+        with open(hand_made_rules) as f:
+            st.session_state.features = json.load(f)
+
+    extractor = init_extractor(lang, graph_format)
+
+    col1, col2 = st.columns(2)
+
+    col1.header("Rule chooser and modifier")
+
+    col2.header("Graph viewer and evaluator")
+
+    with col1:
+        features_merged = []
+        for i in st.session_state.features:
+            for j in st.session_state.features[i]:
+                features_merged.append(j)
+
+        st.session_state.feature_df = get_df_from_rules(
+            [";".join(feat[0]) for feat in features_merged],
+            [";".join(feat[1]) for feat in features_merged],
+            [feat[2] for feat in features_merged],
+        )
+
+        with st.form("example form") as f:
+            gb = GridOptionsBuilder.from_dataframe(st.session_state.feature_df)
+            # make all columns editable
+            gb.configure_columns(
+                ["rules", "negated_rules", "predicted_label"], editable=True
+            )
+            gb.configure_selection(
+                "multiple",
+                use_checkbox=True,
+                groupSelectsChildren=True,
+                groupSelectsFiltered=True,
+            )
+            go = gb.build()
+            ag = AgGrid(
+                st.session_state.feature_df,
+                gridOptions=go,
+                key="grid1",
+                allow_unsafe_jscode=True,
+                reload_data=True,
+                update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
+                width="100%",
+                theme="blue",
+                fit_columns_on_grid_load=False,
+            )
+
+            delete_or_train = st.radio(
+                "Delete or Train selected rules", ("none", "delete")
+            )
+            submit = st.form_submit_button(label="save updates")
+
+        if submit:
+            delete = delete_or_train == "delete"
+
+            st.session_state.rows_to_delete = [r["rules"] for r in ag["selected_rows"]]
+            st.session_state.rls_after_delete = []
+
+            negated_list = ag["data"]["negated_rules"].tolist()
+            predicted_labels = ag["data"]["predicted_label"].tolist()
+            feature_list = []
+            for i, rule in enumerate(ag["data"]["rules"].tolist()):
+                if not negated_list[i].strip():
+                    feature_list.append([rule.split(";"), [], predicted_labels[i]])
+                else:
+                    feature_list.append(
+                        [
+                            rule.split(";"),
+                            negated_list[i].strip().split(";"),
+                            predicted_labels[i],
+                        ]
+                    )
+            if st.session_state.rows_to_delete and delete:
+                for r in feature_list:
+                    if ";".join(r[0]) not in st.session_state.rows_to_delete:
+                        st.session_state.rls_after_delete.append(r)
+            else:
+                st.session_state.rls_after_delete = copy.deepcopy(feature_list)
+
+            if st.session_state.rls_after_delete and not delete:
+                save_after_modify(hand_made_rules)
+
+        if st.session_state.rows_to_delete and delete_or_train == "delete":
+            with st.form("Delete form"):
+                st.write("The following rules will be deleted, do you accept it?")
+                st.write(st.session_state.rows_to_delete)
+                save_button = st.form_submit_button("Accept Delete")
+
+            if save_button:
+                save_after_modify(hand_made_rules)
+        text = st.text_area("You can add a new rule here manually")
+        negated_text = st.text_area("You can modify the negated features here")
+        label_text = st.text_area("You can modify the label here")
+        agree = st.button("Add rule to the ruleset")
+        if agree:
+            if not negated_text.strip():
+                negated_features = []
+            else:
+                negated_features = negated_text.split(";")
+            if not label_text.strip():
+                with st_stdout("error"):
+                    print("Please provide label for your rule!")
+            else:
+                if label_text.strip() not in st.session_state.features:
+                    st.session_state.features[label_text.strip()] = []
+
+                st.session_state.features[label_text].append(
+                    [[text], negated_features, label_text]
+                )
+                if st.session_state.features[label_text]:
+                    features_merged = []
+                    for i in st.session_state.features:
+                        for j in st.session_state.features[i]:
+                            features_merged.append(j)
+
+                    st.session_state.feature_df = get_df_from_rules(
+                        [";".join(feat[0]) for feat in features_merged],
+                        [";".join(feat[1]) for feat in features_merged],
+                        [feat[2] for feat in features_merged],
+                    )
+                    save_rules = hand_made_rules or "saved_features.json"
+                    save_ruleset(save_rules, st.session_state.features)
+                    rerun()
+
+    with col2:
+        text_input = st.text_area(
+            "Provide the text here you want to parse and apply rules to!"
+        )
+
+        if text_input:
+            graphs, predicted = match_texts(text_input, extractor, graph_format)
+            dot_current_graph = to_dot(
+                graphs[0],
+            )
+
+            st.markdown("__The predicted labels are:__")
+            st.write(predicted[0][0])
+
+            st.markdown("__The matched patterns are:__")
+            st.write(predicted[0][1])
+            if st.session_state.download:
+                graph_pipe = Source(dot_current_graph).pipe(format="svg")
+                st.download_button(
+                    label="Download graph as SVG",
+                    data=graph_pipe,
+                    file_name="graph.svg",
+                    mime="mage/svg+xml",
+                )
+
+            st.graphviz_chart(
+                dot_current_graph,
+                use_container_width=True,
+            )
+
+            st.write("Penman format:")
+            st.text(penman.encode(penman.decode(graph_to_pn(graphs[0])), indent=10))
+            st.write("In one line format:")
+            st.write(graph_to_pn(graphs[0]))
 
 
 def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made_rules):
@@ -48,14 +232,30 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
     if not feature_path and not st.session_state.trained:
         st.sidebar.title("Train your dataset!")
         show_app = st.sidebar.button("Train")
-        st.session_state.min_edge = st.sidebar.number_input(
-            "Min edge in features", min_value=0, max_value=3, value=0, step=1
+        st.sidebar.markdown(
+            """
+        __Min edge in features (if you set it higher than 0, we won't allow single tokens in the features, only edges)__
+        """
         )
-        st.session_state.rank = st.sidebar.selectbox(
-            "Rank features based on accuracy", options=[False, True]
+        st.session_state.min_edge = st.sidebar.number_input(
+            "", min_value=0, max_value=3, value=0, step=1
+        )
+        st.sidebar.markdown(
+            """
+            __Ranking type:__
+             - False -> train a machine learning model and rank based on feature importance
+             - True -> rank all features based on TP and FP scores
+            """
+        )
+        st.session_state.rank = st.sidebar.selectbox("", options=[False, True], key=1)
+
+        st.sidebar.markdown(
+            """
+        __Show download button for graphs (an option to allow downloading graphs)__
+        """
         )
         st.session_state.download = st.sidebar.selectbox(
-            "Show download button for graphs", options=[False, True]
+            "", options=[False, True], key=2
         )
         if show_app:
             st.session_state.suggested_features = train_df(
@@ -76,7 +276,7 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
         st.bar_chart(data.groupby("label").size())
 
         st.write("sentence lenghts:")
-        st.bar_chart(data.text.str.len())
+        st.bar_chart(data.text.str.len().sort_values(ascending=False).iloc[0:100])
 
         st.write("common words:")
         st.bar_chart(
@@ -86,6 +286,11 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
     if st.session_state.trained or feature_path:
 
         with st.expander("Browse dataset:"):
+            st.markdown(
+                """
+                The dataset can be inspected below, if you are interested in of the graphs, you can check it in the graph browser under 'Graphs and results'
+                """
+            )
             gb = GridOptionsBuilder.from_dataframe(st.session_state.df)
             gb.configure_default_column(
                 editable=False,
@@ -104,7 +309,7 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                 reload_data=False,
                 update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
                 width="100%",
-                theme="material",
+                theme="blue",
                 fit_columns_on_grid_load=True,
             )
 
@@ -130,16 +335,14 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                     for _ in range(pop_len)
                 ]
 
-        col1.header("Rule to apply")
+        col1.header("Rule chooser and modifier")
 
-        col2.header("Graphs and results")
-
-        # if graph_format == "fourlang":
-        #    tfl = load_text_to_4lang()
+        col2.header("Graph viewer and evaluator")
 
         with col1:
             classes = st.selectbox(
-                "Choose class", list(st.session_state.features.keys())
+                "First, choose class you want to use to build rules",
+                list(st.session_state.features.keys()),
             )
 
             st.session_state.feature_df = get_df_from_rules(
@@ -148,6 +351,15 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
             )
 
             with st.form("example form") as f:
+
+                st.markdown(
+                    """
+                __You can modify any rule you want to__
+
+                Remember, we use the [PENMAN](https://github.com/goodmami/penman) notation to describe a rule. You can find more information about the rules in the [README](https://github.com/adaamko/POTATO) of our repository.
+                """
+                )
+
                 gb = GridOptionsBuilder.from_dataframe(st.session_state.feature_df)
                 # make all columns editable
                 gb.configure_columns(["rules", "negated_rules"], editable=True)
@@ -167,12 +379,22 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                     update_mode=GridUpdateMode.MODEL_CHANGED
                     | GridUpdateMode.VALUE_CHANGED,
                     width="100%",
-                    theme="material",
+                    theme="blue",
                     fit_columns_on_grid_load=False,
                 )
 
+                st.markdown(
+                    """
+                    After you modified any rule, click on __save updates__ button to save your changes.
+
+
+                    Tick the __box__ next to the rules you want to evaluate and then, click on the __evaluate__ button.
+                    If you don't tick any rule, the evaluator will evaluate all the rules.
+                """
+                )
                 delete_or_train = st.radio(
-                    "Delete or Train selected rules", ("none", "delete", "train")
+                    "Delete or Train selected rules (you can only train underspecified rules that contain a regexp)",
+                    ("none", "delete", "train"),
                 )
                 submit = st.form_submit_button(label="save updates")
                 evaluate = st.form_submit_button(label="evaluate selected")
@@ -487,7 +709,7 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                     update_mode=GridUpdateMode.MODEL_CHANGED
                     | GridUpdateMode.VALUE_CHANGED,
                     width="100%",
-                    theme="material",
+                    theme="blue",
                     fit_columns_on_grid_load=True,
                 )
 
@@ -532,7 +754,7 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                     update_mode=GridUpdateMode.MODEL_CHANGED
                     | GridUpdateMode.VALUE_CHANGED,
                     width="100%",
-                    theme="material",
+                    theme="blue",
                     fit_columns_on_grid_load=True,
                 )
 
@@ -549,17 +771,33 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                     save_dataframe(st.session_state.df, train_data)
                     rerun()
 
+        st.sidebar.title("Train your dataset!")
         train = st.sidebar.button("Train!")
-        st.session_state.min_edge = st.sidebar.number_input(
-            "Min edge in features", min_value=0, max_value=3, value=0, step=1
+        st.sidebar.markdown(
+            """
+        __Min edge in features (if you set it higher than 0, we won't allow single tokens in the features, only edges)__
+        """
         )
-        st.session_state.rank = st.sidebar.selectbox(
-            "Rank features based on accuracy", options=[False, True]
+        st.session_state.min_edge = st.sidebar.number_input(
+            "", min_value=0, max_value=3, value=0, step=1
+        )
+        st.sidebar.markdown(
+            """
+            __Ranking type:__
+             - False -> train a machine learning model and rank based on feature importance
+             - True -> rank all features based on TP and FP scores
+            """
+        )
+        st.session_state.rank = st.sidebar.selectbox("", options=[False, True], key=1)
+
+        st.sidebar.markdown(
+            """
+        __Show download button for graphs (an option to allow downloading graphs)__
+        """
         )
         st.session_state.download = st.sidebar.selectbox(
-            "Show download button for graphs", options=[False, True]
+            "", options=[False, True], key=2
         )
-
         if train:
             df_to_train = st.session_state.df.copy()
             df_to_train = df_to_train[df_to_train.applied_rules.map(len) == 0]
@@ -595,7 +833,8 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                 st.session_state.features[st.session_state.inverse_labels[1]] = []
 
             classes = st.selectbox(
-                "Choose class", list(st.session_state.features.keys())
+                "First, choose class you want to use to build rules",
+                list(st.session_state.features.keys()),
             )
 
             st.session_state.feature_df = get_df_from_rules(
@@ -604,6 +843,14 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
             )
 
             with st.form("example form") as f:
+                st.markdown(
+                    """
+                __You can modify any rule you want to__
+
+                Remember, we use the [PENMAN](https://github.com/goodmami/penman) notation to describe a rule. You can find more information about the rules in the [README](https://github.com/adaamko/POTATO) of our repository.
+                """
+                )
+
                 gb = GridOptionsBuilder.from_dataframe(st.session_state.feature_df)
                 # make all columns editable
                 gb.configure_columns(["rules", "negated_rules"], editable=True)
@@ -623,43 +870,55 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                     update_mode=GridUpdateMode.MODEL_CHANGED
                     | GridUpdateMode.VALUE_CHANGED,
                     width="100%",
-                    theme="material",
+                    theme="blue",
                     fit_columns_on_grid_load=True,
                 )
 
+                st.markdown(
+                    """
+                    After you modified any rule, click on __save updates__ button to save your changes.
+
+
+                    Tick the __box__ next to the rules you want to evaluate and then, click on the __evaluate__ button.
+                    If you don't tick any rule, the evaluator will evaluate all the rules.
+
+                    If you think your rules are good and you want to evaluate samples based on them, click on the __annotate__ button.
+                """
+                )
+
                 delete_or_train = st.radio(
-                    "Delete or Train selected rules", ("none", "delete", "train")
+                    "Delete or Train selected rules (you can only train underspecified rules that contain a regexp)",
+                    ("none", "delete", "train"),
                 )
                 submit = st.form_submit_button(label="save updates")
                 evaluate = st.form_submit_button(label="evaluate selected")
                 annotate = st.form_submit_button(label="annotate based on selected")
 
-            feature_list = []
-            selected_rules = (
-                ag["selected_rows"]
-                if ag["selected_rows"]
-                else ag["data"].to_dict(orient="records")
-            )
-            for rule in selected_rules:
-                positive_rules = (
-                    rule["rules"].split(";")
-                    if "rules" in rule and rule["rules"].strip()
-                    else []
-                )
-                negated_rules = (
-                    rule["negated_rules"].split(";")
-                    if "negated_rules" in rule and rule["negated_rules"].strip()
-                    else []
-                )
-                feature_list.append(
-                    [
-                        positive_rules,
-                        negated_rules,
-                        classes,
-                    ]
-                )
-
             if evaluate or annotate:
+                feature_list = []
+                selected_rules = (
+                    ag["selected_rows"]
+                    if ag["selected_rows"]
+                    else ag["data"].to_dict(orient="records")
+                )
+                for rule in selected_rules:
+                    positive_rules = (
+                        rule["rules"].split(";")
+                        if "rules" in rule and rule["rules"].strip()
+                        else []
+                    )
+                    negated_rules = (
+                        rule["negated_rules"].split(";")
+                        if "negated_rules" in rule and rule["negated_rules"].strip()
+                        else []
+                    )
+                    feature_list.append(
+                        [
+                            positive_rules,
+                            negated_rules,
+                            classes,
+                        ]
+                    )
                 st.session_state.sens = [";".join(feat[0]) for feat in feature_list]
                 if not st.session_state.sens:
                     with st_stdout("error"):
@@ -868,7 +1127,7 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
 
 def get_args():
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument("-t", "--train-data", type=str, required=True)
+    parser.add_argument("-t", "--train-data", type=str)
     parser.add_argument("-v", "--val-data", type=str)
     parser.add_argument(
         "-sr",
@@ -898,14 +1157,38 @@ def get_args():
 
 def main(args):
     st.set_page_config(layout="wide")
+    hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {
+	
+                visibility: hidden;
+                
+                }
+            footer:after {
+                content:'POTATO'; 
+                visibility: visible;
+                display: block;
+                position: relative;
+                #background-color: red;
+                padding: 5px;
+                top: 2px;
+            }
+            </style>
+            
+            """
+    st.markdown(hide_streamlit_style, unsafe_allow_html=True)
     st.markdown(
-        "<h1 style='text-align: center; color: black;'>Rule extraction framework</h1>",
+        "<h1 style='text-align: center; color: black;'>POTATO</h1>"
+        "<h2 style='text-align: center; color: black;'>explainable information extraction framework</h2>"
+        "<h3 style='text-align: center;'>Visit our <a href='https://github.com/adaamko/POTATO'>GitHub</a> page for more information and to access the code</h3><p></p>",
         unsafe_allow_html=True,
     )
 
     init_session_states()
     evaluator = init_evaluator()
-    data = read_train(args.train_data, args.label)
+    if args.train_data:
+        data = read_train(args.train_data, args.label)
     if args.val_data:
         val_data = read_val(args.val_data, args.label)
     graph_format = args.graph_format
@@ -913,14 +1196,20 @@ def main(args):
     hand_made_rules = args.hand_rules
     mode = args.mode
     if mode == "simple":
-        assert args.val_data
+        assert args.train_data, "Train data is required for simple mode"
+        assert args.val_data, "Validation data is required for simple mode"
         simple_mode(
             evaluator, data, val_data, graph_format, feature_path, hand_made_rules
         )
     elif mode == "advanced":
+        assert args.train_data, "Train data is required for advanced mode"
         advanced_mode(
             evaluator, args.train_data, graph_format, feature_path, hand_made_rules
         )
+    # For inference mode you don't need any training data as we will use the model
+    # to predict the labels on-the-fly
+    elif mode == "inference":
+        inference_mode(evaluator, hand_made_rules)
 
 
 if __name__ == "__main__":
