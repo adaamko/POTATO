@@ -304,6 +304,13 @@ def show_ml_feature(classes, hand_made_rules):
         }
     )
     with st.form("rule_chooser") as f:
+        st.markdown(
+            """
+        ##### Inspect rules
+        __Tick to box next to the rules you want to accept, then click on the _accept_rules_ button.__
+        
+        __Unaccepted rules will be deleted__."""
+        )
         gb = GridOptionsBuilder.from_dataframe(ranked_df)
         gb.configure_default_column(
             editable=False,
@@ -326,7 +333,7 @@ def show_ml_feature(classes, hand_made_rules):
             allow_unsafe_jscode=True,
             reload_data=False,
             update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
-            theme="material",
+            theme="blue",
             fit_columns_on_grid_load=False,
         )
 
@@ -414,6 +421,14 @@ def extract_data_from_dataframe(option):
 
 
 def graph_viewer(type, graphs, sentences, ids, nodes):
+    st.markdown(
+        """
+    Tick the box next to the graphs you want to see. 
+    The rule that applied will be highlighted in the graph. 
+
+    The penman format of the graph will be also shown, you can copy any of the part directly from the penman format if you want to add a new rule.
+    """
+    )
     df = pd.DataFrame(
         {
             "id": ids,
@@ -446,7 +461,7 @@ def graph_viewer(type, graphs, sentences, ids, nodes):
         reload_data=False,
         update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
         width="100%",
-        theme="material",
+        theme="blue",
         fit_columns_on_grid_load=True,
     )
 
@@ -492,6 +507,9 @@ def graph_viewer(type, graphs, sentences, ids, nodes):
 
 
 def add_rule_manually(classes, hand_made_rules):
+    st.markdown(
+        "If you want multiple rules to apply at once you can add __;__ between them"
+    )
     text = st.text_area("You can add a new rule here manually")
     negated_text = st.text_area("You can modify the negated features here")
     agree = st.button("Add rule to the ruleset")
@@ -510,7 +528,7 @@ def add_rule_manually(classes, hand_made_rules):
             save_ruleset(save_rules, st.session_state.features)
             rerun()
     st.markdown(
-        f"<span><b>Or get suggestions by our ML!</b></span>",
+        f"<span><b>Or you can get suggestions by our ML by clicking on the button below!</b></span>",
         unsafe_allow_html=True,
     )
 
