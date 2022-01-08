@@ -99,7 +99,7 @@ def inference_mode(evaluator, hand_made_rules):
                 reload_data=True,
                 update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
                 width="100%",
-                theme="blue",
+                theme="light",
                 fit_columns_on_grid_load=False,
             )
 
@@ -309,7 +309,7 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                 reload_data=False,
                 update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
                 width="100%",
-                theme="blue",
+                theme="light",
                 fit_columns_on_grid_load=True,
             )
 
@@ -379,7 +379,7 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                     update_mode=GridUpdateMode.MODEL_CHANGED
                     | GridUpdateMode.VALUE_CHANGED,
                     width="100%",
-                    theme="blue",
+                    theme="light",
                     fit_columns_on_grid_load=False,
                 )
 
@@ -709,7 +709,7 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                     update_mode=GridUpdateMode.MODEL_CHANGED
                     | GridUpdateMode.VALUE_CHANGED,
                     width="100%",
-                    theme="blue",
+                    theme="light",
                     fit_columns_on_grid_load=True,
                 )
 
@@ -754,7 +754,7 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                     update_mode=GridUpdateMode.MODEL_CHANGED
                     | GridUpdateMode.VALUE_CHANGED,
                     width="100%",
-                    theme="blue",
+                    theme="light",
                     fit_columns_on_grid_load=True,
                 )
 
@@ -870,7 +870,7 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                     update_mode=GridUpdateMode.MODEL_CHANGED
                     | GridUpdateMode.VALUE_CHANGED,
                     width="100%",
-                    theme="blue",
+                    theme="light",
                     fit_columns_on_grid_load=True,
                 )
 

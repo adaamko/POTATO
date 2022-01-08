@@ -111,10 +111,12 @@ class FeatureEvaluator:
         return one_versus_rest_df
 
     def rank_features(self, cl, features, orig_data, false_negatives):
-        if false_negatives:
-            subset_data = orig_data.iloc[false_negatives]
-        else:
-            subset_data = orig_data
+        # TODO: currently disabled
+        # if false_negatives:
+        #     subset_data = orig_data.iloc[false_negatives]
+        # else:
+        #   subset_data = orig_data
+        subset_data = orig_data
         df, accuracy = self.evaluate_feature(cl, features, subset_data)
 
         features_stat = []

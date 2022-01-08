@@ -333,7 +333,7 @@ def show_ml_feature(classes, hand_made_rules):
             allow_unsafe_jscode=True,
             reload_data=False,
             update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
-            theme="blue",
+            theme="light",
             fit_columns_on_grid_load=False,
         )
 
@@ -461,7 +461,7 @@ def graph_viewer(type, graphs, sentences, ids, nodes):
         reload_data=False,
         update_mode=GridUpdateMode.MODEL_CHANGED | GridUpdateMode.VALUE_CHANGED,
         width="100%",
-        theme="blue",
+        theme="light",
         fit_columns_on_grid_load=True,
     )
 
