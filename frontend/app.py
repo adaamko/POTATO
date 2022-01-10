@@ -54,6 +54,13 @@ def inference_mode(evaluator, hand_made_rules):
         st.error("Currently AMR does not support German")
         return
 
+    st.sidebar.markdown(
+        """
+        __Show download button for graphs (an option to allow downloading graphs)__
+        """
+    )
+    st.session_state.download = st.sidebar.selectbox("", options=[False, True], key=2)
+
     if hand_made_rules:
         with open(hand_made_rules) as f:
             st.session_state.features = json.load(f)
@@ -204,6 +211,9 @@ def inference_mode(evaluator, hand_made_rules):
                     file_name="graph.svg",
                     mime="mage/svg+xml",
                 )
+
+            with st.expander("Graph dot source", expanded=False):
+                st.write(dot_current_graph)
 
             st.graphviz_chart(
                 dot_current_graph,

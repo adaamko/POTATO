@@ -439,7 +439,7 @@ def graph_viewer(type, graphs, sentences, ids, nodes):
     )
     gb = GridOptionsBuilder.from_dataframe(df)
     gb.configure_default_column(
-        editable=False,
+        editable=True,
         resizable=True,
         sorteable=True,
         wrapText=True,
@@ -486,6 +486,8 @@ def graph_viewer(type, graphs, sentences, ids, nodes):
             marked_nodes=set(nodes),
         )
 
+        with st.expander("Graph dot source", expanded=False):
+            st.write(dot_current_graph)
         if st.session_state.download:
             graph_pipe = Source(dot_current_graph).pipe(format="svg")
             st.download_button(
