@@ -1221,6 +1221,9 @@ def main(args):
     elif mode == "inference":
         inference_mode(evaluator, hand_made_rules)
 
+    else:
+        st.error("Mode not supported")
+
 
 if __name__ == "__main__":
     args = get_args()
