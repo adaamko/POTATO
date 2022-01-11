@@ -464,11 +464,8 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                 st.session_state.rls_after_delete = []
 
                 feature_list = []
-                selected_rules = (
-                    ag["selected_rows"]
-                    if ag["selected_rows"]
-                    else ag["data"].to_dict(orient="records")
-                )
+                selected_rules = ag["data"].to_dict(orient="records")
+
                 for rule in selected_rules:
                     positive_rules = (
                         rule["rules"].split(";")
@@ -858,6 +855,10 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                 list(st.session_state.features.keys()),
             )
 
+            if not st.session_state.features[classes]:
+                st.session_state.features[classes] = [
+                    [["(u_1 / dummy :1 (u_2 / feature))"], [], classes]
+                ]
             st.session_state.feature_df = get_df_from_rules(
                 [";".join(feat[0]) for feat in st.session_state.features[classes]],
                 [";".join(feat[1]) for feat in st.session_state.features[classes]],
@@ -988,11 +989,8 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                 st.session_state.rls_after_delete = []
 
                 feature_list = []
-                selected_rules = (
-                    ag["selected_rows"]
-                    if ag["selected_rows"]
-                    else ag["data"].to_dict(orient="records")
-                )
+                selected_rules = ag["data"].to_dict(orient="records")
+
                 for rule in selected_rules:
                     positive_rules = (
                         rule["rules"].split(";")
