@@ -463,19 +463,30 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                 ]
                 st.session_state.rls_after_delete = []
 
-                negated_list = ag["data"]["negated_rules"].tolist()
                 feature_list = []
-                for i, rule in enumerate(ag["data"]["rules"].tolist()):
-                    if not negated_list[i].strip():
-                        feature_list.append([rule.split(";"), [], classes])
-                    else:
-                        feature_list.append(
-                            [
-                                rule.split(";"),
-                                negated_list[i].strip().split(";"),
-                                classes,
-                            ]
-                        )
+                selected_rules = (
+                    ag["selected_rows"]
+                    if ag["selected_rows"]
+                    else ag["data"].to_dict(orient="records")
+                )
+                for rule in selected_rules:
+                    positive_rules = (
+                        rule["rules"].split(";")
+                        if "rules" in rule and rule["rules"].strip()
+                        else []
+                    )
+                    negated_rules = (
+                        rule["negated_rules"].split(";")
+                        if "negated_rules" in rule and rule["negated_rules"].strip()
+                        else []
+                    )
+                    feature_list.append(
+                        [
+                            positive_rules,
+                            negated_rules,
+                            classes,
+                        ]
+                    )
                 if st.session_state.rows_to_delete and delete:
                     for r in feature_list:
                         if ";".join(r[0]) not in st.session_state.rows_to_delete:
@@ -976,19 +987,30 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                 ]
                 st.session_state.rls_after_delete = []
 
-                negated_list = ag["data"]["negated_rules"].tolist()
                 feature_list = []
-                for i, rule in enumerate(ag["data"]["rules"].tolist()):
-                    if not negated_list[i].strip():
-                        feature_list.append([rule.split(";"), [], classes])
-                    else:
-                        feature_list.append(
-                            [
-                                rule.split(";"),
-                                negated_list[i].strip().split(";"),
-                                classes,
-                            ]
-                        )
+                selected_rules = (
+                    ag["selected_rows"]
+                    if ag["selected_rows"]
+                    else ag["data"].to_dict(orient="records")
+                )
+                for rule in selected_rules:
+                    positive_rules = (
+                        rule["rules"].split(";")
+                        if "rules" in rule and rule["rules"].strip()
+                        else []
+                    )
+                    negated_rules = (
+                        rule["negated_rules"].split(";")
+                        if "negated_rules" in rule and rule["negated_rules"].strip()
+                        else []
+                    )
+                    feature_list.append(
+                        [
+                            positive_rules,
+                            negated_rules,
+                            classes,
+                        ]
+                    )
                 if st.session_state.rows_to_delete and delete:
                     for r in feature_list:
                         if ";".join(r[0]) not in st.session_state.rows_to_delete:
