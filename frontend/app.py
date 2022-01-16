@@ -111,7 +111,7 @@ def inference_mode(evaluator, hand_made_rules):
             )
 
             delete_or_train = st.radio(
-                "Delete or Train selected rules", ("none", "delete")
+                "Delete selected rules", ("none", "delete")
             )
             submit = st.form_submit_button(label="save updates")
 
@@ -403,8 +403,8 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                 """
                 )
                 delete_or_train = st.radio(
-                    "Delete or Train selected rules (you can only train underspecified rules that contain a regexp)",
-                    ("none", "delete", "train"),
+                    "Delete or Refine selected rules (you can only refine underspecified rules that contain a regexp)",
+                    ("none", "delete", "refine"),
                 )
                 submit = st.form_submit_button(label="save updates")
                 evaluate = st.form_submit_button(label="evaluate selected")
@@ -456,7 +456,7 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
 
             if submit:
                 delete = delete_or_train == "delete"
-                train = delete_or_train == "train"
+                train = delete_or_train == "refine"
 
                 st.session_state.rows_to_delete = [
                     r["rules"] for r in ag["selected_rows"]
@@ -484,7 +484,7 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
                     st.session_state.rls_after_delete = copy.deepcopy(feature_list)
                     rule_to_train = st.session_state.rows_to_delete[0]
                     if ";" in rule_to_train or ".*" not in rule_to_train:
-                        st.text("Only single and underspecified rules can be trained!")
+                        st.text("Only single and underspecified rules can be refined!")
                     else:
                         selected_words = evaluator.train_feature(
                             classes, rule_to_train, data, graph_format
@@ -897,8 +897,8 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                 )
 
                 delete_or_train = st.radio(
-                    "Delete or Train selected rules (you can only train underspecified rules that contain a regexp)",
-                    ("none", "delete", "train"),
+                    "Delete or Refine selected rules (you can only refine underspecified rules that contain a regexp)",
+                    ("none", "delete", "refine"),
                 )
                 submit = st.form_submit_button(label="save updates")
                 evaluate = st.form_submit_button(label="evaluate selected")
@@ -969,7 +969,7 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
 
             if submit:
                 delete = delete_or_train == "delete"
-                train = delete_or_train == "train"
+                train = delete_or_train == "refine"
 
                 st.session_state.rows_to_delete = [
                     r["rules"] for r in ag["selected_rows"]
@@ -997,7 +997,7 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
                     st.session_state.rls_after_delete = copy.deepcopy(feature_list)
                     rule_to_train = st.session_state.rows_to_delete[0]
                     if ";" in rule_to_train or ".*" not in rule_to_train:
-                        st.text("Only single and underspecified rules can be trained!")
+                        st.text("Only single and underspecified rules can be refined!")
                     else:
                         selected_words = evaluator.train_feature(
                             classes,
