@@ -24,7 +24,7 @@ setup(
         "penman",
         "networkx",
         "rank_bm25",
-        "streamlit >= 1.3.1",
+        "streamlit == 1.3.1",
         "streamlit-aggrid",
         "scikit-criteria >= 0.5",
         "tuw-nlp",

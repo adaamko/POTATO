@@ -7,8 +7,7 @@ POTATO is a human-in-the-loop XAI framework for extracting and evaluating interp
 
 ## Built systems
 
-To get started with rule-systems we provide rule-based features prebuilt with POTATO on different datasets (e.g. our paper _Offensive text detection on Englis
-h Twitter with deep learning models and rule-based systems_ for the HASOC2021 shared task). If you are interested in that, you can go under _features/_ for more info!
+To get started with rule-systems we provide rule-based features prebuilt with POTATO on different datasets (e.g. our paper _Offensive text detection on English Twitter with deep learning models and rule-based systems_ for the HASOC2021 shared task). If you are interested in that, you can go under _features/_ for more info!
 
 ## Install and Quick Start
 ### Setup
@@ -380,6 +379,13 @@ The answer will be a list with the predicted labels (if none of the rules match,
 ```bash
 ["Entity-Destination(e1,e2)","NONE"]
 ```
+
+The streamlit frontend also has an inference mode, where the implemented rule-system can be used for inference. It can be started with:
+
+```bash
+streamlit run frontend/app.py -- -hr features/semeval/test_features.json -m inference
+```
+
 ## Contributing
 
 We welcome all contributions! Please fork this repository and create a branch for your modifications. We suggest getting in touch with us first, by opening an issue or by writing an email to Adam Kovacs or Gabor Recski at firstname.lastname@tuwien.ac.at
