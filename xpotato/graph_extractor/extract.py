@@ -65,7 +65,7 @@ class GraphExtractor:
         elif graph_type == "amr":
             self.init_amr()
             for sen in tqdm(iterable):
-                graphs = self.stog.parse_sents([sen])
+                graphs = self.amr_stog.parse_sents([sen])
                 g, _ = amr_pn_to_graph(graphs[0])
                 yield g
 
