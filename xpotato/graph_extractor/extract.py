@@ -158,8 +158,9 @@ class FeatureEvaluator:
                     for iso_pairs in matcher.subgraph_isomorphisms_iter():
                         nodes = []
                         for k in iso_pairs:
-                            if feature_graph.nodes[iso_pairs[k]]["name"] == ".*":
-                                nodes.append(g.nodes[k]["name"])
+                            if not nodes:
+                                if feature_graph.nodes[iso_pairs[k]]["name"] == ".*":
+                                    nodes.append(g.nodes[k]["name"])
                         if not nodes:
                             g2_to_g1 = {v: u for (u, v) in iso_pairs.items()}
                             for u, v, attrs in feature_graph.edges(data=True):
@@ -209,7 +210,10 @@ class FeatureEvaluator:
 
         word_features = []
 
-        word_features.append(feature.replace(".*", "|".join(selected_words)))
+        if selected_words:
+            word_features.append(feature.replace(".*", "|".join(selected_words), 1))
+        else:
+            word_features.append(feature)
 
         return word_features
 

@@ -110,9 +110,7 @@ def inference_mode(evaluator, hand_made_rules):
                 fit_columns_on_grid_load=False,
             )
 
-            delete_or_train = st.radio(
-                "Delete selected rules", ("none", "delete")
-            )
+            delete_or_train = st.radio("Delete selected rules", ("none", "delete"))
             submit = st.form_submit_button(label="save updates")
 
         if submit:
@@ -818,7 +816,7 @@ def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_r
         )
         if train:
             df_to_train = st.session_state.df.copy()
-            #df_to_train = df_to_train[df_to_train.applied_rules.map(len) == 0]
+            # df_to_train = df_to_train[df_to_train.applied_rules.map(len) == 0]
 
             if not df_to_train.empty:
                 st.session_state.trained = True
