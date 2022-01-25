@@ -10,6 +10,11 @@ POTATO is a human-in-the-loop XAI framework for extracting and evaluating interp
 To get started with rule-systems we provide rule-based features prebuilt with POTATO on different datasets (e.g. our paper _Offensive text detection on English Twitter with deep learning models and rule-based systems_ for the HASOC2021 shared task). If you are interested in that, you can go under _features/_ for more info!
 
 ## Install and Quick Start
+Check out our quick demonstration (~2 min) video about the tool:
+[https://youtu.be/PkQ71wUSeNU}
+
+There is a longer version with a detailed method description and presented background research (~1 hour): [https://youtu.be/6R_V1WfIjsU]
+
 ### Setup
 The tool is heavily dependent upon the [tuw-nlp](https://github.com/recski/tuw-nlp) repository. You can install tuw-nlp with pip:
 
