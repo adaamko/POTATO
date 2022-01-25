@@ -11,9 +11,9 @@ To get started with rule-systems we provide rule-based features prebuilt with PO
 
 ## Install and Quick Start
 Check out our quick demonstration (~2 min) video about the tool:
-[https://youtu.be/PkQ71wUSeNU}
+https://youtu.be/PkQ71wUSeNU
 
-There is a longer version with a detailed method description and presented background research (~1 hour): [https://youtu.be/6R_V1WfIjsU]
+There is a longer version with a detailed method description and presented background research (~1 hour): https://youtu.be/6R_V1WfIjsU
 
 ### Setup
 The tool is heavily dependent upon the [tuw-nlp](https://github.com/recski/tuw-nlp) repository. You can install tuw-nlp with pip:
