@@ -154,8 +154,8 @@ class FeatureEvaluator:
                     node_match=GraphFormulaMatcher.node_matcher,
                     edge_match=GraphFormulaMatcher.edge_matcher,
                 )
-                if matcher.subgraph_is_isomorphic():
-                    for iso_pairs in matcher.subgraph_isomorphisms_iter():
+                if matcher.subgraph_is_monomorphic():
+                    for iso_pairs in matcher.subgraph_monomorphisms_iter():
                         nodes = []
                         for k in iso_pairs:
                             if not nodes:
