@@ -46,6 +46,7 @@ class Dataset:
 
     def set_graphs(self, graphs: List[nx.DiGraph]) -> None:
         for sample, graph in zip(self._dataset, graphs):
+            graph.remove_edges_from(nx.selfloop_edges(graph))
             sample.set_graph(graph)
 
     def load_graphs(self, path: str) -> None:
