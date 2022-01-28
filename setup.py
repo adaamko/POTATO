@@ -22,7 +22,7 @@ setup(
         "graphviz",
         "openpyxl",
         "penman",
-        "networkx",
+        "networkx >= 2.6.3",
         "rank_bm25",
         "streamlit == 1.3.1",
         "streamlit-aggrid",
