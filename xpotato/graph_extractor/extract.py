@@ -43,7 +43,7 @@ class GraphExtractor:
     def parse_iterable(self, iterable, graph_type="fourlang"):
         if graph_type == "fourlang":
             with TextTo4lang(
-                lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir
+                    lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir
             ) as tfl:
                 for sen in tqdm(iterable):
                     fl_graphs = list(tfl(sen))
@@ -74,7 +74,7 @@ class FeatureEvaluator:
     def __init__(self, graph_format="ud"):
         self.graph_format = graph_format
 
-    def match_features(self, dataset, features):
+    def match_features(self, dataset, features, multi=False):
         graphs = dataset.graph.tolist()
 
         matches = []
@@ -84,13 +84,10 @@ class FeatureEvaluator:
 
         for i, g in tqdm(enumerate(graphs)):
             feats = matcher.match(g)
-            for key, feature in feats:
-                matches.append(features[feature])
-                predicted.append(key)
-                break
+            if multi:
+                self.match_multi(feats, features, matches, predicted)
             else:
-                matches.append("")
-                predicted.append("")
+                self.match_not_multi(feats, features, matches, predicted)
 
         d = {
             "Sentence": dataset.text.tolist(),
@@ -99,6 +96,29 @@ class FeatureEvaluator:
         }
         df = pd.DataFrame(d)
         return df
+
+    def match_multi(self, feats, features, matches, predicted):
+        keys = []
+        matched_rules = []
+        for key, feature in feats:
+            if key not in keys:
+                matched_rules.append(features[feature])
+                keys.append(key)
+        if not keys:
+            matches.append("")
+            predicted.append("")
+        else:
+            matches.append(matched_rules)
+            predicted.append(keys)
+
+    def match_not_multi(self, feats, features, matches, predicted):
+        for key, feature in feats:
+            matches.append(features[feature])
+            predicted.append(key)
+            break
+        else:
+            matches.append("")
+            predicted.append("")
 
     def one_versus_rest(self, df, entity):
         mapper = {entity: 1}
@@ -254,8 +274,8 @@ class FeatureEvaluator:
 
         for word in words_to_measures:
             if words_to_measures[word]["precision"] > 0.9 and (
-                words_to_measures[word]["TP"] > 1
-                or words_to_measures[word]["recall"] > 0.01
+                    words_to_measures[word]["TP"] > 1
+                    or words_to_measures[word]["recall"] > 0.01
             ):
                 selected_words.add(word)
 
@@ -291,7 +311,7 @@ class FeatureEvaluator:
 
         accuracy = []
         for pcf in precision_recall_fscore_support(
-            labels, whole_predicted, average=None
+                labels, whole_predicted, average=None
         ):
             if len(pcf) > 1:
                 accuracy.append(pcf[1])
