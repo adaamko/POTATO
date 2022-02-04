@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="xpotato",
-    version="0.0.8",
+    version="0.0.9",
     description="XAI human-in-the-loop information extraction framework",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
@@ -22,7 +22,7 @@ setup(
         "graphviz",
         "openpyxl",
         "penman",
-        "networkx",
+        "networkx >= 2.6.3",
         "rank_bm25",
         "streamlit == 1.3.1",
         "streamlit-aggrid",
