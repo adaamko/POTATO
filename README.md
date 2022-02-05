@@ -84,8 +84,8 @@ sentences = [("Governments and industries in nations around the world are pourin
 Initialize the dataset and also provide a label encoding. Then parse the sentences into graphs. Currently we provide three types of graphs: _ud_, _fourlang_, _amr_. Also provide the language you want to parse, currently we support English (en) and German (de).
 
 ```python
-dataset = Dataset(sentences, label_vocab={"Other":0, "Entity-Destination(e1,e2)": 1})
-dataset.set_graphs(dataset.parse_graphs(graph_format="ud"), lang="en")
+dataset = Dataset(sentences, label_vocab={"Other":0, "Entity-Destination(e1,e2)": 1}, lang="en")
+dataset.set_graphs(dataset.parse_graphs(graph_format="ud"))
 ```
 
 Check the dataset:
