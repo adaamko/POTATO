@@ -43,7 +43,7 @@ class GraphExtractor:
     def parse_iterable(self, iterable, graph_type="fourlang"):
         if graph_type == "fourlang":
             with TextTo4lang(
-                    lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir
+                lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir
             ) as tfl:
                 for sen in tqdm(iterable):
                     fl_graphs = list(tfl(sen))
@@ -274,8 +274,8 @@ class FeatureEvaluator:
 
         for word in words_to_measures:
             if words_to_measures[word]["precision"] > 0.9 and (
-                    words_to_measures[word]["TP"] > 1
-                    or words_to_measures[word]["recall"] > 0.01
+                words_to_measures[word]["TP"] > 1
+                or words_to_measures[word]["recall"] > 0.01
             ):
                 selected_words.add(word)
 
@@ -311,7 +311,7 @@ class FeatureEvaluator:
 
         accuracy = []
         for pcf in precision_recall_fscore_support(
-                labels, whole_predicted, average=None
+            labels, whole_predicted, average=None
         ):
             if len(pcf) > 1:
                 accuracy.append(pcf[1])
