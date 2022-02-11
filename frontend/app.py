@@ -22,8 +22,7 @@ from utils import (
     init_extractor,
     init_session_states,
     rank_and_suggest,
-    read_train,
-    read_val,
+    read_df,
     rerun,
     rule_chooser,
     save_ruleset,
@@ -634,7 +633,7 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
 
 
 def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_rules):
-    data = read_train(train_data)
+    data = read_df(train_data)
     if hand_made_rules:
         with open(hand_made_rules) as f:
             st.session_state.features = json.load(f)
@@ -1216,9 +1215,9 @@ def main(args):
     init_session_states()
     evaluator = init_evaluator()
     if args.train_data:
-        data = read_train(args.train_data, args.label)
+        data = read_df(args.train_data, args.label)
     if args.val_data:
-        val_data = read_val(args.val_data, args.label)
+        val_data = read_df(args.val_data, args.label)
     graph_format = args.graph_format
     feature_path = args.suggested_rules
     hand_made_rules = args.hand_rules

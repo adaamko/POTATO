@@ -28,6 +28,37 @@ class Dataset:
         self.extractor = GraphExtractor(lang=lang, cache_fn=f"{lang}_nlp_cache")
         self.graphs = None
 
+    @staticmethod
+    def save_dataframe(df: pd.DataFrame, path: str) -> None:
+        graphs = [graph_to_pn(graph) for graph in df["graph"].tolist()]
+        df["graph"] = graphs
+        df.to_csv(path, index=False, sep="\t")
+
+    def prune_graphs(self, graphs: List[nx.DiGraph] = None) -> None:
+        graphs_str = []
+        for i, graph in enumerate(graphs):
+            graph.remove_nodes_from(list(nx.isolates(graph)))
+            # ADAM: THIS IS JUST FOR PICKLE TO PENMAN CONVERSION
+            graph = self._random_postprocess(graph)
+
+            g = [
+                c
+                for c in sorted(
+                    nx.weakly_connected_components(graph), key=len, reverse=True
+                )
+            ]
+            if len(g) > 1:
+                print(
+                    "WARNING: graph has multiple connected components, taking the largest"
+                )
+                g_pn = graph_to_pn(graph.subgraph(g[0].copy()))
+            else:
+                g_pn = graph_to_pn(graph)
+
+            graphs_str.append(g_pn)
+
+        return graphs_str
+
     def read_dataset(
         self,
         examples: List[Tuple[str, str]] = None,
@@ -35,33 +66,13 @@ class Dataset:
         binary: bool = False,
     ) -> List[Sample]:
         if examples:
-            return [Sample(example) for example in examples]
+            return [Sample(example, PotatoGraph()) for example in examples]
         elif path:
             if binary:
                 df = pd.read_pickle(path)
-                graphs = []
-                for i, graph in enumerate(df["graph"].tolist()):
-                    graph.remove_nodes_from(list(nx.isolates(graph)))
-                    # ADAM: THIS IS JUST FOR PICKLE TO PENMAN CONVERSION
-                    graph = self._random_postprocess(graph)
-
-                    g = [
-                        c
-                        for c in sorted(
-                            nx.weakly_connected_components(graph), key=len, reverse=True
-                        )
-                    ]
-                    if len(g) > 1:
-                        print(
-                            "WARNING: graph has multiple connected components, taking the largest"
-                        )
-                        g_pn = graph_to_pn(graph.subgraph(g[0].copy()))
-                    else:
-                        g_pn = graph_to_pn(graph)
-
-                    graphs.append(g_pn)
+                graphs_str = self.prune_graphs(df.graph.tolist())
                 df.drop(columns=["graph"], inplace=True)
-                df["graph"] = graphs
+                df["graph"] = graphs_str
             else:
                 df = pd.read_csv(path, sep="\t")
 
@@ -112,12 +123,18 @@ class Dataset:
             potato_graph.graph.remove_edges_from(nx.selfloop_edges(potato_graph.graph))
             sample.set_graph(potato_graph)
 
-    def load_graphs(self, path: str) -> None:
-        with open(path, "rb") as f:
-            for line in f:
-                graph = PotatoGraph()
-                graph.from_penman(line.strip())
-                self.graphs.append(graph)
+    def load_graphs(self, path: str, binary: bool = False) -> None:
+        if binary:
+            graphs = [graph for graph in pd.read_pickle(path)]
+            graph_str = self.prune_graphs(graphs)
+
+            graphs = [PotatoGraph(graph_str=graph) for graph in graph_str]
+            self.graphs = graphs
+        else:
+            with open(path, "rb") as f:
+                for line in f:
+                    graph = PotatoGraph(graph_str=line.strip())
+                    self.graphs.append(graph)
 
         self.set_graphs(self.graphs)
 

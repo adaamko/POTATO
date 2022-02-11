@@ -13,6 +13,7 @@ import torch
 from streamlit.report_thread import REPORT_CONTEXT_ATTR_NAME
 
 from xpotato.dataset.utils import default_pn_to_graph
+from xpotato.graph_extractor.graph import PotatoGraph
 from xpotato.graph_extractor.extract import FeatureEvaluator, GraphExtractor
 from xpotato.models.trainer import GraphTrainer
 from xpotato.dataset.utils import default_pn_to_graph
@@ -229,23 +230,28 @@ def filter_label(df, label):
 
 
 @st.cache(allow_output_mutation=True)
-def read_train(path, label=None):
-    df = pd.read_pickle(path)
+def read_df(path, label=None, binary=False):
+    if binary:
+        df = pd.read_pickle(path)
+    else:
+        df = pd.read_csv(path, sep="\t")
+        graphs = []
+        for graph in df["graph"]:
+            potato_graph = PotatoGraph(graph_str=graph)
+            graphs.append(potato_graph.graph)
+        df["graph"] = graphs
     if label is not None:
         filter_label(df, label)
     return df
 
 
 def save_dataframe(data, path):
-    data.to_pickle(path)
-
-
-@st.cache(allow_output_mutation=True)
-def read_val(path, label=None):
-    df = pd.read_pickle(path)
-    if label is not None:
-        filter_label(df, label)
-    return df
+    if ".pickle" in path:
+        data.to_pickle(path)
+    else:
+        graphs = data["graph"]
+        data["graph"] = [graph_to_pn(graph) for graph in graphs]
+        data.to_csv(path, sep="\t", index=False)
 
 
 def train_df(df, min_edge=0, rank=False):
