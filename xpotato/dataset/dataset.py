@@ -79,7 +79,8 @@ class Dataset:
             return [
                 Sample(
                     (example["text"], example["label"]),
-                    PotatoGraph(graph_str=example["graph"]),
+                    potato_graph=PotatoGraph(graph_str=example["graph"]),
+                    label_id=example["label_id"],
                 )
                 for _, example in tqdm(df.iterrows())
             ]
@@ -100,8 +101,7 @@ class Dataset:
                 "text": [sample.text for sample in self._dataset],
                 "label": [sample.label for sample in self._dataset],
                 "label_id": [
-                    self.label_vocab[sample.label] if sample.label else None
-                    for sample in self._dataset
+                    sample.get_label_id(self.label_vocab) for sample in self._dataset
                 ],
                 "graph": [sample.potato_graph.graph for sample in self._dataset],
             }
@@ -144,8 +144,7 @@ class Dataset:
                 "text": [sample.text for sample in self._dataset],
                 "label": [sample.label for sample in self._dataset],
                 "label_id": [
-                    self.label_vocab[sample.label] if sample.label else None
-                    for sample in self._dataset
+                    sample.get_label_id(self.label_vocab) for sample in self._dataset
                 ],
                 "graph": [str(sample.potato_graph) for sample in self._dataset],
             }
