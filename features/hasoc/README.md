@@ -15,18 +15,18 @@ Prebuilt rule-systems are available in this directory for the _2019, 2020, 2021_
 Then the frontend of POTATO can be started from the __frontend__ directory:
 
 ```bash
-streamlit run app.py -- -t ../features/hasoc/hasoc_2021_train_amr.pickle -v ../features/hasoc/hasoc_2021_val_amr.pickle -hr ../features/hasoc/2021_train_features_task1.json
+streamlit run app.py -- -t ../features/hasoc/hasoc_2021_train_amrtsv -v ../features/hasoc/hasoc_2021_val_amr.tsv -hr ../features/hasoc/2021_train_features_task1.json
 ```
 
 If you want to reproduce our output run _evaluate.py_ from the _scripts_ directory.
 
 ```bash
-python evaluate.py -t amr -f ../features/hasoc/2021_train_features_task1.json -d ../features/hasoc/hasoc_2021_test_amr.pickle
+python evaluate.py -t amr -f ../features/hasoc/2021_train_features_task1.json -d ../features/hasoc/hasoc_2021_test_amr.tsv
 ```
 
 If you want to get the classification report, run the script with the __mode__ (-m) parameter:
 ```bash
-python evaluate.py -t amr -f ../features/hasoc/2021_train_features_task1.json -d ../features/hasoc/hasoc_2021_test_amr.pickle -m report
+python evaluate.py -t amr -f ../features/hasoc/2021_train_features_task1.json -d ../features/hasoc/hasoc_2021_test_amr.tsv -m report
 ```
 
 ## Usage and examples on the HASOC data
