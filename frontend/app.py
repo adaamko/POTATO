@@ -26,6 +26,7 @@ from utils import (
     rerun,
     rule_chooser,
     save_ruleset,
+    read_ruleset,
     save_after_modify,
     save_dataframe,
     match_texts,
@@ -61,8 +62,7 @@ def inference_mode(evaluator, hand_made_rules):
     st.session_state.download = st.sidebar.selectbox("", options=[False, True], key=2)
 
     if hand_made_rules:
-        with open(hand_made_rules) as f:
-            st.session_state.features = json.load(f)
+        read_ruleset(hand_made_rules)
 
     extractor = init_extractor(lang, graph_format)
 
@@ -180,7 +180,7 @@ def inference_mode(evaluator, hand_made_rules):
                         [";".join(feat[1]) for feat in features_merged],
                         [feat[2] for feat in features_merged],
                     )
-                    save_rules = hand_made_rules or "saved_features.json"
+                    save_rules = hand_made_rules or "saved_features.tsv"
                     save_ruleset(save_rules, st.session_state.features)
                     rerun()
 
@@ -225,8 +225,7 @@ def inference_mode(evaluator, hand_made_rules):
 
 def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made_rules):
     if hand_made_rules:
-        with open(hand_made_rules) as f:
-            st.session_state.features = json.load(f)
+        read_ruleset(hand_made_rules)
 
     if "df" not in st.session_state:
         st.session_state.df = data.copy()
@@ -635,8 +634,7 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
 def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_rules):
     data = read_df(train_data)
     if hand_made_rules:
-        with open(hand_made_rules) as f:
-            st.session_state.features = json.load(f)
+        read_ruleset(hand_made_rules)
     if "df" not in st.session_state:
         st.session_state.df = data.copy()
         if "annotated" not in st.session_state.df:

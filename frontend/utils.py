@@ -17,6 +17,7 @@ from xpotato.graph_extractor.graph import PotatoGraph
 from xpotato.graph_extractor.extract import FeatureEvaluator, GraphExtractor
 from xpotato.models.trainer import GraphTrainer
 from xpotato.dataset.utils import default_pn_to_graph
+from xpotato.graph_extractor.rule import RuleSet, Rule
 from tuw_nlp.graph.utils import GraphFormulaMatcher, graph_to_pn
 
 from contextlib import contextmanager
@@ -157,8 +158,27 @@ def to_dot(graph, marked_nodes=set(), integ=False):
 
 
 def save_ruleset(path, features):
-    with open(path, "w+") as f:
-        json.dump(features, f)
+    rule_set = RuleSet()
+    rule_set.from_dict(features)
+    
+    if path.endswith(".json"):
+        rule_set.to_json(path)
+    elif path.endswith(".tsv"):
+        rule_set.to_tsv(path)
+    else:
+        raise ValueError("Unknown file extension, currently only .json and .tsv are supported")
+
+def read_ruleset(path):
+    rule_set = RuleSet()
+
+    if path.endswith(".json"):
+        rule_set.from_json(path)
+    elif path.endswith(".tsv"):
+        rule_set.from_tsv(path)
+    else:
+        raise ValueError("Unknown file extension, currently only .json and .tsv are supported")
+
+    st.session_state.features = rule_set.to_dict()
 
 
 def d_clean(string):
@@ -218,7 +238,7 @@ def save_after_modify(hand_made_rules, classes=None):
             [feat[2] for feat in features_merged],
         )
 
-    save_rules = hand_made_rules or "saved_features.json"
+    save_rules = hand_made_rules or "saved_features.tsv"
     save_ruleset(save_rules, st.session_state.features)
     st.session_state.rows_to_delete = []
     rerun()
@@ -360,7 +380,7 @@ def show_ml_feature(classes, hand_made_rules):
                 [";".join(feat[0]) for feat in st.session_state.features[classes]],
                 [";".join(feat[1]) for feat in st.session_state.features[classes]],
             )
-            save_rules = hand_made_rules or "saved_features.json"
+            save_rules = hand_made_rules or "saved_features.tsv"
             save_ruleset(save_rules, st.session_state.features)
             rerun()
 
@@ -532,7 +552,7 @@ def add_rule_manually(classes, hand_made_rules):
                 [";".join(feat[0]) for feat in st.session_state.features[classes]],
                 [";".join(feat[1]) for feat in st.session_state.features[classes]],
             )
-            save_rules = hand_made_rules or "saved_features.json"
+            save_rules = hand_made_rules or "saved_features.tsv"
             save_ruleset(save_rules, st.session_state.features)
             rerun()
     st.markdown(
