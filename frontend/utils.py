@@ -160,13 +160,16 @@ def to_dot(graph, marked_nodes=set(), integ=False):
 def save_ruleset(path, features):
     rule_set = RuleSet()
     rule_set.from_dict(features)
-    
+
     if path.endswith(".json"):
         rule_set.to_json(path)
     elif path.endswith(".tsv"):
         rule_set.to_tsv(path)
     else:
-        raise ValueError("Unknown file extension, currently only .json and .tsv are supported")
+        raise ValueError(
+            "Unknown file extension, currently only .json and .tsv are supported"
+        )
+
 
 def read_ruleset(path):
     rule_set = RuleSet()
@@ -176,7 +179,9 @@ def read_ruleset(path):
     elif path.endswith(".tsv"):
         rule_set.from_tsv(path)
     else:
-        raise ValueError("Unknown file extension, currently only .json and .tsv are supported")
+        raise ValueError(
+            "Unknown file extension, currently only .json and .tsv are supported"
+        )
 
     st.session_state.features = rule_set.to_dict()
 
