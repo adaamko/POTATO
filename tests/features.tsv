@@ -1,0 +1,2 @@
+FIND	(u_0 / find :obl (u_1 / .*) :obj (u_2 / .*))	
+WRITE	(u_0 / write :nsubj (u_1 / .*) :obj (u_2 / .*))	
