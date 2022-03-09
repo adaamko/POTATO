@@ -7,6 +7,7 @@ import pandas as pd
 from sklearn.metrics import classification_report
 
 from xpotato.graph_extractor.extract import FeatureEvaluator
+from xpotato.graph_extractor.graph import PotatoGraph
 
 
 # TODO Adam: This is not the best place for these functions but I didn't want it to be in the frontend.utils
@@ -18,8 +19,16 @@ def filter_label(df, label):
     df["label_id"] = df.apply(lambda x: 0 if x["label"] == "NOT" else 1, axis=1)
 
 
-def read_val(path, label=None):
-    df = pd.read_pickle(path)
+def read_df(path, label=None, binary=False):
+    if binary:
+        df = pd.read_pickle(path)
+    else:
+        df = pd.read_csv(path, sep="\t")
+        graphs = []
+        for graph in df["graph"]:
+            potato_graph = PotatoGraph(graph_str=graph)
+            graphs.append(potato_graph.graph)
+        df["graph"] = graphs
     if label is not None:
         filter_label(df, label)
     return df
@@ -52,7 +61,7 @@ def main():
     )
 
     args = get_args()
-    df = read_val(args.dataset_path, args.label)
+    df = read_df(args.dataset_path, args.label)
 
     with open(args.features) as f:
         features = json.load(f)

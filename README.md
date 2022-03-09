@@ -258,13 +258,14 @@ trainer = GraphTrainer(df)
 #extract features
 features = trainer.prepare_and_train()
 
+from xpotato.dataset.utils import save_dataframe
 from sklearn.model_selection import train_test_split
 
 train, val = train_test_split(df, test_size=0.2, random_state=1234)
 
 #save train and validation, this is important for the frontend to work
-train.to_pickle("train_dataset")
-val.to_pickle("val_dataset")
+save_dataframe(train, 'train.tsv')
+save_dataframe(val, 'val.tsv')
 
 import json
 
@@ -287,18 +288,18 @@ with open("graphs.pickle", "wb") as f:
 If the DataFrame is ready with the parsed graphs, the UI can be started to inspect the extracted rules and modify them. The frontend is a streamlit app, the simplest way of starting it is (the training and the validation dataset must be provided):
 
 ```
-streamlit run frontend/app.py -- -t notebooks/train_dataset -v notebooks/val_dataset -g ud
+streamlit run frontend/app.py -- -t notebooks/train.tsv -v notebooks/val.tsv -g ud
 ```
 
 it can be also started with the extracted features:
 
 ```
-streamlit run frontend/app.py -- -t notebooks/train_dataset -v notebooks/val_dataset -g ud -sr notebooks/features.json
+streamlit run frontend/app.py -- -t notebooks/train.tsv -v notebooks/val.tsv -g ud -sr notebooks/features.json
 ```
 
 if you already used the UI and extracted the features manually and you want to load it, you can run:
 ```
-streamlit run frontend/app.py -- -t notebooks/train_dataset -v notebooks/val_dataset -g ud -sr notebooks/features.json -hr notebooks/manual_features.json
+streamlit run frontend/app.py -- -t notebooks/train.tsv -v notebooks/val.tsv -g ud -sr notebooks/features.json -hr notebooks/manual_features.json
 ```
 
 ### Advanced mode
@@ -331,7 +332,7 @@ sentences = [("Governments and industries in nations around the world are pourin
 
 Then, the frontend can be started:
 ```
-streamlit run frontend/app.py -- -t notebooks/unsupervised_dataset -g ud -m advanced
+streamlit run frontend/app.py -- -t notebooks/unsupervised_dataset.tsv -g ud -m advanced
 ```
 
 Once the frontend starts up and you define the labels, you are faced with the annotation interface. You can search elements by clicking on the appropriate column name and applying the desired filter. You can annotate instances by checking the checkbox at the beginning of the line. You can check multiple checkboxs at a time. Once you've selected the utterances you want to annotate, click on the _Annotate_ button. The annotated samples will appear in the lower table. You can clear the annotation of certain elements by selecting them in the second table and clicking _Clear annotation_.
@@ -345,7 +346,7 @@ Once you have some annotated data, you can train rules by clicking the _Train!_ 
 If you have the features ready and you want to evaluate them on a test set, you can run:
 
 ```python
-python scripts/evaluate.py -t ud -f notebooks/features.json -d notebooks/val_dataset
+python scripts/evaluate.py -t ud -f notebooks/features.json -d notebooks/val.tsv
 ```
 
 The result will be a _csv_ file with the labels and the matched rules.

@@ -13,5 +13,5 @@ bash data.sh
 Then the frontend of POTATO can be started from the __frontend__ directory:
 
 ```bash
-streamlit run app.py -- -t ../features/semeval/semeval_train.pickle -v ../features/semeval/semeval_val.pickle
+streamlit run app.py -- -t ../features/semeval/semeval_train.tsv -v ../features/semeval/semeval_val.tsv
 ```

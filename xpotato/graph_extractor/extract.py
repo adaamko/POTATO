@@ -5,6 +5,7 @@ from collections import defaultdict
 import networkx as nx
 import pandas as pd
 import stanza
+import penman as pn
 from networkx.algorithms.isomorphism import DiGraphMatcher
 from sklearn.metrics import precision_recall_fscore_support
 from tqdm import tqdm
@@ -40,10 +41,12 @@ class GraphExtractor:
                 nlp = stanza.Pipeline(self.lang)
             self.nlp = CachedStanzaPipeline(nlp, self.cache_fn)
 
-    def parse_iterable(self, iterable, graph_type="fourlang"):
+    def parse_iterable(self, iterable, graph_type="fourlang", lang=None):
+        if lang:
+            self.lang = lang
         if graph_type == "fourlang":
             with TextTo4lang(
-                    lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir
+                lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir
             ) as tfl:
                 for sen in tqdm(iterable):
                     fl_graphs = list(tfl(sen))
@@ -74,50 +77,121 @@ class FeatureEvaluator:
     def __init__(self, graph_format="ud"):
         self.graph_format = graph_format
 
-    def match_features(self, dataset, features, multi=False):
+    # ADAM: Very important to assign IDs to features from 0 because that's how
+    # the mapping will work!!
+    def annotate(self, graph, features):
+        feature_to_marked_nodes = {}
+
+        for i, feature in enumerate(features):
+            assert (
+                len(feature) == 4
+            ), f"Feature must be a 4-tuple for OpenIE, not {feature}"
+
+            positive_features = feature[0]
+            negative_features = feature[1]
+
+            for positive in positive_features:
+                p = pn.decode(positive)
+                first = p.triples[0][0]
+                assert first == "u_0", f"The IDs must start from 0, not {first}"
+
+            for negative in negative_features:
+                p = pn.decode(negative)
+                first = p.triples[0][0]
+                assert first == "u_0", f"The IDs must start from 0, not {first}"
+
+            feature_to_marked_nodes[i] = feature[3]
+            features[i] = feature[:3]
+
+        matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph)
+        feats = matcher.match(graph, return_subgraphs=True)
+
+        for key, i, subgraphs in feats:
+            triplet = {"relation": key}
+            marked_nodes = feature_to_marked_nodes[i]
+            for j, node in enumerate(marked_nodes):
+                subgraph = subgraphs[j]
+
+                node_to_node = {}
+                for id, graph_node in subgraph.nodes(data=True):
+                    mapping = graph_node["mapping"]
+                    node_to_node[mapping] = graph_node["name"]
+
+                for k, v in node.items():
+                    triplet[k] = node_to_node[v]
+
+                yield triplet
+
+    def annotate_dataframe(self, dataset, features):
+        graphs = dataset.graph.tolist()
+
+        triplets = []
+        for graph in graphs:
+            relations = self.annotate(graph, features)
+            triplets.append(list(relations))
+        d = {
+            "Sentence": dataset.text.tolist(),
+            "Triplets": triplets,
+        }
+
+        return pd.DataFrame(d)
+
+    def match_features(self, dataset, features, multi=False, return_subgraphs=False):
         graphs = dataset.graph.tolist()
 
         matches = []
         predicted = []
+        matched_graphs = []
 
         matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph)
 
         for i, g in tqdm(enumerate(graphs)):
-            feats = matcher.match(g)
+            feats = matcher.match(g, return_subgraphs=return_subgraphs)
             if multi:
-                self.match_multi(feats, features, matches, predicted)
+                self.match_multi(feats, features, matches, predicted, matched_graphs)
             else:
-                self.match_not_multi(feats, features, matches, predicted)
+                self.match_not_multi(
+                    feats, features, matches, predicted, matched_graphs
+                )
 
         d = {
             "Sentence": dataset.text.tolist(),
             "Predicted label": predicted,
             "Matched rule": matches,
         }
+        if return_subgraphs:
+            d["Matched subgraph"] = matched_graphs
+
         df = pd.DataFrame(d)
         return df
 
-    def match_multi(self, feats, features, matches, predicted):
+    def match_multi(self, feats, features, matches, predicted, matched_graphs):
         keys = []
         matched_rules = []
-        for key, feature in feats:
+        matched_subgraphs = []
+        for key, feature, graphs in feats:
             if key not in keys:
                 matched_rules.append(features[feature])
+                matched_subgraphs.append(graphs)
                 keys.append(key)
         if not keys:
             matches.append("")
             predicted.append("")
+            graphs.append("")
         else:
             matches.append(matched_rules)
             predicted.append(keys)
+            matched_graphs.append(matched_subgraphs)
 
-    def match_not_multi(self, feats, features, matches, predicted):
-        for key, feature in feats:
+    def match_not_multi(self, feats, features, matches, predicted, matched_graphs):
+        for key, feature, graphs in feats:
             matches.append(features[feature])
             predicted.append(key)
+            matched_graphs.append(graphs)
             break
         else:
             matches.append("")
+            matched_graphs.append("")
             predicted.append("")
 
     def one_versus_rest(self, df, entity):
@@ -274,8 +348,8 @@ class FeatureEvaluator:
 
         for word in words_to_measures:
             if words_to_measures[word]["precision"] > 0.9 and (
-                    words_to_measures[word]["TP"] > 1
-                    or words_to_measures[word]["recall"] > 0.01
+                words_to_measures[word]["TP"] > 1
+                or words_to_measures[word]["recall"] > 0.01
             ):
                 selected_words.add(word)
 
@@ -311,7 +385,7 @@ class FeatureEvaluator:
 
         accuracy = []
         for pcf in precision_recall_fscore_support(
-                labels, whole_predicted, average=None
+            labels, whole_predicted, average=None
         ):
             if len(pcf) > 1:
                 accuracy.append(pcf[1])
