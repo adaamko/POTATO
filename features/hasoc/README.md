@@ -15,7 +15,7 @@ Prebuilt rule-systems are available in this directory for the _2019, 2020, 2021_
 Then the frontend of POTATO can be started from the __frontend__ directory:
 
 ```bash
-streamlit run app.py -- -t ../features/hasoc/hasoc_2021_train_amrtsv -v ../features/hasoc/hasoc_2021_val_amr.tsv -hr ../features/hasoc/2021_train_features_task1.json
+streamlit run app.py -- -t ../features/hasoc/hasoc_2021_train_amr.tsv -v ../features/hasoc/hasoc_2021_val_amr.tsv -hr ../features/hasoc/2021_train_features_task1.json
 ```
 
 If you want to reproduce our output run _evaluate.py_ from the _scripts_ directory.
