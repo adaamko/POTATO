@@ -398,6 +398,17 @@ We welcome all contributions! Please fork this repository and create a branch fo
 
 ## Citing
 
+If you use the library, please cite our [paper](https://arxiv.org/abs/2201.13230)
+
+```bib
+@article{Kovacs:2022,
+  title={{POTATO: exPlainable infOrmation exTrAcTion framewOrk}},
+  author={Kov{\'a}cs, {\'A}d{\'a}m and G{\'e}mes, Kinga and Ikl{\'o}di, Eszter and Recski, G{\'a}bor},
+  journal={arXiv preprint arXiv:2201.13230},
+  year={2022}
+}
+```
+
 ## License 
 
 MIT license
