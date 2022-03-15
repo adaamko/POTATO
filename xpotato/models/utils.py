@@ -134,10 +134,10 @@ def to_dot(graph, marked_nodes=set(), integ=False):
     node_to_name = {}
     for node, n_data in graph.nodes(data=True):
         if integ:
-            d_node = d_clean(str(node))
+            d_node = str(node)
         else:
             d_node = d_clean(n_data["name"])
-        printname = d_node
+        printname = d_clean(n_data["name"])
         node_to_name[node] = printname
         if "expanded" in n_data and n_data["expanded"] and printname in marked_nodes:
             node_line = u'\t{0} [shape = circle, label = "{1}", \
@@ -185,11 +185,20 @@ def to_dot(graph, marked_nodes=set(), integ=False):
         if "color" in edata:
             d_node1 = node_to_name[u]
             d_node2 = node_to_name[v]
-            edge_lines.append(
-                u'\t{0} -> {1} [ label = "{2}" ];'.format(
-                    d_node1, d_node2, edata["color"]
+            
+            if integ:
+                edge_lines.append(
+                    u'\t{0} -> {1} [ label = "{2}" ];'.format(
+                        str(u), str(v), edata["color"]
+                    )
                 )
-            )
+
+            else:
+                edge_lines.append(
+                    u'\t{0} -> {1} [ label = "{2}" ];'.format(
+                        d_node1, d_node2, edata["color"]
+                    )
+                )
 
     lines += sorted(edge_lines)
     lines.append("}")

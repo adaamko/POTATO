@@ -20,6 +20,10 @@ from xpotato.dataset.utils import default_pn_to_graph, ud_to_graph, amr_pn_to_gr
 
 class GraphExtractor:
     def __init__(self, cache_dir=None, cache_fn=None, lang=None):
+        if cache_dir is None:
+            cache_dir = os.path.join(os.path.dirname(__file__), "cache")
+        if cache_fn is None:
+            cache_fn = os.path.join(cache_dir, "nlp_cache.json")
         self.cache_dir = cache_dir
         self.cache_fn = cache_fn
         self.lang = lang
@@ -115,7 +119,11 @@ class FeatureEvaluator:
                 node_to_node = {}
                 for id, graph_node in subgraph.nodes(data=True):
                     mapping = graph_node["mapping"]
-                    node_to_node[mapping] = graph_node["name"]
+                    node_to_node[mapping] = (
+                        graph_node["entity"]
+                        if "entity" in graph_node
+                        else graph_node["name"]
+                    )
 
                 for k, v in node.items():
                     triplet[k] = node_to_node[v]

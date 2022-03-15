@@ -19,13 +19,16 @@ class Dataset:
         lang="en",
         path=None,
         binary=False,
+        cache_fn=None,
     ) -> None:
         self.label_vocab = label_vocab
         if path:
             self._dataset = self.read_dataset(path=path, binary=binary)
         else:
             self._dataset = self.read_dataset(examples=examples)
-        self.extractor = GraphExtractor(lang=lang, cache_fn=f"{lang}_nlp_cache")
+
+        cache = cache_fn or f"{lang}_nlp_cache"
+        self.extractor = GraphExtractor(lang=lang, cache_fn=cache)
         self.graphs = None
 
     @staticmethod
