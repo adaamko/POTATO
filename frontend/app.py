@@ -632,7 +632,10 @@ def simple_mode(evaluator, data, val_data, graph_format, feature_path, hand_made
 
 
 def advanced_mode(evaluator, train_data, graph_format, feature_path, hand_made_rules):
-    data = read_df(train_data)
+    if ".pickle" in train_data:
+        data = read_df(train_data, binary=True)
+    else:
+        data = read_df(train_data)
     if hand_made_rules:
         read_ruleset(hand_made_rules)
     if "df" not in st.session_state:
@@ -1213,9 +1216,15 @@ def main(args):
     init_session_states()
     evaluator = init_evaluator()
     if args.train_data:
-        data = read_df(args.train_data, args.label)
+        if ".pickle" in args.train_data:
+            data = read_df(args.train_data, args.label, binary=True)
+        else:
+            data = read_df(args.train_data, args.label)
     if args.val_data:
-        val_data = read_df(args.val_data, args.label)
+        if ".pickle" in args.val_data:
+            val_data = read_df(args.val_data, args.label, binary=True)
+        else:
+            val_data = read_df(args.val_data, args.label)
     graph_format = args.graph_format
     feature_path = args.suggested_rules
     hand_made_rules = args.hand_rules
