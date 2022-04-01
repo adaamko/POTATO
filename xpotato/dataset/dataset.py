@@ -19,6 +19,7 @@ class Dataset:
         lang="en",
         path=None,
         binary=False,
+        cache_dir=None,
         cache_fn=None,
     ) -> None:
         self.label_vocab = label_vocab
@@ -27,8 +28,9 @@ class Dataset:
         else:
             self._dataset = self.read_dataset(examples=examples)
 
-        cache = cache_fn or f"{lang}_nlp_cache"
-        self.extractor = GraphExtractor(lang=lang, cache_fn=cache)
+        self.extractor = GraphExtractor(
+            lang=lang, cache_dir=cache_dir, cache_fn=cache_fn
+        )
         self.graphs = None
 
     @staticmethod
@@ -68,6 +70,7 @@ class Dataset:
         path: str = None,
         binary: bool = False,
     ) -> List[Sample]:
+        examples = list(examples)
         if examples:
             return [Sample(example, PotatoGraph()) for example in examples]
         elif path:

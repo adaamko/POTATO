@@ -23,7 +23,7 @@ class GraphExtractor:
         if cache_dir is None:
             cache_dir = os.path.join(os.path.dirname(__file__), "cache")
         if cache_fn is None:
-            cache_fn = os.path.join(cache_dir, "nlp_cache.json")
+            cache_fn = os.path.join(cache_dir, f"{lang}_nlp_cache.json")
         self.cache_dir = cache_dir
         self.cache_fn = cache_fn
         self.lang = lang
@@ -53,9 +53,10 @@ class GraphExtractor:
                 lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir
             ) as tfl:
                 for sen in tqdm(iterable):
-                    fl_graphs = list(tfl(sen))
+                    fl_graphs = list(tfl(sen, ssplit=False))
                     g = fl_graphs[0]
                     for n in fl_graphs[1:]:
+                        raise ValueError(f'sentence should not be split up: {sen}!')
                         g = nx.compose(g, n)
                     yield g
 
