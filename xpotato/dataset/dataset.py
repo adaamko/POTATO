@@ -19,6 +19,7 @@ class Dataset:
         lang="en",
         path=None,
         binary=False,
+        cache_dir=None,
         cache_fn=None,
     ) -> None:
         self.label_vocab = label_vocab
@@ -27,8 +28,9 @@ class Dataset:
         else:
             self._dataset = self.read_dataset(examples=examples)
 
-        cache = cache_fn or f"{lang}_nlp_cache"
-        self.extractor = GraphExtractor(lang=lang, cache_fn=cache)
+        self.extractor = GraphExtractor(
+            lang=lang, cache_dir=cache_dir, cache_fn=cache_fn
+        )
         self.graphs = None
 
     @staticmethod
@@ -68,6 +70,7 @@ class Dataset:
         path: str = None,
         binary: bool = False,
     ) -> List[Sample]:
+        examples = list(examples)
         if examples:
             return [Sample(example, PotatoGraph()) for example in examples]
         elif path:
@@ -98,7 +101,7 @@ class Dataset:
 
         return graph
 
-    def to_dataframe(self) -> pd.DataFrame:
+    def to_dataframe(self, as_penman: bool = False) -> pd.DataFrame:
         df = pd.DataFrame(
             {
                 "text": [sample.text for sample in self._dataset],
@@ -106,7 +109,10 @@ class Dataset:
                 "label_id": [
                     sample.get_label_id(self.label_vocab) for sample in self._dataset
                 ],
-                "graph": [sample.potato_graph.graph for sample in self._dataset],
+                "graph": [
+                    str(sample.potato_graph) if as_penman else sample.potato_graph.graph
+                    for sample in self._dataset
+                ],
             }
         )
         return df
@@ -142,16 +148,7 @@ class Dataset:
         self.set_graphs(self.graphs)
 
     def save_dataset(self, path: str) -> None:
-        df = pd.DataFrame(
-            {
-                "text": [sample.text for sample in self._dataset],
-                "label": [sample.label for sample in self._dataset],
-                "label_id": [
-                    sample.get_label_id(self.label_vocab) for sample in self._dataset
-                ],
-                "graph": [str(sample.potato_graph) for sample in self._dataset],
-            }
-        )
+        df = self.to_dataframe(as_penman=True)
         df.to_csv(path, index=False, sep="\t")
 
     def save_graphs(self, path: str) -> None:
