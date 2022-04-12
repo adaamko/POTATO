@@ -154,7 +154,7 @@ class FeatureEvaluator:
         matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph)
 
         for i, g in tqdm(enumerate(graphs)):
-            feats = matcher.match(g, return_subgraphs=return_subgraphs)
+            feats = matcher.match(g, return_subgraphs=True)
             if multi:
                 self.match_multi(feats, features, matches, predicted, matched_graphs)
             else:
