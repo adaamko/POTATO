@@ -15,18 +15,18 @@ Prebuilt rule-systems are available in this directory for the _2019, 2020, 2021_
 Then the frontend of POTATO can be started from the __frontend__ directory:
 
 ```bash
-streamlit run app.py -- -t ../features/hasoc/hasoc_2021_train_amr.pickle -v ../features/hasoc/hasoc_2021_val_amr.pickle -hr ../features/hasoc/2021_train_features_task1.json
+streamlit run app.py -- -t ../features/hasoc/hasoc_2021_train_amr.tsv -v ../features/hasoc/hasoc_2021_val_amr.tsv -hr ../features/hasoc/2021_train_features_task1.json
 ```
 
 If you want to reproduce our output run _evaluate.py_ from the _scripts_ directory.
 
 ```bash
-python evaluate.py -t amr -f ../features/hasoc/2021_train_features_task1.json -d ../features/hasoc/hasoc_2021_test_amr.pickle
+python evaluate.py -t amr -f ../features/hasoc/2021_train_features_task1.json -d ../features/hasoc/hasoc_2021_test_amr.tsv
 ```
 
 If you want to get the classification report, run the script with the __mode__ (-m) parameter:
 ```bash
-python evaluate.py -t amr -f ../features/hasoc/2021_train_features_task1.json -d ../features/hasoc/hasoc_2021_test_amr.pickle -m report
+python evaluate.py -t amr -f ../features/hasoc/2021_train_features_task1.json -d ../features/hasoc/hasoc_2021_test_amr.tsv -m report
 ```
 
 ## Usage and examples on the HASOC data
@@ -253,9 +253,9 @@ if you already used the UI and extracted the features manually and you want to l
 streamlit run frontend/app.py -- -t notebooks/train_dataset -v notebooks/val_dataset -g ud -sr notebooks/features.json -hr notebooks/manual_features.json
 ```
 
-### Unsupervised mode
+### Advanced mode
 
-If labels are not or just partially provided, the frontend can be started also in _unsupervised_ mode, where the user can _annotate_ a few examples at the start, then the system gradually offers rules based on the provided examples. 
+If labels are not or just partially provided, the frontend can be started also in _advanced_ mode, where the user can _annotate_ a few examples at the start, then the system gradually offers rules based on the provided examples. 
 
 
 Dataset without labels can be initialized with:
@@ -280,7 +280,7 @@ sentences = [("fuck absolutely everything about today.", ""),
 
 Then, the frontend can be started:
 ```
-streamlit run frontend/app.py -- -t notebooks/unsupervised_dataset -g ud -m unsupervised
+streamlit run frontend/app.py -- -t notebooks/unsupervised_dataset -g ud -m advanced
 ```
 
 

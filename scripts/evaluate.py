@@ -1,15 +1,40 @@
 import argparse
-import logging
-import pickle
-import sys
 import json
-from collections import defaultdict
+import logging
+import sys
 
-import networkx as nx
 import pandas as pd
 from sklearn.metrics import classification_report
-from xpotato.dataset.utils import default_pn_to_graph
+
 from xpotato.graph_extractor.extract import FeatureEvaluator
+from xpotato.graph_extractor.graph import PotatoGraph
+
+
+# TODO Adam: This is not the best place for these functions but I didn't want it to be in the frontend.utils
+# ------------------------------------------------------
+
+
+def filter_label(df, label):
+    df["label"] = df.apply(lambda x: label if label in x["labels"] else "NOT", axis=1)
+    df["label_id"] = df.apply(lambda x: 0 if x["label"] == "NOT" else 1, axis=1)
+
+
+def read_df(path, label=None, binary=False):
+    if binary:
+        df = pd.read_pickle(path)
+    else:
+        df = pd.read_csv(path, sep="\t")
+        graphs = []
+        for graph in df["graph"]:
+            potato_graph = PotatoGraph(graph_str=graph)
+            graphs.append(potato_graph.graph)
+        df["graph"] = graphs
+    if label is not None:
+        filter_label(df, label)
+    return df
+
+
+# ------------------------------------------------------
 
 
 def get_args():
@@ -18,7 +43,13 @@ def get_args():
     parser.add_argument("-f", "--features", type=str, required=True)
     parser.add_argument("-d", "--dataset-path", type=str, default=None, required=True)
     parser.add_argument("-m", "--mode", type=str, default="predictions")
-
+    parser.add_argument(
+        "-l",
+        "--label",
+        default=None,
+        type=str,
+        help="Specify label for OneVsAll multi-label classification. Datasets require a labels column with all valid labels.",
+    )
     return parser.parse_args()
 
 
@@ -30,7 +61,7 @@ def main():
     )
 
     args = get_args()
-    df = pd.read_pickle(args.dataset_path)
+    df = read_df(args.dataset_path, args.label)
 
     with open(args.features) as f:
         features = json.load(f)
@@ -67,9 +98,10 @@ def main():
     if args.mode == "predictions":
         pred_df.to_csv(sys.stdout, sep="\t")
     elif args.mode == "report":
-        assert report, "There are no labels in the dataset, we cannot generate a classification report. Are you evaluating a test set?"
+        assert (
+            report
+        ), "There are no labels in the dataset, we cannot generate a classification report. Are you evaluating a test set?"
         print(report)
-
 
 
 if __name__ == "__main__":

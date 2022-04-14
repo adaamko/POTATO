@@ -1,6 +1,5 @@
 import numpy as np
 from collections import defaultdict
-from collections import defaultdict
 from tuw_nlp.common.vocabulary import Vocabulary
 from tuw_nlp.graph.lexical import LexGraphs
 from tuw_nlp.graph.utils import graph_to_pn

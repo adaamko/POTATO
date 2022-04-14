@@ -15,11 +15,11 @@ Prebuilt rule-systems for both the _cause_ and the _treat_ label are also availa
 Then the frontend of POTATO can be started from the __frontend__ directory:
 
 ```bash
-streamlit run app.py -- -t ../features/crowdtruth/crowdtruth_train_dataset_cause_ud.pickle -v ../features/crowdtruth/crowdtruth_dev_dataset_cause_ud.pickle -hr ../features/crowdtruth/crowd_cause_features_ud.json
+streamlit run app.py -- -t ../features/crowdtruth/crowdtruth_train_dataset_cause_ud.tsv -v ../features/crowdtruth/crowdtruth_dev_dataset_cause_ud.tsv -hr ../features/crowdtruth/crowd_cause_features_ud.json
 ```
 
 If you are done building the rule-system, you can evaluate it on the test data, for this run _evaluate.py_ from the _scripts_ directory.
 
 ```bash
-python evaluate.py -t ud -f ../features/crowdtruth/crowd_cause_features_ud.json -d ../features/crowdtruth/crowdtruth_train_dataset_cause_ud.pickle
+python evaluate.py -t ud -f ../features/crowdtruth/crowd_cause_features_ud.json -d ../features/crowdtruth/crowdtruth_train_dataset_cause_ud.tsv
 ```
