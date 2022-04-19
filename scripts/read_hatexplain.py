@@ -89,18 +89,14 @@ def process(data_path: str, groups: List[str], target: str, just_none: bool):
     )
     potato_dataset.set_graphs(potato_dataset.parse_graphs(graph_format="ud"))
     df = potato_dataset.to_dataframe()
-    """
     trainer = GraphTrainer(df)
     features = trainer.prepare_and_train()
-    """
     train, val = train_test_split(df, test_size=0.2, random_state=1234)
     save_dataframe(train, os.path.join(data_path, "train.tsv"))
     save_dataframe(val, os.path.join(data_path, "val.tsv"))
 
-    """
     with open("features.json", "w+") as f:
         json.dump(features, f)
-    """
 
 
 if __name__ == "__main__":
