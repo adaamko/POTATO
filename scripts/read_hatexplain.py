@@ -65,14 +65,28 @@ def process(data_path: str, groups: List[str], target: str, just_none: bool):
         if os.path.isfile(group_path):
             with open(group_path, "r") as group_json:
                 group_list = json.load(group_json)
-                sentences += [(example["sentence"], "None" if group != target else target.capitalize(),
-                               [tok for (rat, tok) in zip(example["rationale"], example["tokens"]) if rat == 1]
-                               if group == target else [])
-                              for example in group_list]
+                sentences += [
+                    (
+                        example["sentence"],
+                        "None" if group != target else target.capitalize(),
+                        [
+                            tok
+                            for (rat, tok) in zip(
+                                example["rationale"], example["tokens"]
+                            )
+                            if rat == 1
+                        ]
+                        if group == target
+                        else [],
+                    )
+                    for example in group_list
+                ]
         else:
             logging.warning(f"Skipping {group}, because {group_path} does not exist.")
 
-    potato_dataset = ExplainableDataset(sentences, label_vocab={"None": 0, f"{target.capitalize()}": 1}, lang="en")
+    potato_dataset = ExplainableDataset(
+        sentences, label_vocab={"None": 0, f"{target.capitalize()}": 1}, lang="en"
+    )
     potato_dataset.set_graphs(potato_dataset.parse_graphs(graph_format="ud"))
     df = potato_dataset.to_dataframe()
     """
@@ -80,8 +94,8 @@ def process(data_path: str, groups: List[str], target: str, just_none: bool):
     features = trainer.prepare_and_train()
     """
     train, val = train_test_split(df, test_size=0.2, random_state=1234)
-    save_dataframe(train, os.path.join(data_path, 'train.tsv'))
-    save_dataframe(val, os.path.join(data_path, 'val.tsv'))
+    save_dataframe(train, os.path.join(data_path, "train.tsv"))
+    save_dataframe(val, os.path.join(data_path, "val.tsv"))
 
     """
     with open("features.json", "w+") as f:
@@ -147,10 +161,16 @@ if __name__ == "__main__":
         )
 
     if args.mode != "process":
-        dataset = args.data_path if os.path.isfile(args.data_path) else os.path.join(args.data_path, "dataset.json")
+        dataset = (
+            args.data_path
+            if os.path.isfile(args.data_path)
+            else os.path.join(args.data_path, "dataset.json")
+        )
         if not os.path.isfile(dataset):
-            raise ArgumentError("The specified data path is not a file and does not contain a dataset.json file. "
-                                "If your file has a different name, please specify.")
+            raise ArgumentError(
+                "The specified data path is not a file and does not contain a dataset.json file. "
+                "If your file has a different name, please specify."
+            )
         dir_path = os.path.dirname(dataset)
         dt_by_target = read_json(dataset)
         for name, list_of_dicts in dt_by_target.items():
@@ -158,8 +178,22 @@ if __name__ == "__main__":
                 json.dump(list_of_dicts, json_file, indent=4)
 
         if args.mode == "both":
-            process(data_path=dir_path, groups=target_groups, target=args.target, just_none=args.just_none)
+            process(
+                data_path=dir_path,
+                groups=target_groups,
+                target=args.target,
+                just_none=args.just_none,
+            )
 
     else:
-        dir_path = os.path.dirname(args.data_path) if os.path.isfile(args.data_path) else args.data_path
-        process(data_path=dir_path, groups=target_groups, target=args.target, just_none=args.just_none)
+        dir_path = (
+            os.path.dirname(args.data_path)
+            if os.path.isfile(args.data_path)
+            else args.data_path
+        )
+        process(
+            data_path=dir_path,
+            groups=target_groups,
+            target=args.target,
+            just_none=args.just_none,
+        )

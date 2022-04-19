@@ -25,7 +25,9 @@ class ExplainableDataset(Dataset):
                 ],
                 "rationale": [sample.rationale for sample in self._dataset],
                 "graph": [
-                    str(sample.potato_graph).replace("\n", " ") if as_penman else sample.potato_graph.graph
+                    str(sample.potato_graph).replace("\n", " ")
+                    if as_penman
+                    else sample.potato_graph.graph
                     for sample in self._dataset
                 ],
             }
