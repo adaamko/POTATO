@@ -11,15 +11,23 @@ from xpotato.graph_extractor.graph import PotatoGraph
 class ExplainableDataset(Dataset):
     def __init__(
         self,
-            examples: List[Tuple[str, str]] = None,
-            label_vocab: Dict[str, int] = {}, lang="en",
-            path=None,
-            binary=False,
-            cache_dir=None,
-            cache_fn=None,
+        examples: List[Tuple[str, str]] = None,
+        label_vocab: Dict[str, int] = {},
+        lang="en",
+        path=None,
+        binary=False,
+        cache_dir=None,
+        cache_fn=None,
     ) -> None:
-        super().__init__(examples=examples, label_vocab=label_vocab, lang=lang, path=path, binary=binary,
-                         cache_dir=cache_dir, cache_fn=cache_fn)
+        super().__init__(
+            examples=examples,
+            label_vocab=label_vocab,
+            lang=lang,
+            path=path,
+            binary=binary,
+            cache_dir=cache_dir,
+            cache_fn=cache_fn,
+        )
 
     def read_dataset(
         self,
