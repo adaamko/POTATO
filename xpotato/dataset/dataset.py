@@ -117,7 +117,7 @@ class Dataset:
         )
         return df
 
-    def parse_graphs(self, graph_format: str = "fourlang") -> List[nx.DiGraph]:
+    def parse_graphs(self, graph_format: str = "fourlang") -> List[PotatoGraph]:
         graphs = list(
             self.extractor.parse_iterable(
                 [sample.text for sample in self._dataset], graph_format
