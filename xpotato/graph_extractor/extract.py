@@ -56,7 +56,7 @@ class GraphExtractor:
                     fl_graphs = list(tfl(sen, ssplit=False))
                     g = fl_graphs[0]
                     for n in fl_graphs[1:]:
-                        raise ValueError(f'sentence should not be split up: {sen}!')
+                        raise ValueError(f"sentence should not be split up: {sen}!")
                         g = nx.compose(g, n)
                     yield g
 

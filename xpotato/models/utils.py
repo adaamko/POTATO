@@ -48,7 +48,7 @@ def d_clean(string):
 
 
 def to_dots(graphs, marked_nodes=set(), integ=False):
-    lines = [u"digraph finite_state_machine {", "\tdpi=70;"]
+    lines = ["digraph finite_state_machine {", "\tdpi=70;"]
     # lines.append('\tordering=out;')
     # sorting everything to make the process deterministic
     for i, graph in enumerate(graphs):
@@ -69,41 +69,41 @@ def to_dots(graphs, marked_nodes=set(), integ=False):
                 and n_data["expanded"]
                 and printname in marked_nodes
             ):
-                node_line = u'\t{0} [shape = circle, label = "{1}", \
+                node_line = '\t{0} [shape = circle, label = "{1}", \
                         style=filled, fillcolor=purple];'.format(
                     d_node, printname
                 ).replace(
                     "-", "_"
                 )
             elif "expanded" in n_data and n_data["expanded"]:
-                node_line = u'\t{0} [shape = circle, label = "{1}", \
+                node_line = '\t{0} [shape = circle, label = "{1}", \
                         style="filled"];'.format(
                     d_node, printname
                 ).replace(
                     "-", "_"
                 )
             elif "fourlang" in n_data and n_data["fourlang"]:
-                node_line = u'\t{0} [shape = circle, label = "{1}", \
+                node_line = '\t{0} [shape = circle, label = "{1}", \
                         style="filled", fillcolor=red];'.format(
                     d_node, printname
                 ).replace(
                     "-", "_"
                 )
             elif "substituted" in n_data and n_data["substituted"]:
-                node_line = u'\t{0} [shape = circle, label = "{1}", \
+                node_line = '\t{0} [shape = circle, label = "{1}", \
                         style="filled"];'.format(
                     d_node, printname
                 ).replace(
                     "-", "_"
                 )
             elif printname in marked_nodes:
-                node_line = u'\t{0} [shape = circle, label = "{1}", style=filled, fillcolor=lightblue];'.format(
+                node_line = '\t{0} [shape = circle, label = "{1}", style=filled, fillcolor=lightblue];'.format(
                     d_node, printname
                 ).replace(
                     "-", "_"
                 )
             else:
-                node_line = u'\t{0} [shape = circle, label = "{1}"];'.format(
+                node_line = '\t{0} [shape = circle, label = "{1}"];'.format(
                     d_node, printname
                 ).replace("-", "_")
             node_lines.append(node_line)
@@ -115,7 +115,7 @@ def to_dots(graphs, marked_nodes=set(), integ=False):
                 d_node1 = node_to_name[u]
                 d_node2 = node_to_name[v]
                 edge_lines.append(
-                    u'\t{0} -> {1} [ label = "{2}" ];'.format(
+                    '\t{0} -> {1} [ label = "{2}" ];'.format(
                         d_node1, d_node2, edata["color"]
                     )
                 )
@@ -123,11 +123,11 @@ def to_dots(graphs, marked_nodes=set(), integ=False):
         lines += sorted(edge_lines)
         lines.append("}")
     lines.append("}")
-    return u"\n".join(lines)
+    return "\n".join(lines)
 
 
 def to_dot(graph, marked_nodes=set(), integ=False):
-    lines = [u"digraph finite_state_machine {", "\tdpi=70;"]
+    lines = ["digraph finite_state_machine {", "\tdpi=70;"]
     # lines.append('\tordering=out;')
     # sorting everything to make the process deterministic
     node_lines = []
@@ -140,41 +140,41 @@ def to_dot(graph, marked_nodes=set(), integ=False):
         printname = d_clean(n_data["name"])
         node_to_name[node] = printname
         if "expanded" in n_data and n_data["expanded"] and printname in marked_nodes:
-            node_line = u'\t{0} [shape = circle, label = "{1}", \
+            node_line = '\t{0} [shape = circle, label = "{1}", \
                     style=filled, fillcolor=purple];'.format(
                 d_node, printname
             ).replace(
                 "-", "_"
             )
         elif "expanded" in n_data and n_data["expanded"]:
-            node_line = u'\t{0} [shape = circle, label = "{1}", \
+            node_line = '\t{0} [shape = circle, label = "{1}", \
                     style="filled"];'.format(
                 d_node, printname
             ).replace(
                 "-", "_"
             )
         elif "fourlang" in n_data and n_data["fourlang"]:
-            node_line = u'\t{0} [shape = circle, label = "{1}", \
+            node_line = '\t{0} [shape = circle, label = "{1}", \
                     style="filled", fillcolor=red];'.format(
                 d_node, printname
             ).replace(
                 "-", "_"
             )
         elif "substituted" in n_data and n_data["substituted"]:
-            node_line = u'\t{0} [shape = circle, label = "{1}", \
+            node_line = '\t{0} [shape = circle, label = "{1}", \
                     style="filled"];'.format(
                 d_node, printname
             ).replace(
                 "-", "_"
             )
         elif printname in marked_nodes:
-            node_line = u'\t{0} [shape = circle, label = "{1}", style=filled, fillcolor=lightblue];'.format(
+            node_line = '\t{0} [shape = circle, label = "{1}", style=filled, fillcolor=lightblue];'.format(
                 d_node, printname
             ).replace(
                 "-", "_"
             )
         else:
-            node_line = u'\t{0} [shape = circle, label = "{1}"];'.format(
+            node_line = '\t{0} [shape = circle, label = "{1}"];'.format(
                 d_node, printname
             ).replace("-", "_")
         node_lines.append(node_line)
@@ -185,21 +185,21 @@ def to_dot(graph, marked_nodes=set(), integ=False):
         if "color" in edata:
             d_node1 = node_to_name[u]
             d_node2 = node_to_name[v]
-            
+
             if integ:
                 edge_lines.append(
-                    u'\t{0} -> {1} [ label = "{2}" ];'.format(
+                    '\t{0} -> {1} [ label = "{2}" ];'.format(
                         str(u), str(v), edata["color"]
                     )
                 )
 
             else:
                 edge_lines.append(
-                    u'\t{0} -> {1} [ label = "{2}" ];'.format(
+                    '\t{0} -> {1} [ label = "{2}" ];'.format(
                         d_node1, d_node2, edata["color"]
                     )
                 )
 
     lines += sorted(edge_lines)
     lines.append("}")
-    return u"\n".join(lines)
+    return "\n".join(lines)
