@@ -9,7 +9,7 @@ class RelationSample(Sample):
         self.e1 = example[2]
         self.e2 = example[3]
 
-    def _postprocess(self, graph: nx.Digraph) -> nx.Digraph:
+    def _postprocess(self, graph: nx.DiGraph) -> nx.DiGraph:
         for node, attr in graph.nodes(data=True):
             if self.e1_lemma:
                 if (
@@ -32,7 +32,7 @@ class RelationSample(Sample):
 
         return graph
 
-    def set_graph(self, graph: nx.Digraph) -> None:
+    def set_graph(self, graph: nx.DiGraph) -> None:
         self.graph = self._postprocess(graph)
 
     def prepare_lemma(self, doc) -> None:
