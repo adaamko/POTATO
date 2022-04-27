@@ -186,7 +186,7 @@ class FeatureEvaluator:
         if not keys:
             matches.append("")
             predicted.append("")
-            graphs.append("")
+            matched_graphs.append("")
         else:
             matches.append(matched_rules)
             predicted.append(keys)
