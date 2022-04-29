@@ -2,23 +2,26 @@ import json
 import os
 import numpy as np
 import logging
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from argparse import ArgumentParser, ArgumentError
+from ast import literal_eval
 
+import pandas as pd
 from sklearn.model_selection import train_test_split
 from xpotato.dataset.explainable_dataset import ExplainableDataset
 from xpotato.models.trainer import GraphTrainer
 from xpotato.dataset.utils import save_dataframe
 
 
-def read_json(file_path: str) -> Dict[str, List[Dict[str, List[str]]]]:
-    data_by_target = {}
+def read_json(
+    file_path: str, min_token_count: int = 2
+) -> List[Dict[str, List[Dict[str, List[str]]]]]:
+    data_by_target = []
     with open(file_path) as dataset:
         data = json.load(dataset)
         for post in data.values():
             sentence = " ".join(post["post_tokens"])
             targets = {}
-            target = []
             labels = {}
             for annotation in post["annotators"]:
                 if annotation["label"] not in labels:
@@ -45,58 +48,95 @@ def read_json(file_path: str) -> Dict[str, List[Dict[str, List[str]]]]:
                     ]
                     rationale = np.round(np.mean(rats, axis=0), decimals=0).tolist()
                 if len(target) == 1:
-                    if target[0] not in data_by_target:
-                        data_by_target[target[0]] = []
-                    data_by_target[target[0]].append(
+                    other_targets = []
+                    if min_token_count < 2:
+                        other_targets = [t for t in targets.keys() if t != target[0]]
+                    data_by_target.append(
                         {
                             "tokens": post["post_tokens"],
                             "sentence": sentence,
                             "rationale": rationale,
+                            "label": target[0],
+                            "secondary_labels": other_targets,
                         }
                     )
     return data_by_target
 
 
-def process(data_path: str, groups: List[str], target: str, just_none: bool):
-    running_groups = ["none", target] if just_none else groups
-    sentences = []
-    for group in running_groups:
-        group_path = os.path.join(data_path, f"{group}.json")
-        if os.path.isfile(group_path):
-            with open(group_path, "r") as group_json:
-                group_list = json.load(group_json)
-                sentences += [
-                    (
-                        example["sentence"],
-                        "None" if group != target else target.capitalize(),
-                        [
-                            tok
-                            for (rat, tok) in zip(
-                                example["rationale"], example["tokens"]
-                            )
-                            if rat == 1
-                        ]
-                        if group == target
-                        else [],
-                    )
-                    for example in group_list
-                ]
-        else:
-            logging.warning(f"Skipping {group}, because {group_path} does not exist.")
-
-    potato_dataset = ExplainableDataset(
-        sentences, label_vocab={"None": 0, f"{target.capitalize()}": 1}, lang="en"
+def get_sentences(
+    group: pd.DataFrame, other: pd.DataFrame, target: str
+) -> List[Tuple[str, str, List[str]]]:
+    sentences = {
+        index: (
+            example.sentence,
+            target.capitalize(),
+            [
+                tokens
+                for (rationale, tokens) in zip(
+                    literal_eval(example.rationale), literal_eval(example.tokens)
+                )
+                if rationale == 1
+            ],
+        )
+        for index, example in group.iterrows()
+    }
+    sentences.update(
+        {index: (example.sentence, "None", []) for index, example in other.iterrows()}
     )
-    potato_dataset.set_graphs(potato_dataset.parse_graphs(graph_format="ud"))
-    df = potato_dataset.to_dataframe()
-    trainer = GraphTrainer(df)
-    features = trainer.prepare_and_train()
-    train, val = train_test_split(df, test_size=0.2, random_state=1234)
-    save_dataframe(train, os.path.join(data_path, "train.tsv"))
-    save_dataframe(val, os.path.join(data_path, "val.tsv"))
+    return [s[1] for s in sorted(sentences.items())]
 
-    with open("features.json", "w+") as f:
-        json.dump(features, f)
+
+def process(
+    data_path: str,
+    target: str,
+    just_none: bool,
+    use_secondary: bool = False,
+    create_features: bool = False,
+) -> None:
+    df = pd.read_csv(os.path.join(data_path, "dataset.tsv"), sep="\t")
+    main_group = df[df.label == target.capitalize()]
+    main_others = (
+        df[df.label != target.capitalize()] if not just_none else df[df.label == "None"]
+    )
+    main_sentences = get_sentences(main_group, main_others, target)
+
+    main_potato_dataset = ExplainableDataset(
+        main_sentences, label_vocab={"None": 0, f"{target.capitalize()}": 1}, lang="en"
+    )
+    graphs = main_potato_dataset.parse_graphs(graph_format="ud")
+    main_potato_dataset.set_graphs(graphs)
+    main_df = main_potato_dataset.to_dataframe()
+    main_train, main_val = train_test_split(main_df, test_size=0.2, random_state=1234)
+    save_dataframe(main_train, os.path.join(data_path, "train.tsv"))
+    save_dataframe(main_val, os.path.join(data_path, "val.tsv"))
+
+    if use_secondary:
+        secondary_group = df[
+            (df.secondary_labels.str.contains(target.capitalize()))
+            | (df.label == target.capitalize())
+        ]
+        secondary_other = df.loc[
+            set(df.index.tolist()).difference(secondary_group.index.tolist())
+        ]
+        secondary_sentences = get_sentences(secondary_group, secondary_other, target)
+        secondary_potato_dataset = ExplainableDataset(
+            secondary_sentences,
+            label_vocab={"None": 0, f"{target.capitalize()}": 1},
+            lang="en",
+        )
+        secondary_potato_dataset.set_graphs(graphs)
+        secondary_df = secondary_potato_dataset.to_dataframe()
+        secondary_train, secondary_val = train_test_split(
+            secondary_df, test_size=0.2, random_state=1234
+        )
+        save_dataframe(secondary_train, os.path.join(data_path, "secondary_train.tsv"))
+        save_dataframe(secondary_val, os.path.join(data_path, "secondary_val.tsv"))
+    if create_features:
+        trainer = GraphTrainer(main_df)
+        features = trainer.prepare_and_train()
+
+        with open(os.path.join(data_path, "features.json"), "w+") as f:
+            json.dump(features, f)
 
 
 if __name__ == "__main__":
@@ -145,8 +185,21 @@ if __name__ == "__main__":
     argparser.add_argument(
         "--just_none",
         "-n",
-        action="store_true",
         help="Use only the normal texts as counter.",
+        action="store_true",
+    )
+    argparser.add_argument(
+        "--min_target",
+        "-mt",
+        help="The minimum number of annotators finding the text to target a group.",
+        type=int,
+        default=2,
+    )
+    argparser.add_argument(
+        "--create_features",
+        "-cf",
+        help="Whether to create train features based on the POTATO graph.",
+        action="store_true",
     )
     args = argparser.parse_args()
 
@@ -168,17 +221,17 @@ if __name__ == "__main__":
                 "If your file has a different name, please specify."
             )
         dir_path = os.path.dirname(dataset)
-        dt_by_target = read_json(dataset)
-        for name, list_of_dicts in dt_by_target.items():
-            with open(os.path.join(dir_path, f"{name.lower()}.json"), "w") as json_file:
-                json.dump(list_of_dicts, json_file, indent=4)
+        dt_by_target = read_json(dataset, args.min_target)
+        dataf = pd.DataFrame.from_records(dt_by_target)
+        dataf.to_csv(os.path.join(dir_path, "dataset.tsv"), sep="\t")
 
         if args.mode == "both":
             process(
                 data_path=dir_path,
-                groups=target_groups,
                 target=args.target,
                 just_none=args.just_none,
+                use_secondary=args.min_target != 2,
+                create_features=args.create_features,
             )
 
     else:
@@ -189,7 +242,8 @@ if __name__ == "__main__":
         )
         process(
             data_path=dir_path,
-            groups=target_groups,
             target=args.target,
             just_none=args.just_none,
+            use_secondary=args.min_target != 2,
+            create_features=args.create_features,
         )
