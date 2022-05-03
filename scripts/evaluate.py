@@ -27,7 +27,7 @@ def filter_label(df, labels):
         )
 
 
-def read_df(path, label=None, binary=False):
+def read_df(path, labels=None, binary=False):
     if binary:
         df = pd.read_pickle(path)
     else:
@@ -37,8 +37,8 @@ def read_df(path, label=None, binary=False):
             potato_graph = PotatoGraph(graph_str=graph)
             graphs.append(potato_graph.graph)
         df["graph"] = graphs
-    if label is not None:
-        filter_label(df, label)
+    if labels is not None:
+        filter_label(df, labels)
     return df
 
 
