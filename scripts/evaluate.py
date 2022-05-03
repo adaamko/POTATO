@@ -60,7 +60,7 @@ def get_features(path, label=None):
         with open(fn) as f:
             features = json.load(f)
             for k in features:
-                if label and k is not label:
+                if label and k != label:
                     continue
                 labels.add(k)
                 for f in features[k]:
@@ -91,7 +91,6 @@ def main():
         format="%(asctime)s : "
         + "%(module)s (%(lineno)s) - %(levelname)s - %(message)s",
     )
-
     args = get_args()
     assert args.mode in ("predictions", "report")
 
