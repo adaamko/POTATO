@@ -27,7 +27,7 @@ def filter_label(df, labels):
         )
 
 
-def read_df(path, labels=None, binary=False):
+def read_df(path, label=None, binary=False):
     if binary:
         df = pd.read_pickle(path)
     else:
@@ -37,8 +37,8 @@ def read_df(path, labels=None, binary=False):
             potato_graph = PotatoGraph(graph_str=graph)
             graphs.append(potato_graph.graph)
         df["graph"] = graphs
-    if labels is not None:
-        filter_label(df, labels)
+    if label is not None:
+        filter_label(df, label)
     return df
 
 
@@ -60,7 +60,7 @@ def get_features(path, label=None):
         with open(fn) as f:
             features = json.load(f)
             for k in features:
-                if label and k is not label:
+                if label and k != label:
                     continue
                 labels.add(k)
                 for f in features[k]:
@@ -91,7 +91,6 @@ def main():
         format="%(asctime)s : "
         + "%(module)s (%(lineno)s) - %(levelname)s - %(message)s",
     )
-
     args = get_args()
     assert args.mode in ("predictions", "report")
 
