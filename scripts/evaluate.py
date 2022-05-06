@@ -53,14 +53,15 @@ def get_features(path, label=None):
         files.append(path)
     elif os.path.isdir(path):
         for fn in os.listdir(path):
-            assert fn.endswith("json") or path.endswith(
+            assert fn.endswith("json") or fn.endswith(
                 "tsv"
-            ), "feature dir should only contain JSON or TSV files"
+            ), f"feature dir should only contain JSON or TSV files: {fn}"
             files.append(os.path.join(path, fn))
     else:
         raise ValueError(f"not a file or directory: {path}")
 
     labels = set()
+    all_features = []
     for fn in files:
         ruleset = RuleSet()
         if fn.endswith("json"):
@@ -75,8 +76,9 @@ def get_features(path, label=None):
             if label and label != lab:
                 continue
             labels.add(lab)
+            all_features.append(k)
 
-    return features, labels
+    return all_features, labels
 
 
 def get_args():
