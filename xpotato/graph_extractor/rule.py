@@ -22,6 +22,10 @@ class Rule:
             and self.label == __o.label
         )
 
+    def sort_rule(self) -> None:
+        self.positive_samples.sort()
+        self.negative_samples.sort()
+
     def to_list(self) -> List[List[Union[List[str], str]]]:
         return (
             [self.positive_samples, self.negative_samples, self.label]
@@ -51,7 +55,20 @@ class RuleSet:
             return False
         return self.rules == __o.rules
 
+    def sort_rules(self) -> None:
+        for rule in self.rules:
+            rule.sort_rule()
+
+        self.rules.sort(
+            key=lambda rule: (
+                rule.label,
+                ";".join(rule.positive_samples),
+                ";".join(rule.negative_samples),
+            )
+        )
+
     def to_tsv(self, tsv_path: str):
+        self.sort_rules()
         with open(tsv_path, "w") as f:
             for rule in self.rules:
                 positive_samples = ";".join(rule.positive_samples)
