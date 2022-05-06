@@ -8,8 +8,10 @@ from ast import literal_eval
 import pandas as pd
 
 from tuw_nlp.common.eval import get_cat_stats, print_cat_stats
+from tuw_nlp.graph.utils import graph_to_pn
 from xpotato.graph_extractor.extract import FeatureEvaluator
 from xpotato.graph_extractor.graph import PotatoGraph
+from xpotato.graph_extractor.rule import RuleSet
 
 
 # TODO Adam: This is not the best place for these functions but I didn't want it to be in the frontend.utils
@@ -45,28 +47,36 @@ def read_df(path, labels=None, binary=False):
 def get_features(path, label=None):
     files = []
     if os.path.isfile(path):
-        assert path.endswith("json"), "features file must be JSON"
+        assert path.endswith("json") or path.endswith(
+            "tsv"
+        ), "features file must be JSON or TSV"
         files.append(path)
     elif os.path.isdir(path):
         for fn in os.listdir(path):
-            assert fn.endswith("json"), "feature dir should only contain JSON files"
+            assert fn.endswith("json") or path.endswith(
+                "tsv"
+            ), "feature dir should only contain JSON or TSV files"
             files.append(os.path.join(path, fn))
     else:
         raise ValueError(f"not a file or directory: {path}")
 
-    feature_values = []
     labels = set()
     for fn in files:
-        with open(fn) as f:
-            features = json.load(f)
-            for k in features:
-                if label and k != label:
-                    continue
-                labels.add(k)
-                for f in features[k]:
-                    feature_values.append(f)
+        ruleset = RuleSet()
+        if fn.endswith("json"):
+            ruleset.from_json(fn)
+        elif fn.endswith("tsv"):
+            ruleset.from_tsv(fn)
+        else:
+            raise ValueError(f"unknown file type: {fn}")
+        features = ruleset.to_list()
+        for k in features:
+            lab = k[2]
+            if label and label != lab:
+                continue
+            labels.add(lab)
 
-    return feature_values, labels
+    return features, labels
 
 
 def get_args():
