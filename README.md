@@ -100,7 +100,7 @@ We can also check any of the graphs:
 from xpotato.models.utils import to_dot
 from graphviz import Source
 
-Source(to_dot(dataset.graphs[0]))
+Source(to_dot(df.iloc[0].graph))
 ```
 ![graph](https://raw.githubusercontent.com/adaamko/POTATO/main/files/re_example.svg)
 

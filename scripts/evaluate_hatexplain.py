@@ -33,7 +33,7 @@ def find_good_features(
         target = list(features.keys())[0]
     if save_features is None:
         logging.warning(
-            'No path given for the good features. '
+            "No path given for the good features. "
             'They will be saved to this working directory with the name "good_features.json"'
         )
         save_features = "good_features.json"
