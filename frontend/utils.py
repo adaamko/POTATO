@@ -603,8 +603,8 @@ def rank_and_suggest(classes, data, evaluator):
 ###############################################################################
 # Init classes
 @st.cache()
-def init_evaluator():
-    return FeatureEvaluator()
+def init_evaluator(case_sensitive=False):
+    return FeatureEvaluator(case_sensitive=case_sensitive)
 
 
 @st.cache(

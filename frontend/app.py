@@ -1180,6 +1180,7 @@ def get_args():
         type=str,
         help="Specify label for OneVsAll multi-label classification. Datasets require a labels column with all valid labels.",
     )
+    parser.add_argument("-cs", "--case-sensitive", default=False, action="store_true")
     return parser.parse_args()
 
 
@@ -1214,7 +1215,7 @@ def main(args):
     )
 
     init_session_states()
-    evaluator = init_evaluator()
+    evaluator = init_evaluator(args.case_sensitive)
     if args.train_data:
         if ".pickle" in args.train_data:
             data = read_df(args.train_data, args.label, binary=True)
