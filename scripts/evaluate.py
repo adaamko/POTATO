@@ -94,6 +94,7 @@ def get_args():
         type=str,
         help="Specify label for OneVsAll multi-label classification. Datasets require a labels column with all valid labels.",
     )
+    parser.add_argument("-cs", "--case-sensitive", default=False, action="store_true")
     return parser.parse_args()
 
 
@@ -110,7 +111,7 @@ def main():
 
     df = read_df(args.dataset_path, labels)
 
-    evaluator = FeatureEvaluator()
+    evaluator = FeatureEvaluator(case_sensitive=args.case_sensitive)
 
     pred_df = evaluator.match_features(df, features, multi=True)
 
