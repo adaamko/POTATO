@@ -79,8 +79,9 @@ class GraphExtractor:
 
 
 class FeatureEvaluator:
-    def __init__(self, graph_format="ud"):
+    def __init__(self, graph_format="ud", case_sensitive=False):
         self.graph_format = graph_format
+        self.case_sensitive = case_sensitive
 
     # ADAM: Very important to assign IDs to features from 0 because that's how
     # the mapping will work!!
@@ -108,7 +109,7 @@ class FeatureEvaluator:
             feature_to_marked_nodes[i] = feature[3]
             features[i] = feature[:3]
 
-        matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph)
+        matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph, case_sensitive=self.case_sensitive)
         feats = matcher.match(graph, return_subgraphs=True)
 
         for key, i, subgraphs in feats:
@@ -152,7 +153,7 @@ class FeatureEvaluator:
         predicted = []
         matched_graphs = []
 
-        matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph)
+        matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph, case_sensitive=self.case_sensitive)
 
         for i, g in tqdm(enumerate(graphs)):
             feats = matcher.match(g, return_subgraphs=True)
@@ -251,12 +252,7 @@ class FeatureEvaluator:
         trained_features = []
         with open(path, "w+") as f:
             for i, g in enumerate(graphs):
-                matcher = DiGraphMatcher(
-                    g,
-                    feature_graph,
-                    node_match=GraphFormulaMatcher.node_matcher,
-                    edge_match=GraphFormulaMatcher.edge_matcher,
-                )
+                matcher = GraphFormulaMatcher.get_matcher(g, feature_graph, self.case_sensitive)
                 if matcher.subgraph_is_monomorphic():
                     for iso_pairs in matcher.subgraph_monomorphisms_iter():
                         nodes = []
@@ -376,7 +372,7 @@ class FeatureEvaluator:
         false_neg_g = []
         false_neg_s = []
         false_neg_indices = []
-        matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph)
+        matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph, case_sensitive=self.case_sensitive)
         for i, g in enumerate(graphs):
             feats = matcher.match(g)
             label = 0
