@@ -1,5 +1,4 @@
 import argparse
-import json
 import logging
 import os
 import sys
@@ -8,7 +7,6 @@ from ast import literal_eval
 import pandas as pd
 
 from tuw_nlp.common.eval import get_cat_stats, print_cat_stats
-from tuw_nlp.graph.utils import graph_to_pn
 from xpotato.graph_extractor.extract import FeatureEvaluator
 from xpotato.graph_extractor.graph import PotatoGraph
 from xpotato.graph_extractor.rule import RuleSet
@@ -87,14 +85,24 @@ def get_args():
     parser.add_argument("-f", "--features", type=str, required=True)
     parser.add_argument("-d", "--dataset-path", type=str, default=None, required=True)
     parser.add_argument("-m", "--mode", type=str, default="predictions")
-    parser.add_argument(
+    parser.add_argument("-cs", "--case-sensitive", default=False, action="store_true")
+    parser.add_argument("-e", "--exclude-labels", nargs="+")
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "-l",
         "--label",
         default=None,
         type=str,
         help="Specify label for OneVsAll multi-label classification. Datasets require a labels column with all valid labels.",
     )
-    parser.add_argument("-cs", "--case-sensitive", default=False, action="store_true")
+    group.add_argument(
+        "-a",
+        "--all-labels",
+        default=False,
+        action="store_true",
+        help="include all labels from dataset in evaluation, even if there are no rules for them",
+    )
     return parser.parse_args()
 
 
@@ -108,6 +116,9 @@ def main():
     assert args.mode in ("predictions", "report")
 
     features, labels = get_features(args.features, args.label)
+
+    if args.all_labels:
+        labels = None
 
     df = read_df(args.dataset_path, labels)
 
@@ -127,7 +138,20 @@ def main():
                 "There are no labels in the dataset, we cannot generate a classification report. Are you evaluating a test set?"
             )
 
-        print_cat_stats(get_cat_stats(pred_df["Predicted label"], gold_labels))
+        pred_labels = pred_df["Predicted label"]
+
+        if args.exclude_labels:
+            xlabels = set(args.exclude_labels)
+            pred_labels = [
+                [lab for lab in labels if lab not in xlabels] for labels in pred_labels
+            ]
+            gold_labels = [
+                [lab for lab in labels if lab not in xlabels] for labels in gold_labels
+            ]
+
+        cat_stats = get_cat_stats(pred_labels, gold_labels)
+
+        print_cat_stats(cat_stats)
 
 
 if __name__ == "__main__":
