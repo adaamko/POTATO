@@ -12,6 +12,7 @@ from tqdm import tqdm
 from tuw_nlp.grammar.text_to_4lang import TextTo4lang
 from tuw_nlp.graph.utils import (
     GraphFormulaMatcher,
+    GraphFormulaPatternMatcher,
 )
 from tuw_nlp.text.pipeline import CachedStanzaPipeline
 
@@ -146,14 +147,21 @@ class FeatureEvaluator:
 
         return pd.DataFrame(d)
 
-    def match_features(self, dataset, features, multi=False, return_subgraphs=False):
+    def match_features(
+        self,
+        dataset,
+        features,
+        multi=False,
+        return_subgraphs=False,
+        graph_matcher=GraphFormulaPatternMatcher,
+    ):
         graphs = dataset.graph.tolist()
 
         matches = []
         predicted = []
         matched_graphs = []
 
-        matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph, case_sensitive=self.case_sensitive)
+        matcher = graph_matcher(features, converter=default_pn_to_graph, case_sensitive=self.case_sensitive)
 
         for i, g in tqdm(enumerate(graphs)):
             feats = matcher.match(g, return_subgraphs=True)
@@ -360,7 +368,14 @@ class FeatureEvaluator:
 
         return selected_words
 
-    def evaluate_feature(self, cl, features, data, graph_format="ud"):
+    def evaluate_feature(
+        self,
+        cl,
+        features,
+        data,
+        graph_format="ud",
+        graph_matcher=GraphFormulaPatternMatcher,
+    ):
         measure_features = []
         graphs = data.graph.tolist()
         labels = self.one_versus_rest(data, cl).one_versus_rest.tolist()
@@ -372,7 +387,7 @@ class FeatureEvaluator:
         false_neg_g = []
         false_neg_s = []
         false_neg_indices = []
-        matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph, case_sensitive=self.case_sensitive)
+        matcher = graph_matcher(features, converter=default_pn_to_graph, case_sensitive=self.case_sensitive)
         for i, g in enumerate(graphs):
             feats = matcher.match(g)
             label = 0
