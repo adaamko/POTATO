@@ -84,6 +84,7 @@ def get_args():
     parser.add_argument("-t", "--graph-type", type=str, default="fourlang")
     parser.add_argument("-f", "--features", type=str, required=True)
     parser.add_argument("-d", "--dataset-path", type=str, default=None, required=True)
+    parser.add_argument("-c", "--cache", type=str, default=None)
     parser.add_argument("-m", "--mode", type=str, default="predictions")
     parser.add_argument("-cs", "--case-sensitive", default=False, action="store_true")
     parser.add_argument("-e", "--exclude-labels", nargs="+")
@@ -122,9 +123,15 @@ def main():
 
     df = read_df(args.dataset_path, labels)
 
-    evaluator = FeatureEvaluator(case_sensitive=args.case_sensitive)
-
-    pred_df = evaluator.match_features(df, features, multi=True)
+    if args.cache and os.path.exists(args.cache):
+        logging.warning(f"loading predictions from cache: {args.cache}")
+        pred_df = pd.read_pickle(args.cache)
+    else:
+        evaluator = FeatureEvaluator(case_sensitive=args.case_sensitive)
+        pred_df = evaluator.match_features(df, features, multi=True)
+        if args.cache:
+            logging.warning(f"saving predictions to cache: {args.cache}")
+            pred_df.to_pickle(args.cache)
 
     if args.mode == "predictions":
         pred_df.to_csv(sys.stdout, sep="\t")
