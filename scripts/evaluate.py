@@ -85,6 +85,8 @@ def get_args():
     parser.add_argument("-f", "--features", type=str, required=True)
     parser.add_argument("-d", "--dataset-path", type=str, default=None, required=True)
     parser.add_argument("-c", "--cache", type=str, default=None)
+    parser.add_argument("-tf", "--table-format", type=str, default="github")
+    parser.add_argument("-ff", "--float-format", type=str, default=".2%")
     parser.add_argument("-m", "--mode", type=str, default="predictions")
     parser.add_argument("-cs", "--case-sensitive", default=False, action="store_true")
     parser.add_argument("-e", "--exclude-labels", nargs="+")
@@ -158,7 +160,9 @@ def main():
 
         cat_stats = get_cat_stats(pred_labels, gold_labels)
 
-        print_cat_stats(cat_stats)
+        print_cat_stats(
+            cat_stats, tablefmt=args.table_format, floatfmt=args.float_format
+        )
 
 
 if __name__ == "__main__":
