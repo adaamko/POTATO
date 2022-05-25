@@ -2,6 +2,7 @@ import copy
 import json
 import re
 import sys
+from ast import literal_eval
 
 from collections import defaultdict
 from graphviz import Source
@@ -18,7 +19,7 @@ from xpotato.graph_extractor.extract import FeatureEvaluator, GraphExtractor
 from xpotato.models.trainer import GraphTrainer
 from xpotato.dataset.utils import default_pn_to_graph
 from xpotato.graph_extractor.rule import RuleSet, Rule
-from tuw_nlp.graph.utils import GraphFormulaMatcher, graph_to_pn
+from tuw_nlp.graph.utils import GraphFormulaPatternMatcher, graph_to_pn
 
 from contextlib import contextmanager
 from io import StringIO
@@ -39,7 +40,7 @@ def match_texts(text_input, extractor, graph_format):
     for k in st.session_state.features:
         for f in st.session_state.features[k]:
             feature_values.append(f)
-    matcher = GraphFormulaMatcher(feature_values, converter=default_pn_to_graph)
+    matcher = GraphFormulaPatternMatcher(feature_values, converter=default_pn_to_graph)
 
     graphs = list(extractor.parse_iterable([text for text in texts], graph_format))
 
@@ -250,7 +251,7 @@ def save_after_modify(hand_made_rules, classes=None):
 
 
 def filter_label(df, label):
-    df["label"] = df.apply(lambda x: label if label in x["labels"] else "NOT", axis=1)
+    df["label"] = df.apply(lambda x: label if label in literal_eval(x["labels"]) else "NOT", axis=1)
     df["label_id"] = df.apply(lambda x: 0 if x["label"] == "NOT" else 1, axis=1)
 
 
@@ -289,8 +290,15 @@ def train_df(df, min_edge=0, rank=False):
 
 def rule_chooser():
     option = st.selectbox("Choose from the rules", st.session_state.sens)
-    G, _ = default_pn_to_graph(option.split(";")[0])
-    text_G, _ = default_pn_to_graph(option.split(";")[0])
+    first_option = option.split(";")[0]
+    if first_option.startswith("("):
+        text_G, _ = default_pn_to_graph(first_option)
+    else:
+        command, graph1, graph2 = re.match(
+            "([^(]*)\((.*),(.*)\)", first_option
+        ).groups()
+        pn_graph = f"(u_0000 / command_{command} :graph1 {graph1} :graph2 {graph2})"
+        text_G, _ = default_pn_to_graph(pn_graph)
     dot_graph = to_dot(text_G)
     st.graphviz_chart(dot_graph, use_container_width=True)
     nodes = [d_clean(n[1]["name"].split("_")[0]) for n in text_G.nodes(data=True)]
@@ -603,8 +611,8 @@ def rank_and_suggest(classes, data, evaluator):
 ###############################################################################
 # Init classes
 @st.cache()
-def init_evaluator():
-    return FeatureEvaluator()
+def init_evaluator(case_sensitive=False):
+    return FeatureEvaluator(case_sensitive=case_sensitive)
 
 
 @st.cache(
