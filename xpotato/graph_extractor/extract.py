@@ -210,10 +210,7 @@ class FeatureEvaluator:
         for key, feature, graphs in feats:
             if key not in keys or allow_multi_graph:
                 matched_rules.append(features[feature])
-                matched_graph = nx.DiGraph()
-                for g in graphs:
-                    matched_graph = nx.compose(matched_graph, g)
-                matched_subgraphs.append(matched_graph)
+                matched_subgraphs.append(graphs)
                 keys.append(key)
         if not keys:
             matches.append("")
