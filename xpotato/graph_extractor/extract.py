@@ -110,7 +110,9 @@ class FeatureEvaluator:
             feature_to_marked_nodes[i] = feature[3]
             features[i] = feature[:3]
 
-        matcher = GraphFormulaMatcher(features, converter=default_pn_to_graph, case_sensitive=self.case_sensitive)
+        matcher = GraphFormulaMatcher(
+            features, converter=default_pn_to_graph, case_sensitive=self.case_sensitive
+        )
         feats = matcher.match(graph, return_subgraphs=True)
 
         for key, i, subgraphs in feats:
@@ -154,6 +156,7 @@ class FeatureEvaluator:
         multi=False,
         return_subgraphs=False,
         graph_matcher=GraphFormulaPatternMatcher,
+        allow_multi_graph=False,
     ):
         graphs = dataset.graph.tolist()
 
@@ -161,12 +164,21 @@ class FeatureEvaluator:
         predicted = []
         matched_graphs = []
 
-        matcher = graph_matcher(features, converter=default_pn_to_graph, case_sensitive=self.case_sensitive)
+        matcher = graph_matcher(
+            features, converter=default_pn_to_graph, case_sensitive=self.case_sensitive
+        )
 
         for i, g in tqdm(enumerate(graphs)):
             feats = matcher.match(g, return_subgraphs=True)
             if multi:
-                self.match_multi(feats, features, matches, predicted, matched_graphs)
+                self.match_multi(
+                    feats,
+                    features,
+                    matches,
+                    predicted,
+                    matched_graphs,
+                    allow_multi_graph=allow_multi_graph,
+                )
             else:
                 self.match_not_multi(
                     feats, features, matches, predicted, matched_graphs
@@ -183,14 +195,25 @@ class FeatureEvaluator:
         df = pd.DataFrame(d)
         return df
 
-    def match_multi(self, feats, features, matches, predicted, matched_graphs):
+    def match_multi(
+        self,
+        feats,
+        features,
+        matches,
+        predicted,
+        matched_graphs,
+        allow_multi_graph=False,
+    ):
         keys = []
         matched_rules = []
         matched_subgraphs = []
         for key, feature, graphs in feats:
-            if key not in keys:
+            if key not in keys or allow_multi_graph:
                 matched_rules.append(features[feature])
-                matched_subgraphs.append(graphs)
+                matched_graph = nx.DiGraph()
+                for g in graphs:
+                    matched_graph = nx.compose(matched_graph, g)
+                matched_subgraphs.append(matched_graph)
                 keys.append(key)
         if not keys:
             matches.append("")
@@ -260,7 +283,9 @@ class FeatureEvaluator:
         trained_features = []
         with open(path, "w+") as f:
             for i, g in enumerate(graphs):
-                matcher = GraphFormulaMatcher.get_matcher(g, feature_graph, self.case_sensitive)
+                matcher = GraphFormulaMatcher.get_matcher(
+                    g, feature_graph, self.case_sensitive
+                )
                 if matcher.subgraph_is_monomorphic():
                     for iso_pairs in matcher.subgraph_monomorphisms_iter():
                         nodes = []
@@ -387,7 +412,9 @@ class FeatureEvaluator:
         false_neg_g = []
         false_neg_s = []
         false_neg_indices = []
-        matcher = graph_matcher(features, converter=default_pn_to_graph, case_sensitive=self.case_sensitive)
+        matcher = graph_matcher(
+            features, converter=default_pn_to_graph, case_sensitive=self.case_sensitive
+        )
         for i, g in enumerate(graphs):
             feats = matcher.match(g)
             label = 0
