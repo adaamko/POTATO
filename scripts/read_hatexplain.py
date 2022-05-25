@@ -8,6 +8,7 @@ from ast import literal_eval
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from tuw_nlp.text.preprocess.hatexplain import preprocess_hatexplain
 from xpotato.dataset.explainable_dataset import ExplainableDataset
 from xpotato.models.trainer import GraphTrainer
 from xpotato.dataset.utils import save_dataframe
@@ -21,6 +22,7 @@ def read_json(
         data = json.load(dataset)
         for post in data.values():
             sentence = " ".join(post["post_tokens"])
+            sentence = preprocess_hatexplain(sentence)
             targets = {}
             labels = {}
             for annotation in post["annotators"]:
