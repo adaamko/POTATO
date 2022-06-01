@@ -8,8 +8,11 @@ from sklearn.metrics import classification_report
 from xpotato.graph_extractor.extract import FeatureEvaluator
 from xpotato.dataset.explainable_dataset import ExplainableDataset
 
+from hatexplain_to_eraser import data_tsv_to_eraser, prediction_to_eraser
+from call_eraser import call_eraser
 
 def print_classification_report(df: DataFrame, stats: Dict[str, List]):
+    #print([(n > 0) * 1 for n in np.sum([p for p in stats["Predicted"]], axis=0)])
     print(
         classification_report(
             df.label_id,
@@ -66,22 +69,27 @@ def find_good_features(
         valid_files = []
     evaluate(feature_file=save_features, files=train_files + valid_files, target=target)
 
-
 def evaluate(feature_file: str, files: List[str], target: str):
     with open(feature_file) as feature_json:
         features = json.load(feature_json)
     evaluator = FeatureEvaluator()
     if target is None:
         target = list(features.keys())[0]
-
+    
     for file in files:
-        print(f"File: {file}")
+        #print(f"File: {file}")
         potato = ExplainableDataset(path=file, label_vocab={"None": 0, target: 1})
         df = potato.to_dataframe()
         stats = evaluator.evaluate_feature(target, features[target], df)[0]
         print_classification_report(df, stats)
         print("------------------------")
-
+        matched_result = evaluator.match_features(df, features[target])
+        subgraphs = matched_result["Matched rule"]
+        labels = matched_result["Predicted label"]
+        data_tsv_to_eraser(file)
+        prediction_to_eraser(file, subgraphs, labels, labels, labels, target)
+        call_eraser("./hatexplain", "train", "./hatexplain/train_prediction.jsonl")
+        print("------------------------")
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
