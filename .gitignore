@@ -131,8 +131,3 @@ dmypy.json
 
 # PyCharm
 .idea
-
-# HateXplain stuff
-features*.json
-trained_features*.tsv
-saved_features*.tsv
