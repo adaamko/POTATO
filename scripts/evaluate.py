@@ -5,11 +5,11 @@ import sys
 from ast import literal_eval
 
 import pandas as pd
-
 from tuw_nlp.common.eval import get_cat_stats, print_cat_stats
+
+from xpotato.features.utils import get_features
 from xpotato.graph_extractor.extract import FeatureEvaluator
 from xpotato.graph_extractor.graph import PotatoGraph
-from xpotato.graph_extractor.rule import RuleSet
 
 
 # TODO Adam: This is not the best place for these functions but I didn't want it to be in the frontend.utils
@@ -40,43 +40,6 @@ def read_df(path, labels=None, binary=False):
     if labels is not None:
         filter_label(df, labels)
     return df
-
-
-def get_features(path, label=None):
-    files = []
-    if os.path.isfile(path):
-        assert path.endswith("json") or path.endswith(
-            "tsv"
-        ), "features file must be JSON or TSV"
-        files.append(path)
-    elif os.path.isdir(path):
-        for fn in os.listdir(path):
-            assert fn.endswith("json") or fn.endswith(
-                "tsv"
-            ), f"feature dir should only contain JSON or TSV files: {fn}"
-            files.append(os.path.join(path, fn))
-    else:
-        raise ValueError(f"not a file or directory: {path}")
-
-    labels = set()
-    all_features = []
-    for fn in files:
-        ruleset = RuleSet()
-        if fn.endswith("json"):
-            ruleset.from_json(fn)
-        elif fn.endswith("tsv"):
-            ruleset.from_tsv(fn)
-        else:
-            raise ValueError(f"unknown file type: {fn}")
-        features = ruleset.to_list()
-        for k in features:
-            lab = k[2]
-            if label and label != lab:
-                continue
-            labels.add(lab)
-            all_features.append(k)
-
-    return all_features, labels
 
 
 def get_args():
