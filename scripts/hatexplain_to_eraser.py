@@ -4,6 +4,8 @@ import csv
 
 import more_itertools as mit
 
+from tuw_nlp.graph.utils import graph_to_pn
+
 save_path='hatexplain/'
 
 if not os.path.exists(save_path+'docs'):
@@ -139,6 +141,36 @@ def penman_to_nodenames(penman):
 	g = default_pn_to_graph(penman)[0]
 	return list([(x[1]['name']) for x in g.nodes(data=True)])
 
+#get rationales from subgraph prediction
+def get_rationales(datatsvfile, subgraphs):
+	train_tsv = open(datatsvfile, encoding="utf8")
+	read_tsv = csv.reader(train_tsv, delimiter="\t")
+	# 0 text
+	# 1	label
+	# 2	label_id
+	# 3	rationale
+	# 4	graph
+
+	# same id as data_tsv to get docs/ filenames right
+	id = 2
+	skip_first = False
+	for row in read_tsv:
+		if(skip_first == False):
+			skip_first = True
+			continue
+
+		subgraphlist = subgraphs[id-2]
+		
+		if(row[1] == "None"): # cut out GT "None"
+			id = id+1 # do not forget that
+			continue # rip None labels ;(
+			
+		predicted_rationales = []
+		if(subgraphlist): #check if a rule matched (else predicted rationales are empty list)
+			for subgraph in subgraphlist[0]:
+				#predicted_rationales.append(penman_to_nodenames(subgraph[0][0])[0]) # get a list
+				predicted_rationales.append(penman_to_nodenames(graph_to_pn(subgraph))[0]) # get a list
+				
 # datatsvfile: the tsv file
 # subgraphs: the graphs
 # labels: m(xi)j
@@ -164,9 +196,9 @@ def prediction_to_eraser(datatsvfile, subgraphs, labels, labelswithoutr, labelso
 		if(skip_first == False):
 			skip_first = True
 			continue
-		
-		subgraph = subgraphs[id-2]
-		label = labels[id-2]
+
+		subgraphlist = subgraphs[id-2]
+		labellist = labels[id-2]
 		labelwithoutr = labelswithoutr[id-2]
 		labelonlyr = labelsonlyr[id-2]
 		
@@ -174,12 +206,18 @@ def prediction_to_eraser(datatsvfile, subgraphs, labels, labelswithoutr, labelso
 			id = id+1 # do not forget that
 			continue # rip None labels ;(
 		
+		label = ""
+		if(labellist):
+			label = labellist[0] # first label
 		if(not label):
 			label = "None" # might be a problem with porting
+			
 		predicted_rationales = []
-		if(subgraph): #check if a rule matched (else predicted rationales are empty list)
-			predicted_rationales = penman_to_nodenames(subgraph[0][0]) # get a list
-		
+		if(subgraphlist): #check if a rule matched (else predicted rationales are empty list)
+			for subgraph in subgraphlist[0]:
+				#predicted_rationales.append(penman_to_nodenames(subgraph[0][0])[0]) # get a list
+				predicted_rationales.append(penman_to_nodenames(graph_to_pn(subgraph))[0]) # get a list
+		print(predicted_rationales)
 		entry = {}
 		#print(row[2])
 		id_string = "tsv_line_"+str(id)+".txt"
@@ -188,7 +226,6 @@ def prediction_to_eraser(datatsvfile, subgraphs, labels, labelswithoutr, labelso
 		write_doc.close()
 		entry['annotation_id'] = id_string
 		entry['classification'] = label
-		
 		# m_xi = m(xi)j
 		m_xi = 0
 		if(target == label):

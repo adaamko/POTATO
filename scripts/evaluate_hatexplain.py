@@ -8,7 +8,7 @@ from sklearn.metrics import classification_report
 from xpotato.graph_extractor.extract import FeatureEvaluator
 from xpotato.dataset.explainable_dataset import ExplainableDataset
 
-from hatexplain_to_eraser import data_tsv_to_eraser, prediction_to_eraser
+from hatexplain_to_eraser import data_tsv_to_eraser, prediction_to_eraser, get_rationales
 from call_eraser import call_eraser
 
 def print_classification_report(df: DataFrame, stats: Dict[str, List]):
@@ -83,12 +83,14 @@ def evaluate(feature_file: str, files: List[str], target: str):
         stats = evaluator.evaluate_feature(target, features[target], df)[0]
         print_classification_report(df, stats)
         print("------------------------")
-        matched_result = evaluator.match_features(df, features[target])
-        subgraphs = matched_result["Matched rule"]
+        matched_result = evaluator.match_features(df, features[target], multi=True, return_subgraphs=True)
+        #subgraphs = matched_result["Matched rule"]
+        subgraphs = matched_result["Matched subgraph"]
+        #matched_result.to_csv("this_wow_x.csv")
         labels = matched_result["Predicted label"]
         data_tsv_to_eraser(file)
         prediction_to_eraser(file, subgraphs, labels, labels, labels, target)
-        call_eraser("./hatexplain", "train", "./hatexplain/train_prediction.jsonl")
+        call_eraser("./hatexplain", "val", "./hatexplain/val_prediction.jsonl")
         print("------------------------")
 
 if __name__ == "__main__":

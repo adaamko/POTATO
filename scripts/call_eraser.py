@@ -30,16 +30,17 @@ def call_eraser(datadir, testtrainorval, pathtopredictions, silent=False):
 		logger = logging.getLogger()
 		logger.disabled = True
 	#dir(rationale_benchmark.metrics)
-	eraser.runEvaluation(data_dir=datadir, #data dir
-						 split=testtrainorval, # split
-						 results=pathtopredictions, # results 
-						 score_file="eraser_output.json", # score
-						 strict=False) # strict
-						 #iou_thresholds=[0.5], # iou
-						 #aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]) # aopc
+	eraser.runEvaluation("None", # neutralclassname
+						data_dir=datadir, # data dir
+						split=testtrainorval, # split
+						results=pathtopredictions, # results 
+						score_file=datadir+"/eraser_output.json", # score
+						strict=False) # strict
+						#iou_thresholds=[0.5], # iou
+						#aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]) # aopc
 	if silent:
 		logger.disabled = False
-	print_eraser_results()
+	print_eraser_results(datadir)
 
 """
 def call_eraser(datadir, testtrainorval, pathtopredictions):
@@ -62,10 +63,10 @@ def call_eraser(datadir, testtrainorval, pathtopredictions):
 	print_eraser_results()
 """
 
-def print_eraser_results():
+def print_eraser_results(datadir):
 	# print the required results
 	import json
-	with open('./eraser_output.json') as fp:
+	with open(datadir+'/eraser_output.json') as fp:
 		output_data = json.load(fp)
 
 	print('\nPlausibility')
@@ -84,4 +85,4 @@ def print_eraser_results():
 		print('--')
 		
 if __name__ == "__main__":
-	call_eraser("./hatexplain", "train", "./hatexplain/train_prediction.jsonl")
+	call_eraser("./hatexplain", "val", "./hatexplain/val_prediction.jsonl")
