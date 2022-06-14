@@ -272,7 +272,12 @@ class FeatureEvaluator:
         return sorted(features_stat, key=rank, reverse=True)
 
     def train_feature(self, cl, feature, data, graph_format="ud"):
-        feature_graph = default_pn_to_graph(feature)[0]
+        graph_matcher = GraphFormulaPatternMatcher([[[feature], [], []]], default_pn_to_graph, case_sensitive=self.case_sensitive)
+        feat_patt = graph_matcher.patts[0][0]
+        if isinstance(feat_patt[0], tuple):
+            patt1, patt2 = feat_patt[0][1]
+        else:
+            patt1, patt2 = feat_patt[0], None
 
         graphs = data.graph.tolist()
         labels = self.one_versus_rest(data, cl).one_versus_rest.tolist()
@@ -280,19 +285,26 @@ class FeatureEvaluator:
         trained_features = []
         with open(path, "w+") as f:
             for i, g in enumerate(graphs):
-                matcher = GraphFormulaMatcher.get_matcher(
-                    g, feature_graph, self.case_sensitive
-                )
-                if matcher.subgraph_is_monomorphic():
-                    for iso_pairs in matcher.subgraph_monomorphisms_iter():
+                matches = [(i, subgraph) for (key, i, subgraph) in graph_matcher.match(g, return_subgraphs=True)]
+                for patt_index, match in matches:
+                    for graph in match:
                         nodes = []
-                        for k in iso_pairs:
+                        for node_index, node in graph.nodes(data=True):
                             if not nodes:
-                                if feature_graph.nodes[iso_pairs[k]]["name"] == ".*":
-                                    nodes.append(g.nodes[k]["name"])
+                                node_name = node['name']
+                                if node['mapping'] in patt1.nodes and patt1.nodes[node['mapping']]["name"] == ".*":
+                                    nodes.append(node_name)
+                                if patt2 is not None and node['mapping'] in patt2.nodes and patt2.nodes[node['mapping']]["name"] == ".*":
+                                    nodes.append(node_name)
                         if not nodes:
-                            g2_to_g1 = {v: u for (u, v) in iso_pairs.items()}
-                            for u, v, attrs in feature_graph.edges(data=True):
+                            g2_to_g1 = {v: u for (u, v, _) in graph.edges(data=True)}
+                            for u, v, attrs in patt1.edges(data=True):
+                                if attrs["color"] == ".*":
+                                    edge = g.get_edge_data(g2_to_g1[u], g2_to_g1[v])[
+                                        "color"
+                                    ]
+                                    nodes.append(edge)
+                            for u, v, attrs in patt2.edges(data=True):
                                 if attrs["color"] == ".*":
                                     edge = g.get_edge_data(g2_to_g1[u], g2_to_g1[v])[
                                         "color"
