@@ -20,7 +20,7 @@ def nostdout():
 #--results : The location of the model output file in eraser format
 #--score_file : The file name and location to write the output
 
-def call_eraser(datadir, testtrainorval, pathtopredictions, silent=False):
+def call_eraser(neutralclassname, datadir, testtrainorval, pathtopredictions, silent=False):
 	import sys, os
 	pkgpath = os.getcwd()+"\\eraserbenchmark"
 	print(pkgpath)
@@ -30,7 +30,7 @@ def call_eraser(datadir, testtrainorval, pathtopredictions, silent=False):
 		logger = logging.getLogger()
 		logger.disabled = True
 	#dir(rationale_benchmark.metrics)
-	eraser.runEvaluation("None", # neutralclassname
+	eraser.runEvaluation(neutralclassname, # neutralclassname
 						data_dir=datadir, # data dir
 						split=testtrainorval, # split
 						results=pathtopredictions, # results 
@@ -68,21 +68,24 @@ def print_eraser_results(datadir):
 	import json
 	with open(datadir+'/eraser_output.json') as fp:
 		output_data = json.load(fp)
-
-	print('\nPlausibility')
+		
+	print("\n------------------------")
+	
+	print('Plausibility')
 	if 'iou_scores' in output_data:
-		print('IOU F1 :', output_data['iou_scores'][0]['macro']['f1'])
-		print('Token F1 :', output_data['token_prf']['instance_macro']['f1'])
+		print('IOU F1 :', round(output_data['iou_scores'][0]['macro']['f1'], 3))
+		print('Token F1 :', round(output_data['token_prf']['instance_macro']['f1'], 3))
 	
 	if 'token_soft_metrics' in output_data:
-		print('AUPRC :', output_data['token_soft_metrics']['auprc'])
+		print('AUPRC :', round(output_data['token_soft_metrics']['auprc'], 3))
 
 	print('\nFaithfulness')
 	if 'classification_scores' in output_data:
-		print('Comprehensiveness :', output_data['classification_scores']['comprehensiveness'])
-		print('Sufficiency :', output_data['classification_scores']['sufficiency'])
+		print('Comprehensiveness :', round(output_data['classification_scores']['comprehensiveness'], 3))
+		print('Sufficiency :', round(output_data['classification_scores']['sufficiency'], 3))
 	else:
 		print('--')
+	print("")
 		
 if __name__ == "__main__":
-	call_eraser("./hatexplain", "val", "./hatexplain/val_prediction.jsonl")
+	call_eraser("None", "./hatexplain", "val", "./hatexplain/val_prediction.jsonl")

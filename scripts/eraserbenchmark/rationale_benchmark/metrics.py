@@ -278,14 +278,15 @@ def compute_aopc_scores(instances: List[dict], aopc_thresholds: List[float]):
     aopc_sufficiency_score, aopc_sufficiency_points = _instances_aopc(instances, aopc_thresholds, 'sufficiency_classification_scores')
     return aopc_thresholds, aopc_comprehensiveness_score, aopc_comprehensiveness_points, aopc_sufficiency_score, aopc_sufficiency_points
 
-def score_classifications(instances: List[dict], annotations: List[Annotation], docs: Dict[str, List[str]], aopc_thresholds: List[float]) -> Dict[str, float]:
+def score_classifications(neutralclassname: str, instances: List[dict], annotations: List[Annotation], docs: Dict[str, List[str]], aopc_thresholds: List[float]) -> Dict[str, float]:
     def compute_kl(cls_scores_, faith_scores_):
         keys = list(cls_scores_.keys())
         cls_scores_ = [cls_scores_[k] for k in keys]
         faith_scores_ = [faith_scores_[k] for k in keys]
         return entropy(faith_scores_, cls_scores_)
     labels = list(set(x.classification for x in annotations))
-    labels +=['None']
+    if(neutralclassname):
+        labels +=[neutralclassname]
     #print("UIUIUIIU")
     label_to_int = {l:i for i,l in enumerate(labels)}
     key_to_instances = {inst['annotation_id']:inst for inst in instances}
@@ -665,7 +666,7 @@ def main():
 
     if has_final_predictions:
         flattened_documents = load_flattened_documents(args.data_dir, docids)
-        class_results = score_classifications(results, annotations, flattened_documents, args.aopc_thresholds)
+        class_results = score_classifications(None, results, annotations, flattened_documents, args.aopc_thresholds)
         scores['classification_scores'] = class_results
     else:
         logging.info("No classification scores detected, skipping classification")
@@ -679,7 +680,7 @@ def main():
             json.dump(scores, of, indent=4, sort_keys=True)
 
 ### COPY TO RUN FROM PYTHON FILE
-def runEvaluation(data_dir, split, results, score_file, strict=False, iou_thresholds=[0.5], aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]):
+def runEvaluation(neutralclassname, data_dir, split, results, score_file, strict=False, iou_thresholds=[0.5], aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]):
     #print(results)   
     args = type("args", (object, ), {
     # data members
@@ -743,7 +744,7 @@ def runEvaluation(data_dir, split, results, score_file, strict=False, iou_thresh
 
     if has_final_predictions:
         flattened_documents = load_flattened_documents(args.data_dir, docids)
-        class_results = score_classifications(results, annotations, flattened_documents, args.aopc_thresholds)
+        class_results = score_classifications(neutralclassname, results, annotations, flattened_documents, args.aopc_thresholds)
         scores['classification_scores'] = class_results
     else:
         logging.info("No classification scores detected, skipping classification")

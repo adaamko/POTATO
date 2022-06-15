@@ -31,7 +31,7 @@ def rationale_to_explanations(text, rationale_list):
 	if(not isinstance(rationale_list, list)):
 		#rationale_list = [rationale_list]
 		print(rationale_list, " is not a list")
-	for i, word in enumerate(text.split()):
+	for i, word in enumerate(text.replace(",", "").split()):
 		if word in rationale_list:
 			explanations.append(1)
 		else:
@@ -51,6 +51,8 @@ def get_evidence(post_id, text, rationale_list):
     output = []
     #explanations = [1,1,0,0,1,1]
     explanations = rationale_to_explanations(text, rationale_list)
+    #print(rationale_list)
+    #print("for text " + text + ":= " + str(explanations))
     anno_text = text.split()
     indexes = sorted([i for i, each in enumerate(explanations) if each==1])
     span_list = list(find_ranges(indexes))
@@ -108,7 +110,6 @@ def data_tsv_to_eraser(tsvfile):
 		if(row[1] == "None"): # cut out GT None
 			id = id+1 # do not forget that
 			continue # rip None labels ;(
-		
 		entry = {}
 		#print(row[2])
 		id_string = "tsv_line_"+str(id)+".txt"
@@ -122,7 +123,6 @@ def data_tsv_to_eraser(tsvfile):
 		entry['query'] = "What is the class?"
 		entry['query_type'] = None
 		data_set.append(entry)
-		
 		#if(id == 350):
 		if(False):
 			print(row[0], row[3])
@@ -150,34 +150,50 @@ def get_rationales(datatsvfile, subgraphs):
 	# 2	label_id
 	# 3	rationale
 	# 4	graph
-
+	rationals = []
 	# same id as data_tsv to get docs/ filenames right
 	id = 2
 	skip_first = False
 	for row in read_tsv:
+		#print(id)
+		
 		if(skip_first == False):
 			skip_first = True
 			continue
-
-		subgraphlist = subgraphs[id-2]
 		
-		if(row[1] == "None"): # cut out GT "None"
-			id = id+1 # do not forget that
-			continue # rip None labels ;(
-			
+		subgraphlist = subgraphs[id-2]
 		predicted_rationales = []
 		if(subgraphlist): #check if a rule matched (else predicted rationales are empty list)
-			for subgraph in subgraphlist[0]:
-				#predicted_rationales.append(penman_to_nodenames(subgraph[0][0])[0]) # get a list
-				predicted_rationales.append(penman_to_nodenames(graph_to_pn(subgraph))[0]) # get a list
-				
+			for subgraph in subgraphlist:
+				#print(subgraph[0])
+				#print(graph_to_pn(subgraph[0]))
+				graph = subgraph[0]
+				words = [graph.nodes[node]["name"] for node in graph.nodes()]
+				#print(words)
+				predicted_rationales = predicted_rationales + words
+				#predicted_rationales.append(penman_to_nodenames(graph_to_pn(subgraph[0]))[0]) # get a list
+
+		rationals.append(predicted_rationales)
+
+		id = id+1
+	return rationals
+	
+# take first label
+def conclude_label_from_labellist(neutralclassname, labellist):
+	label = ""
+	if(labellist):
+		label = labellist[0] # first label
+	if(not label):
+		label = "None" # might be a problem with porting
+	return label
+	
 # datatsvfile: the tsv file
 # subgraphs: the graphs
 # labels: m(xi)j
 # labelswithoutr: m(xi\ri)j
 # labelsonlyr: m(ri)j
 # target: the target class
-def prediction_to_eraser(datatsvfile, subgraphs, labels, labelswithoutr, labelsonlyr, target):
+def prediction_to_eraser(datatsvfile, rationals, labels, labelswithoutr, labelsonlyr, target):
 	train_tsv = open(datatsvfile, encoding="utf8")
 	read_tsv = csv.reader(train_tsv, delimiter="\t")
 	newname = datatsvfile.replace(".tsv", "")
@@ -197,27 +213,20 @@ def prediction_to_eraser(datatsvfile, subgraphs, labels, labelswithoutr, labelso
 			skip_first = True
 			continue
 
-		subgraphlist = subgraphs[id-2]
-		labellist = labels[id-2]
-		labelwithoutr = labelswithoutr[id-2]
-		labelonlyr = labelsonlyr[id-2]
+		rationallist = rationals[id-2]
+		#print(rationallist)
+		curlabel = labels[id-2]
+		curlabelwithoutr = labelswithoutr[id-2]
+		curlabelonlyr = labelsonlyr[id-2]
 		
 		if(row[1] == "None"): # cut out GT "None"
 			id = id+1 # do not forget that
 			continue # rip None labels ;(
 		
-		label = ""
-		if(labellist):
-			label = labellist[0] # first label
-		if(not label):
-			label = "None" # might be a problem with porting
+		label = conclude_label_from_labellist("None", curlabel)
+		labelwithoutr = conclude_label_from_labellist("None", curlabelwithoutr)
+		labelonlyr = conclude_label_from_labellist("None", curlabelonlyr)
 			
-		predicted_rationales = []
-		if(subgraphlist): #check if a rule matched (else predicted rationales are empty list)
-			for subgraph in subgraphlist[0]:
-				#predicted_rationales.append(penman_to_nodenames(subgraph[0][0])[0]) # get a list
-				predicted_rationales.append(penman_to_nodenames(graph_to_pn(subgraph))[0]) # get a list
-		print(predicted_rationales)
 		entry = {}
 		#print(row[2])
 		id_string = "tsv_line_"+str(id)+".txt"
@@ -238,6 +247,8 @@ def prediction_to_eraser(datatsvfile, subgraphs, labels, labelswithoutr, labelso
 		m_ri = 0
 		if(target == labelonlyr):
 			m_ri = 1
+		
+		#print("m_xi = " + str(m_xi) + " m_xi_minus_ri = " + str(m_xi_minus_ri) + " m_ri = " + str(m_ri))
 			
 		# normal classification: P(target) = m(xi)j
 		ptarget = m_xi
@@ -247,24 +258,29 @@ def prediction_to_eraser(datatsvfile, subgraphs, labels, labelswithoutr, labelso
 		}
 		entry['classification_scores'] = classification_scores_dict
 		# comprehensiveness = m(xi)j - m(xi\ri)j
-		pcomprehensiveness = m_xi - m_xi_minus_ri
+		#pcomprehensiveness = m_xi - m_xi_minus_ri
+		pcomprehensiveness = m_xi_minus_ri
 		comprehensiveness_classification_scores_dict = {
 			target: pcomprehensiveness,
 			"None": 1-pcomprehensiveness
 		}
 		entry['comprehensiveness_classification_scores'] = comprehensiveness_classification_scores_dict
 		# sufficiency = m(xi)j - m(ri)j
-		psufficiency = m_xi - m_ri
+		#psufficiency = m_xi - m_ri
+		psufficiency = m_ri
 		sufficiency_classification_scores_dict = {
 			target: psufficiency,
 			"None": 1-psufficiency
 		}
 		entry['sufficiency_classification_scores'] = sufficiency_classification_scores_dict
 
+		#print("pcomprehensiveness = " + str(pcomprehensiveness))
+		#print("psufficiency = " + str(psufficiency))
+
 		entry['docids'] = 'null'
 		rationales_dict = {
 		  "docid": id_string,
-		  "hard_rationale_predictions": get_evidence(id_string, row[0], predicted_rationales)
+		  "hard_rationale_predictions": get_evidence(id_string, row[0], rationallist)
 		}
 		entry['rationales'] = [rationales_dict]
 		entry['query'] = "What is the class?"
