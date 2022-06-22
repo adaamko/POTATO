@@ -275,7 +275,10 @@ class FeatureEvaluator:
         graph_matcher = GraphFormulaPatternMatcher([[[feature], [], []]], default_pn_to_graph, case_sensitive=self.case_sensitive)
         feat_patt = graph_matcher.patts[0][0]
         if isinstance(feat_patt[0], tuple):
-            patt1, patt2 = feat_patt[0][1]
+            if len(feat_patt[0][1]) == 2:
+                patt1, patt2 = feat_patt[0][1]
+            else:
+                _, patt1, patt2 = feat_patt[0][1]
         else:
             patt1, patt2 = feat_patt[0], None
 
