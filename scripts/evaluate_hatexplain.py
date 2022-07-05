@@ -99,11 +99,12 @@ def evaluate(feature_file: str, files: List[str], target: str):
         stats = evaluator.evaluate_feature(target, features[target], df)[0]
 
         matched_result = evaluator.match_features(df, features[target], multi=True, return_subgraphs=True, allow_multi_graph=True)
-        matched_result.to_csv('temp_matched_result.tsv', sep="\t")
         subgraphs = matched_result["Matched subgraph"]
         labels = matched_result["Predicted label"]
         rationale_as_text_list = get_rationales(file, subgraphs)
-
+        matched_result["Predicted rational"] = rationale_as_text_list
+        matched_result.to_csv('temp_matched_result.tsv', sep="\t")
+        
         df_without_rationales = df.copy()
         for i in range(df_without_rationales['text'].size):
             df_without_rationales['text'][i] = remove_rationals(df_without_rationales['text'][i], rationale_as_text_list[i])
@@ -126,15 +127,12 @@ def evaluate(feature_file: str, files: List[str], target: str):
         matched_result = evaluator.match_features(df_only_rationales, features[target], multi=True, return_subgraphs=True, allow_multi_graph=True)
         labels_only_rationales = matched_result["Predicted label"]
 
-        #print(labels)
-        #print(labels_without_rationales)
-        #print(labels_only_rationales)
-
         data_tsv_to_eraser(file)
         prediction_to_eraser(file, rationale_as_text_list, labels, labels_without_rationales, labels_only_rationales, target)
         call_eraser("None", "./hatexplain", "val", "./hatexplain/val_prediction.jsonl")
         print("------------------------")
         print_classification_report(df, stats)
+        
         print("------------------------")
 
 if __name__ == "__main__":
