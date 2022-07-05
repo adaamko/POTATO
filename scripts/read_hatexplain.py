@@ -8,6 +8,7 @@ from ast import literal_eval
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from tuw_nlp.text.preprocess.hatexplain import preprocess_hatexplain
 from xpotato.dataset.explainable_dataset import ExplainableDataset
 from xpotato.models.trainer import GraphTrainer
 from xpotato.dataset.utils import save_dataframe
@@ -21,6 +22,7 @@ def read_json(
         data = json.load(dataset)
         for post in data.values():
             sentence = " ".join(post["post_tokens"])
+            sentence = preprocess_hatexplain(sentence)
             targets = {}
             labels = {}
             for annotation in post["annotators"]:
@@ -53,6 +55,7 @@ def read_json(
                         other_targets = [t for t in targets.keys() if t != target[0]]
                     data_by_target.append(
                         {
+                            "id": post["post_id"],
                             "tokens": post["post_tokens"],
                             "sentence": sentence,
                             "rationale": rationale,
@@ -90,49 +93,62 @@ def process(
     data_path: str,
     target: str,
     just_none: bool,
+    split_file: str,
     use_secondary: bool = False,
     create_features: bool = False,
 ) -> None:
     df = pd.read_csv(os.path.join(data_path, "dataset.tsv"), sep="\t")
-    main_group = df[df.label == target.capitalize()]
-    main_others = (
-        df[df.label != target.capitalize()] if not just_none else df[df.label == "None"]
-    )
-    main_sentences = get_sentences(main_group, main_others, target)
+    split_ids = json.load(open(split_file))
+    train_df = df[df.id.isin(split_ids["train"])]
+    val_df = df[df.id.isin(split_ids["val"])]
+    test_df = df[df.id.isin(split_ids["test"])]
+    feature_trainer_df = None
 
-    main_potato_dataset = ExplainableDataset(
-        main_sentences, label_vocab={"None": 0, f"{target.capitalize()}": 1}, lang="en"
-    )
-    graphs = main_potato_dataset.parse_graphs(graph_format="ud")
-    main_potato_dataset.set_graphs(graphs)
-    main_df = main_potato_dataset.to_dataframe()
-    main_train, main_val = train_test_split(main_df, test_size=0.2, random_state=1234)
-    save_dataframe(main_train, os.path.join(data_path, "train.tsv"))
-    save_dataframe(main_val, os.path.join(data_path, "val.tsv"))
+    for dataframe, name in zip((train_df, val_df, test_df), ("train", "val", "test")):
+        main_group = dataframe[dataframe.label == target.capitalize()]
+        main_others = (
+            dataframe[dataframe.label != target.capitalize()]
+            if not just_none
+            else dataframe[dataframe.label == "None"]
+        )
+        main_sentences = get_sentences(main_group, main_others, target)
 
-    if use_secondary:
-        secondary_group = df[
-            (df.secondary_labels.str.contains(target.capitalize()))
-            | (df.label == target.capitalize())
-        ]
-        secondary_other = df.loc[
-            set(df.index.tolist()).difference(secondary_group.index.tolist())
-        ]
-        secondary_sentences = get_sentences(secondary_group, secondary_other, target)
-        secondary_potato_dataset = ExplainableDataset(
-            secondary_sentences,
+        main_potato_dataset = ExplainableDataset(
+            main_sentences,
             label_vocab={"None": 0, f"{target.capitalize()}": 1},
             lang="en",
         )
-        secondary_potato_dataset.set_graphs(graphs)
-        secondary_df = secondary_potato_dataset.to_dataframe()
-        secondary_train, secondary_val = train_test_split(
-            secondary_df, test_size=0.2, random_state=1234
-        )
-        save_dataframe(secondary_train, os.path.join(data_path, "secondary_train.tsv"))
-        save_dataframe(secondary_val, os.path.join(data_path, "secondary_val.tsv"))
+        graphs = main_potato_dataset.parse_graphs(graph_format="ud")
+        main_potato_dataset.set_graphs(graphs)
+        main_df = main_potato_dataset.to_dataframe()
+        save_dataframe(main_df, os.path.join(data_path, f"{name}.tsv"))
+
+        if use_secondary:
+            secondary_group = dataframe[
+                (dataframe.secondary_labels.str.contains(target.capitalize()))
+                | (dataframe.label == target.capitalize())
+            ]
+            secondary_other = dataframe.loc[
+                set(dataframe.index.tolist()).difference(secondary_group.index.tolist())
+            ]
+            secondary_sentences = get_sentences(
+                secondary_group, secondary_other, target
+            )
+            secondary_potato_dataset = ExplainableDataset(
+                secondary_sentences,
+                label_vocab={"None": 0, f"{target.capitalize()}": 1},
+                lang="en",
+            )
+            secondary_potato_dataset.set_graphs(graphs)
+            secondary_df = secondary_potato_dataset.to_dataframe()
+            save_dataframe(
+                secondary_df, os.path.join(data_path, f"secondary_{name}.tsv")
+            )
+        if feature_trainer_df is None:
+            feature_trainer_df = main_df
+
     if create_features:
-        trainer = GraphTrainer(main_df)
+        trainer = GraphTrainer(feature_trainer_df)
         features = trainer.prepare_and_train()
 
         with open(os.path.join(data_path, "features.json"), "w+") as f:
@@ -163,6 +179,7 @@ if __name__ == "__main__":
     argparser.add_argument(
         "--data_path", "-d", help="Path to the json dataset.", required=True
     )
+    argparser.add_argument("--split_path", "-s", help="Path of the official split.")
     argparser.add_argument(
         "--mode",
         "-m",
@@ -215,6 +232,13 @@ if __name__ == "__main__":
             if os.path.isfile(args.data_path)
             else os.path.join(args.data_path, "dataset.json")
         )
+        if args.split_path is None:
+            args.split_path = args.data_path
+        split = (
+            args.split_path
+            if os.path.isfile(args.split_path)
+            else os.path.join(args.split_path, "post_id_divisions.json")
+        )
         if not os.path.isfile(dataset):
             raise ArgumentError(None,
                 "The specified data path is not a file and does not contain a dataset.json file. "
@@ -230,6 +254,7 @@ if __name__ == "__main__":
                 data_path=dir_path,
                 target=args.target,
                 just_none=args.just_none,
+                split_file=split,
                 use_secondary=args.min_target != 2,
                 create_features=args.create_features,
             )
@@ -240,10 +265,18 @@ if __name__ == "__main__":
             if os.path.isfile(args.data_path)
             else args.data_path
         )
+        if args.split_path is None:
+            args.split_path = dir_path
+        split = (
+            args.split_path
+            if os.path.isfile(args.split_path)
+            else os.path.join(args.split_path, "post_id_divisions.json")
+        )
         process(
             data_path=dir_path,
             target=args.target,
             just_none=args.just_none,
+            split_file=split,
             use_secondary=args.min_target != 2,
             create_features=args.create_features,
         )
