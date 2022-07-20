@@ -2,14 +2,19 @@ from typing import List, Dict
 import json
 import numpy as np
 from pandas import DataFrame
+import pandas
 import logging
 from argparse import ArgumentParser, ArgumentError
 from sklearn.metrics import classification_report
 from xpotato.graph_extractor.extract import FeatureEvaluator
 from xpotato.dataset.explainable_dataset import ExplainableDataset
+from xpotato.dataset.utils import save_dataframe
 
+from hatexplain_to_eraser import data_tsv_to_eraser, prediction_to_eraser, get_rationales
+from call_eraser import call_eraser
 
 def print_classification_report(df: DataFrame, stats: Dict[str, List]):
+    #print([(n > 0) * 1 for n in np.sum([p for p in stats["Predicted"]], axis=0)])
     print(
         classification_report(
             df.label_id,
@@ -66,6 +71,19 @@ def find_good_features(
         valid_files = []
     evaluate(feature_file=save_features, files=train_files + valid_files, target=target)
 
+def remove_rationals(x, rationals):
+    text = x
+    for rational in rationals:
+        text = text.replace(rational, "")
+    return text
+
+def concat_rationals(rationals):
+    if(not rationals):
+        return "UNK"
+    text = ""
+    for rational in rationals:
+        text = text + rational + " "
+    return text
 
 def evaluate(feature_file: str, files: List[str], target: str):
     with open(feature_file) as feature_json:
@@ -73,15 +91,53 @@ def evaluate(feature_file: str, files: List[str], target: str):
     evaluator = FeatureEvaluator()
     if target is None:
         target = list(features.keys())[0]
-
+    
     for file in files:
-        print(f"File: {file}")
+        #print(f"File: {file}")
         potato = ExplainableDataset(path=file, label_vocab={"None": 0, target: 1})
         df = potato.to_dataframe()
         stats = evaluator.evaluate_feature(target, features[target], df)[0]
-        print_classification_report(df, stats)
-        print("------------------------")
 
+        # get labels and predicted rationals from matched_results
+        matched_result = evaluator.match_features(df, features[target], multi=True, return_subgraphs=True, allow_multi_graph=True)
+        subgraphs = matched_result["Matched subgraph"]
+        labels = matched_result["Predicted label"]
+        rationale_as_text_list = get_rationales(file, subgraphs)
+        matched_result["Predicted rational"] = rationale_as_text_list
+        matched_result.to_csv('temp_matched_result.tsv', sep="\t")
+        
+        # get labels by removing the predicted rationals
+        df_without_rationales = df.copy()
+        for i in range(df_without_rationales['text'].size):
+            df_without_rationales['text'][i] = remove_rationals(df_without_rationales['text'][i], rationale_as_text_list[i])
+        save_dataframe(df_without_rationales, 'temp_df_without_rationales.tsv')
+        potato_without_rationales = ExplainableDataset(path='temp_df_without_rationales.tsv', label_vocab={"None": 0, target: 1})
+        potato_without_rationales.set_graphs(potato_without_rationales.parse_graphs(graph_format="ud"))
+        df_without_rationales = potato_without_rationales.to_dataframe()
+        save_dataframe(df_without_rationales, 'temp_df_without_rationales.tsv') # to view graphs
+        matched_result = evaluator.match_features(df_without_rationales, features[target], multi=True, return_subgraphs=True, allow_multi_graph=True)
+        labels_without_rationales = matched_result["Predicted label"]
+
+        # get labels with only the rationals
+        df_only_rationales = df.copy()
+        for i in range(df_only_rationales['text'].size):
+            df_only_rationales['text'][i] = concat_rationals(rationale_as_text_list[i])
+        save_dataframe(df_only_rationales, 'temp_df_only_rationales.tsv')
+        potato_only_rationales = ExplainableDataset(path='temp_df_only_rationales.tsv', label_vocab={"None": 0, target: 1})
+        potato_only_rationales.set_graphs(potato_only_rationales.parse_graphs(graph_format="ud"))
+        df_only_rationales = potato_only_rationales.to_dataframe()
+        save_dataframe(df_only_rationales, 'temp_df_only_rationales.tsv') # to view graphs
+        matched_result = evaluator.match_features(df_only_rationales, features[target], multi=True, return_subgraphs=True, allow_multi_graph=True)
+        labels_only_rationales = matched_result["Predicted label"]
+
+        # convert the data to eraser format and run eraser
+        data_tsv_to_eraser(file)
+        prediction_to_eraser(file, rationale_as_text_list, labels, labels_without_rationales, labels_only_rationales, target)
+        call_eraser("None", "./hatexplain", "val", "./hatexplain/val_prediction.jsonl")
+        print("------------------------")
+        print_classification_report(df, stats)
+        
+        print("------------------------")
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
