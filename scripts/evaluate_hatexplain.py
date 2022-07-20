@@ -98,6 +98,7 @@ def evaluate(feature_file: str, files: List[str], target: str):
         df = potato.to_dataframe()
         stats = evaluator.evaluate_feature(target, features[target], df)[0]
 
+        # get labels and predicted rationals from matched_results
         matched_result = evaluator.match_features(df, features[target], multi=True, return_subgraphs=True, allow_multi_graph=True)
         subgraphs = matched_result["Matched subgraph"]
         labels = matched_result["Predicted label"]
@@ -105,6 +106,7 @@ def evaluate(feature_file: str, files: List[str], target: str):
         matched_result["Predicted rational"] = rationale_as_text_list
         matched_result.to_csv('temp_matched_result.tsv', sep="\t")
         
+        # get labels by removing the predicted rationals
         df_without_rationales = df.copy()
         for i in range(df_without_rationales['text'].size):
             df_without_rationales['text'][i] = remove_rationals(df_without_rationales['text'][i], rationale_as_text_list[i])
@@ -116,6 +118,7 @@ def evaluate(feature_file: str, files: List[str], target: str):
         matched_result = evaluator.match_features(df_without_rationales, features[target], multi=True, return_subgraphs=True, allow_multi_graph=True)
         labels_without_rationales = matched_result["Predicted label"]
 
+        # get labels with only the rationals
         df_only_rationales = df.copy()
         for i in range(df_only_rationales['text'].size):
             df_only_rationales['text'][i] = concat_rationals(rationale_as_text_list[i])
@@ -127,6 +130,7 @@ def evaluate(feature_file: str, files: List[str], target: str):
         matched_result = evaluator.match_features(df_only_rationales, features[target], multi=True, return_subgraphs=True, allow_multi_graph=True)
         labels_only_rationales = matched_result["Predicted label"]
 
+        # convert the data to eraser format and run eraser
         data_tsv_to_eraser(file)
         prediction_to_eraser(file, rationale_as_text_list, labels, labels_without_rationales, labels_only_rationales, target)
         call_eraser("None", "./hatexplain", "val", "./hatexplain/val_prediction.jsonl")
