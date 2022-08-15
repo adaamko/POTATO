@@ -69,6 +69,7 @@ class ExplainableDataset(Dataset):
                 ],
                 "rationale": [sample.rationale for sample in self._dataset],
                 "rationale_id": [sample.rationale_id for sample in self._dataset],
+                "rationale_lemma": [sample.rationale_lemma for sample in self._dataset],
                 "graph": [
                     str(sample.potato_graph).replace("\n", " ")
                     if as_penman

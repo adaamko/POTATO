@@ -124,6 +124,18 @@ def get_sentences(
                 )
                 if rat == 1
             ],
+            []
+            if target.capitalize() not in literal_eval(example.rationales)
+            else [
+                tok["name"]
+                for rat, tok in zip(
+                    literal_eval(example.rationales)[target.capitalize()],
+                    # LT and GT appear only around user or censored as well as an emoji,
+                    # but that will not influence this negatively
+                    sorted([node for node in literal_eval(example.graph)["nodes"] if node["name"] not in ["LT", "GT"]], key=lambda x: x["id"])[1:],
+                )
+                if rat == 1
+            ],
             PotatoGraph(graph=json_graph.adjacency_graph(literal_eval(example.graph))),
         )
         for (index, example) in group.iterrows()
@@ -133,6 +145,7 @@ def get_sentences(
             index: (
                 example.sentence,
                 "None",
+                [],
                 [],
                 [],
                 PotatoGraph(
