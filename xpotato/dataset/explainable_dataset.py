@@ -47,7 +47,8 @@ class ExplainableDataset(Dataset):
                 df = pd.read_csv(path, sep="\t")
             samples = [
                 ExplainableSample(
-                    (example["text"], example["label"], example["rationale"]),
+                    (example["text"], example["label"], example["rationale"], 
+                    example["rationale_id"], example["rationale_lemma"]),
                     potato_graph=PotatoGraph(graph_str=example["graph"]),
                     label_id=example["label_id"],
                 )

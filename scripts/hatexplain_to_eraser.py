@@ -119,15 +119,15 @@ def data_tsv_to_eraser(tsvfile):
 		entry['annotation_id'] = id_string
 		entry['classification'] = row[1]
 		entry['docids'] = 'null'
-		entry['evidences'] = [get_evidence(id_string, row[0], line_to_list(row[3]))]
+		entry['evidences'] = [get_evidence(id_string, row[0], line_to_list(row[5]))]
 		entry['query'] = "What is the class?"
 		entry['query_type'] = None
 		data_set.append(entry)
 		#if(id == 350):
 		if(False):
-			print(row[0], row[3])
-			print(rationale_to_explanations(row[0], line_to_list(row[3])))
-			print(get_evidence(id_string, row[0], line_to_list(row[3])))
+			print(row[0], row[5])
+			print(rationale_to_explanations(row[0], line_to_list(row[5])))
+			print(get_evidence(id_string, row[0], line_to_list(row[5])))
 		
 		write_eraser.write(json.dumps(entry)+'\n')
 		id = id+1

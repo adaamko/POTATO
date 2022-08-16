@@ -184,7 +184,7 @@ if __name__ == "__main__":
 		print("GT: " + bcolors.OKBLUE+str(row2["label"])+bcolors.ENDC + " vs Prediction: "+bcolors.OKBLUE+str(row["Predicted label"])+bcolors.ENDC+" (it's "+get_confusion_class(num, frame, frame_without_rationales)+")")
 		print("Matched rule: "+ str(row["Matched rule"]))
 		print("Rationals:")
-		print("GT: " + bcolors.OKBLUE+row2["rationale"]+bcolors.ENDC + " vs Prediction: "+bcolors.OKBLUE+row["Predicted rational"]+bcolors.ENDC)
+		print("GT: " + bcolors.OKBLUE+row2["rationale_lemma"]+bcolors.ENDC + " vs Prediction: "+bcolors.OKBLUE+row["Predicted rational"]+bcolors.ENDC)
 		print("------------------------")
 		#print(num)
 		
