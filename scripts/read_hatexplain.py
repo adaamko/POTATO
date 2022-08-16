@@ -2,20 +2,23 @@ import json
 import os
 import numpy as np
 import logging
+from collections import defaultdict
 from typing import List, Dict, Tuple
 from argparse import ArgumentParser, ArgumentError
 from ast import literal_eval
 
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from networkx.readwrite import json_graph
 from tuw_nlp.text.preprocess.hatexplain import preprocess_hatexplain
 from xpotato.dataset.explainable_dataset import ExplainableDataset
+from xpotato.graph_extractor.extract import GraphExtractor
+from xpotato.graph_extractor.graph import PotatoGraph
 from xpotato.models.trainer import GraphTrainer
 from xpotato.dataset.utils import save_dataframe
 
 
 def read_json(
-    file_path: str, min_token_count: int = 2
+    file_path: str, parse_graphs: bool = True
 ) -> List[Dict[str, List[Dict[str, List[str]]]]]:
     data_by_target = []
     with open(file_path) as dataset:
@@ -25,6 +28,8 @@ def read_json(
             sentence = preprocess_hatexplain(sentence)
             targets = {}
             labels = {}
+            pure = False
+            one_majority = False
             for annotation in post["annotators"]:
                 if annotation["label"] not in labels:
                     labels[annotation["label"]] = 1
@@ -35,34 +40,61 @@ def read_json(
                         targets[target_i] = 1
                     else:
                         targets[target_i] += 1
+            # Pure is if it targets only one (or none) groups
+            if len(targets) == 1 or (len(targets) == 2 and "None" in targets):
+                pure = True
+            # One majority is if the majority vote would just be one target
+            if len([l for l in targets.values() if l > 1]) == 1:
+                one_majority = True
+
+            # We don't care about the instances, where each annotator said something different label-wise
             if len(labels) != len(post["annotators"]):
-                label = max(labels.items(), key=lambda x: x[1])[0]
-                if label == "normal":
-                    target = ["None"]
-                else:
-                    target = [t[0] for t in targets.items() if t[1] > 1]
-                rationale = []
+                majority_targets = [t for (t, c) in targets.items() if c >= 2]
+                minority_targets = [t for (t, c) in targets.items() if c < 2]
+                rationale = defaultdict(list)
+                # Get the rationales in an organized manner
                 if len(post["rationales"]) > 0:
-                    rats = [
-                        n
-                        for n in post["rationales"]
-                        if len(n) == len(post["post_tokens"])
+                    not_none_annotators = [
+                        a["target"]
+                        for a in post["annotators"]
+                        if a["label"] != "normal"
                     ]
-                    rationale = np.round(np.mean(rats, axis=0), decimals=0).tolist()
-                if len(target) == 1:
-                    other_targets = []
-                    if min_token_count < 2:
-                        other_targets = [t for t in targets.keys() if t != target[0]]
-                    data_by_target.append(
-                        {
-                            "id": post["post_id"],
-                            "tokens": post["post_tokens"],
-                            "sentence": sentence,
-                            "rationale": rationale,
-                            "label": target[0],
-                            "secondary_labels": other_targets,
-                        }
-                    )
+                    for annotator, rationales in zip(
+                        not_none_annotators, post["rationales"]
+                    ):
+                        major_intersection = list(
+                            set(annotator).intersection(majority_targets)
+                        )
+                        minor_intersection = list(
+                            set(annotator).intersection(minority_targets)
+                        )
+                        for mi in major_intersection + minor_intersection:
+                            rationale[mi].append(rationales)
+                    rationale = {
+                        key: np.round(np.mean(value, axis=0), decimals=0).tolist()
+                        for (key, value) in rationale.items()
+                    }
+                data_by_target.append(
+                    {
+                        "id": post["post_id"],
+                        "tokens": post["post_tokens"],
+                        "sentence": sentence,
+                        "pure": pure,
+                        "one_majority": one_majority,
+                        "rationales": dict(rationale),
+                        "majority_labels": majority_targets,
+                        "minority_labels": minority_targets,
+                    }
+                )
+    if parse_graphs:
+        extractor = GraphExtractor(lang="en")
+        graphs = list(
+            extractor.parse_iterable(
+                [data_point["sentence"] for data_point in data_by_target], "ud"
+            )
+        )
+        for graph, data_point in zip(graphs, data_by_target):
+            data_point["graph"] = json_graph.adjacency_data(graph)
     return data_by_target
 
 
@@ -73,31 +105,82 @@ def get_sentences(
         index: (
             example.sentence,
             target.capitalize(),
-            [
-                tokens
-                for (rationale, tokens) in zip(
-                    literal_eval(example.rationale), literal_eval(example.tokens)
+            []
+            if target.capitalize() not in literal_eval(example.rationales)
+            else [
+                tok
+                for rat, tok in zip(
+                    literal_eval(example.rationales)[target.capitalize()],
+                    literal_eval(example.tokens),
                 )
-                if rationale == 1
+                if rat == 1
             ],
+            []
+            if target.capitalize() not in literal_eval(example.rationales)
+            else [
+                index
+                for index, rat in enumerate(
+                    literal_eval(example.rationales)[target.capitalize()]
+                )
+                if rat == 1
+            ],
+            []
+            if target.capitalize() not in literal_eval(example.rationales)
+            else [
+                tok["name"]
+                for rat, tok in zip(
+                    literal_eval(example.rationales)[target.capitalize()],
+                    # LT and GT appear only around user or censored as well as an emoji,
+                    # but that will not influence this negatively
+                    sorted([node for node in literal_eval(example.graph)["nodes"] if node["name"] not in ["LT", "GT"]], key=lambda x: x["id"])[1:],
+                )
+                if rat == 1
+            ],
+            PotatoGraph(graph=json_graph.adjacency_graph(literal_eval(example.graph))),
         )
-        for index, example in group.iterrows()
+        for (index, example) in group.iterrows()
     }
     sentences.update(
-        {index: (example.sentence, "None", []) for index, example in other.iterrows()}
+        {
+            index: (
+                example.sentence,
+                "None",
+                [],
+                [],
+                [],
+                PotatoGraph(
+                    graph=json_graph.adjacency_graph(literal_eval(example.graph))
+                ),
+            )
+            for index, example in other.iterrows()
+        }
     )
     return [s[1] for s in sorted(sentences.items())]
+
+
+def convert_to_potato(group, other, target):
+    sentences = get_sentences(group, other, target)
+    potato_dataset = ExplainableDataset(
+        sentences,
+        label_vocab={"None": 0, f"{target.capitalize()}": 1},
+        lang="en",
+    )
+    return potato_dataset.to_dataframe()
 
 
 def process(
     data_path: str,
     target: str,
-    just_none: bool,
     split_file: str,
-    use_secondary: bool = False,
     create_features: bool = False,
 ) -> None:
-    df = pd.read_csv(os.path.join(data_path, "dataset.tsv"), sep="\t")
+    df = pd.read_csv(os.path.join(data_path, "dataset_02.tsv"), sep="\t")
+
+    save_path = os.path.join(data_path, target)
+
+    if not os.path.exists(save_path):
+        os.makedirs(save_path)
+
     split_ids = json.load(open(split_file))
     train_df = df[df.id.isin(split_ids["train"])]
     val_df = df[df.id.isin(split_ids["val"])]
@@ -105,47 +188,61 @@ def process(
     feature_trainer_df = None
 
     for dataframe, name in zip((train_df, val_df, test_df), ("train", "val", "test")):
-        main_group = dataframe[dataframe.label == target.capitalize()]
-        main_others = (
-            dataframe[dataframe.label != target.capitalize()]
-            if not just_none
-            else dataframe[dataframe.label == "None"]
-        )
-        main_sentences = get_sentences(main_group, main_others, target)
-
-        main_potato_dataset = ExplainableDataset(
-            main_sentences,
-            label_vocab={"None": 0, f"{target.capitalize()}": 1},
-            lang="en",
-        )
-        graphs = main_potato_dataset.parse_graphs(graph_format="ud")
-        main_potato_dataset.set_graphs(graphs)
-        main_df = main_potato_dataset.to_dataframe()
-        save_dataframe(main_df, os.path.join(data_path, f"{name}.tsv"))
-
-        if use_secondary:
-            secondary_group = dataframe[
-                (dataframe.secondary_labels.str.contains(target.capitalize()))
-                | (dataframe.label == target.capitalize())
+        purity_filters = {
+            "pure": dataframe.pure,
+            "one_majority": dataframe.one_majority,
+            "all": True,
+        }
+        for purity, purity_filter in purity_filters.items():
+            majority_group = dataframe[
+                dataframe.majority_labels.apply(lambda x: target.capitalize() in x)
+                & purity_filter
             ]
-            secondary_other = dataframe.loc[
-                set(dataframe.index.tolist()).difference(secondary_group.index.tolist())
+            majority_others = dataframe[
+                dataframe.majority_labels.apply(lambda x: target.capitalize() not in x)
+                & purity_filter
             ]
-            secondary_sentences = get_sentences(
-                secondary_group, secondary_other, target
-            )
-            secondary_potato_dataset = ExplainableDataset(
-                secondary_sentences,
-                label_vocab={"None": 0, f"{target.capitalize()}": 1},
-                lang="en",
-            )
-            secondary_potato_dataset.set_graphs(graphs)
-            secondary_df = secondary_potato_dataset.to_dataframe()
+            majority_df = convert_to_potato(majority_group, majority_others, target)
             save_dataframe(
-                secondary_df, os.path.join(data_path, f"secondary_{name}.tsv")
+                majority_df, os.path.join(save_path, f"majority_{name}_{purity}.tsv")
+            )
+
+            minority_group = dataframe[
+                (
+                    (
+                        dataframe.minority_labels.apply(
+                            lambda x: target.capitalize() in x
+                        )
+                    )
+                    | (
+                        dataframe.majority_labels.apply(
+                            lambda x: target.capitalize() in x
+                        )
+                    )
+                )
+                & purity_filter
+            ]
+            minority_other = dataframe[
+                (
+                    (
+                        dataframe.minority_labels.apply(
+                            lambda x: target.capitalize() not in x
+                        )
+                    )
+                    & (
+                        dataframe.majority_labels.apply(
+                            lambda x: target.capitalize() not in x
+                        )
+                    )
+                )
+                & purity_filter
+            ]
+            minority_df = convert_to_potato(minority_group, minority_other, target)
+            save_dataframe(
+                minority_df, os.path.join(save_path, f"minority_{name}_{purity}.tsv")
             )
         if feature_trainer_df is None:
-            feature_trainer_df = main_df
+            feature_trainer_df = majority_df
 
     if create_features:
         trainer = GraphTrainer(feature_trainer_df)
@@ -200,19 +297,6 @@ if __name__ == "__main__":
         choices=target_groups,
     )
     argparser.add_argument(
-        "--just_none",
-        "-n",
-        help="Use only the normal texts as counter.",
-        action="store_true",
-    )
-    argparser.add_argument(
-        "--min_target",
-        "-mt",
-        help="The minimum number of annotators finding the text to target a group.",
-        type=int,
-        default=2,
-    )
-    argparser.add_argument(
         "--create_features",
         "-cf",
         help="Whether to create train features based on the POTATO graph.",
@@ -245,17 +329,15 @@ if __name__ == "__main__":
                 "If your file has a different name, please specify."
             )
         dir_path = os.path.dirname(dataset)
-        dt_by_target = read_json(dataset, args.min_target)
+        dt_by_target = read_json(dataset)
         dataf = pd.DataFrame.from_records(dt_by_target)
-        dataf.to_csv(os.path.join(dir_path, "dataset.tsv"), sep="\t")
+        dataf.to_csv(os.path.join(dir_path, "dataset_02.tsv"), sep="\t")
 
         if args.mode == "both":
             process(
                 data_path=dir_path,
                 target=args.target,
-                just_none=args.just_none,
                 split_file=split,
-                use_secondary=args.min_target != 2,
                 create_features=args.create_features,
             )
 
@@ -275,8 +357,6 @@ if __name__ == "__main__":
         process(
             data_path=dir_path,
             target=args.target,
-            just_none=args.just_none,
             split_file=split,
-            use_secondary=args.min_target != 2,
             create_features=args.create_features,
         )
