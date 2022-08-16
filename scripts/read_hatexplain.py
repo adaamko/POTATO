@@ -305,7 +305,7 @@ if __name__ == "__main__":
     args = argparser.parse_args()
 
     if args.mode != "distinct" and args.target is None:
-        raise ArgumentError(
+        raise ArgumentError(None,
             "Target is not given! If you want to produce a POTATO dataset "
             "(by running this code in process or both mode), you should specify the target."
         )
@@ -324,7 +324,7 @@ if __name__ == "__main__":
             else os.path.join(args.split_path, "post_id_divisions.json")
         )
         if not os.path.isfile(dataset):
-            raise ArgumentError(
+            raise ArgumentError(None,
                 "The specified data path is not a file and does not contain a dataset.json file. "
                 "If your file has a different name, please specify."
             )
