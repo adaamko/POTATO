@@ -14,6 +14,8 @@ class ExplainableSample(Sample):
     ) -> None:
         super().__init__(example=example, potato_graph=potato_graph, label_id=label_id)
         self.rationale = example[2]
+        self.rationale_id = example[3]
+        self.potato_graph = example[4]
 
     def _postprocess(self, graph: PotatoGraph) -> PotatoGraph:
         rationale_bool = []
