@@ -74,7 +74,9 @@ def print_eraser_results(datadir):
 	print('Plausibility')
 	if 'iou_scores' in output_data:
 		print('IOU F1 :', round(output_data['iou_scores'][0]['macro']['f1'], 3))
+		print('( P :', round(output_data['iou_scores'][0]['macro']['p'], 3), ', R :', round(output_data['iou_scores'][0]['macro']['r'], 3), ')')
 		print('Token F1 :', round(output_data['token_prf']['instance_macro']['f1'], 3))
+		print('( P :', round(output_data['token_prf']['instance_macro']['p'], 3), ', R :', round(output_data['token_prf']['instance_macro']['r'], 3), ')')
 	
 	if 'token_soft_metrics' in output_data:
 		print('AUPRC :', round(output_data['token_soft_metrics']['auprc'], 3))

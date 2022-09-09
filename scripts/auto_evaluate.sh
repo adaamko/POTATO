@@ -10,6 +10,7 @@ function evaluate() {
 	tsv=".tsv"
 	empty=""
 	foldername=${foldername//$tsv/$empty}
+	foldername="$foldername-rules"
 
 	mkdir $foldername
 	cp $path val.tsv
@@ -21,10 +22,10 @@ function evaluate() {
 	rm val.tsv
 }
 
-#evaluate women/minority_val_all.tsv sexism_rules.json
-#evaluate women/majority_val_all.tsv sexism_rules.json
-#evaluate homosexual/minority_val_all.tsv homophobia_rules.json
-#evaluate homosexual/majority_val_all.tsv homophobia_rules.json
+evaluate women/minority_val_all.tsv sexism_rules.json
+evaluate women/majority_val_all.tsv sexism_rules.json
+evaluate homosexual/minority_val_all.tsv homophobia_rules.json
+evaluate homosexual/majority_val_all.tsv homophobia_rules.json
 
 evaluate women/minority_val_one_majority.tsv sexism_rules.json
 evaluate women/majority_val_one_majority.tsv sexism_rules.json

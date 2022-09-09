@@ -5,10 +5,11 @@ from pandas import DataFrame
 import pandas
 import logging
 from argparse import ArgumentParser, ArgumentError
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, confusion_matrix
 from xpotato.graph_extractor.extract import FeatureEvaluator
 from xpotato.dataset.explainable_dataset import ExplainableDataset
 from xpotato.dataset.utils import save_dataframe
+from tuw_nlp.common.eval import *
 
 from hatexplain_to_eraser import data_tsv_to_eraser, prediction_to_eraser, get_rationales
 from call_eraser import call_eraser
@@ -86,6 +87,7 @@ def concat_rationals(rationals):
     return text
 
 def evaluate(feature_file: str, files: List[str], target: str):
+    #feature_file="sexism_rules.json"
     with open(feature_file) as feature_json:
         features = json.load(feature_json)
     evaluator = FeatureEvaluator()
@@ -93,7 +95,8 @@ def evaluate(feature_file: str, files: List[str], target: str):
         target = list(features.keys())[0]
     
     for file in files:
-        #print(f"File: {file}")
+        #file="women/minority_val_pure.tsv"
+        #target="Women"
         potato = ExplainableDataset(path=file, label_vocab={"None": 0, target: 1})
         df = potato.to_dataframe()
         stats = evaluator.evaluate_feature(target, features[target], df)[0]
@@ -135,9 +138,15 @@ def evaluate(feature_file: str, files: List[str], target: str):
         prediction_to_eraser(file, rationale_as_text_list, labels, labels_without_rationales, labels_only_rationales, target)
         call_eraser("None", "./hatexplain", "val", "./hatexplain/val_prediction.jsonl")
         print("------------------------")
-        print_classification_report(df, stats)
-        
-        print("------------------------")
+        #print_classification_report(df, stats)
+        #print("------------------------")
+
+        tn0, fp0, fn0, tp0 = confusion_matrix(1-df.label_id, [1-(n > 0) * 1 for n in np.sum([p for p in stats["Predicted"]], axis=0)]).ravel()
+        confusion_dict_neutral={"TN":tn0,"FP":fp0,"FN":fn0,"TP":tp0}
+        tn1, fp1, fn1, tp1 = confusion_matrix(df.label_id, [(n > 0) * 1 for n in np.sum([p for p in stats["Predicted"]], axis=0)]).ravel()
+        confusion_dict_target={"TN":tn1,"FP":fp1,"FN":fn1,"TP":tp1}
+        cat_stats={target : confusion_dict_target, "None" : confusion_dict_neutral}
+        print_cat_stats(cat_stats) #s,tablefmt="latex_booktabs"
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
