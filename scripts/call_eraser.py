@@ -34,13 +34,13 @@ def call_eraser(neutralclassname, datadir, testtrainorval, pathtopredictions, si
 						data_dir=datadir, # data dir
 						split=testtrainorval, # split
 						results=pathtopredictions, # results 
-						score_file=datadir+"/eraser_output.json", # score
+						score_file=""+"./eraser_output.json", # score
 						strict=False) # strict
 						#iou_thresholds=[0.5], # iou
 						#aopc_thresholds=[0.01, 0.05, 0.1, 0.2, 0.5]) # aopc
 	if silent:
 		logger.disabled = False
-	print_eraser_results(datadir)
+	print_eraser_results(".")
 
 """
 def call_eraser(datadir, testtrainorval, pathtopredictions):

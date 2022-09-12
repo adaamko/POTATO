@@ -86,6 +86,20 @@ def concat_rationals(rationals):
         text = text + rational + " "
     return text
 
+class NumpyEncoder(json.JSONEncoder):
+    """ Special json encoder for numpy types """
+    def default(self, obj):
+        if isinstance(obj, (np.int_, np.intc, np.intp, np.int8,
+            np.int16, np.int32, np.int64, np.uint8,
+            np.uint16, np.uint32, np.uint64)):
+            return int(obj)
+        elif isinstance(obj, (np.float_, np.float16, np.float32, 
+            np.float64)):
+            return float(obj)
+        elif isinstance(obj,(np.ndarray,)): #### This is the fix
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
+
 def evaluate(feature_file: str, files: List[str], target: str):
     #feature_file="sexism_rules.json"
     with open(feature_file) as feature_json:
@@ -147,6 +161,8 @@ def evaluate(feature_file: str, files: List[str], target: str):
         confusion_dict_target={"TN":tn1,"FP":fp1,"FN":fn1,"TP":tp1}
         cat_stats={target : confusion_dict_target, "None" : confusion_dict_neutral}
         print_cat_stats(cat_stats) #s,tablefmt="latex_booktabs"
+        with open("cat_stats.json", 'w') as fp:
+            fp.write((json.dumps(cat_stats,cls=NumpyEncoder)))
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
