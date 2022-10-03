@@ -5,7 +5,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="xpotato",
-    version="0.1.3",
+    version="0.1.4",
     description="XAI human-in-the-loop information extraction framework",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
