@@ -398,14 +398,24 @@ We welcome all contributions! Please fork this repository and create a branch fo
 
 ## Citing
 
-If you use the library, please cite our [paper](https://arxiv.org/abs/2201.13230)
+If you use the library, please cite our [paper](https://dl.acm.org/doi/abs/10.1145/3511808.3557196) published in CIKM 2022:
 
 ```bib
-@article{Kovacs:2022,
-  title={{POTATO: exPlainable infOrmation exTrAcTion framewOrk}},
-  author={Kov{\'a}cs, {\'A}d{\'a}m and G{\'e}mes, Kinga and Ikl{\'o}di, Eszter and Recski, G{\'a}bor},
-  journal={arXiv preprint arXiv:2201.13230},
-  year={2022}
+@inproceedings{Kovacs:2022,
+author = {Kov\'{a}cs, \'{A}d\'{a}m and G\'{e}mes, Kinga and Ikl\'{o}di, Eszter and Recski, G\'{a}bor},
+title = {POTATO: ExPlainable InfOrmation ExTrAcTion FramewOrk},
+year = {2022},
+isbn = {9781450392365},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3511808.3557196},
+doi = {10.1145/3511808.3557196},
+booktitle = {Proceedings of the 31st ACM International Conference on Information & Knowledge Management},
+pages = {4897–4901},
+numpages = {5},
+keywords = {explainability, explainable, hitl},
+location = {Atlanta, GA, USA},
+series = {CIKM '22}
 }
 ```
 
