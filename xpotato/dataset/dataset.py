@@ -1,3 +1,4 @@
+import json
 from re import I
 from typing import List, Tuple, Dict
 
@@ -5,7 +6,7 @@ import networkx as nx
 import pandas as pd
 
 from tqdm import tqdm
-from tuw_nlp.graph.utils import graph_to_pn
+from tuw_nlp.graph.utils import graph_to_pn, check_if_str_is_penman
 from xpotato.dataset.sample import Sample
 from xpotato.graph_extractor.extract import GraphExtractor
 from xpotato.graph_extractor.graph import PotatoGraph
@@ -35,7 +36,7 @@ class Dataset:
 
     @staticmethod
     def save_dataframe(df: pd.DataFrame, path: str) -> None:
-        graphs = [graph_to_pn(graph) for graph in df["graph"].tolist()]
+        graphs = [nx.cytoscape_data(graph) for graph in df["graph"].tolist()]
         df["graph"] = graphs
         df.to_csv(path, index=False, sep="\t")
 
@@ -76,16 +77,18 @@ class Dataset:
         elif path:
             if binary:
                 df = pd.read_pickle(path)
-                graphs_str = self.prune_graphs(df.graph.tolist())
-                df.drop(columns=["graph"], inplace=True)
-                df["graph"] = graphs_str
+                graphs = [graph for graph in df["graph"].tolist()]
+                if type(graphs[0]) == str and check_if_str_is_penman(graphs[0]):
+                    graphs_str = self.prune_graphs(df.graph.tolist())
+                    df.drop(columns=["graph"], inplace=True)
+                    df["graph"] = graphs_str
             else:
                 df = pd.read_csv(path, sep="\t")
 
             return [
                 Sample(
                     (example["text"], example["label"]),
-                    potato_graph=PotatoGraph(graph_str=example["graph"]),
+                    potato_graph=PotatoGraph(graph=example["graph"]),
                     label_id=example["label_id"],
                 )
                 for _, example in tqdm(df.iterrows())
@@ -101,7 +104,7 @@ class Dataset:
 
         return graph
 
-    def to_dataframe(self, as_penman: bool = False) -> pd.DataFrame:
+    def to_dataframe(self, as_penman: bool = False, as_json: bool = False) -> pd.DataFrame:
         df = pd.DataFrame(
             {
                 "text": [sample.text for sample in self._dataset],
@@ -110,7 +113,9 @@ class Dataset:
                     sample.get_label_id(self.label_vocab) for sample in self._dataset
                 ],
                 "graph": [
-                    str(sample.potato_graph) if as_penman else sample.potato_graph.graph
+                    str(sample.potato_graph) if as_penman 
+                    else sample.potato_graph.to_dict() if as_json
+                    else sample.potato_graph.graph.G
                     for sample in self._dataset
                 ],
             }
@@ -124,12 +129,12 @@ class Dataset:
             )
         )
 
-        self.graphs = [PotatoGraph(graph) for graph in graphs]
+        self.graphs = [PotatoGraph(graph=graph) for graph in graphs]
         return self.graphs
 
     def set_graphs(self, graphs: List[PotatoGraph]) -> None:
         for sample, potato_graph in zip(self._dataset, graphs):
-            potato_graph.graph.remove_edges_from(nx.selfloop_edges(potato_graph.graph))
+            potato_graph.graph.G.remove_edges_from(nx.selfloop_edges(potato_graph.graph.G))
             sample.set_graph(potato_graph)
 
     def load_graphs(self, path: str, binary: bool = False) -> None:
@@ -137,21 +142,25 @@ class Dataset:
             graphs = [graph for graph in pd.read_pickle(path)]
             graph_str = self.prune_graphs(graphs)
 
-            graphs = [PotatoGraph(graph_str=graph) for graph in graph_str]
+            graphs = [PotatoGraph(graph=graph) for graph in graph_str]
             self.graphs = graphs
         else:
             with open(path, "rb") as f:
                 for line in f:
-                    graph = PotatoGraph(graph_str=line.strip())
+                    graph = PotatoGraph(graph=line.strip())
                     self.graphs.append(graph)
 
         self.set_graphs(self.graphs)
 
     def save_dataset(self, path: str) -> None:
-        df = self.to_dataframe(as_penman=True)
+        df = self.to_dataframe(as_json=True)
         df.to_csv(path, index=False, sep="\t")
 
-    def save_graphs(self, path: str) -> None:
+    def save_graphs(self, path: str, type='dict') -> None:
         with open(path, "wb") as f:
             for graph in self.graphs:
-                f.write(str(graph) + "\n")
+                if type == 'dict':
+                   json.dump(graph.graph, f)
+                   f.write('\n')
+                elif type == 'penman':
+                   f.write(f"{str(graph)}\n")

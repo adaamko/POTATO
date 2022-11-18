@@ -4,18 +4,13 @@ from collections import defaultdict
 
 import networkx as nx
 import pandas as pd
-import stanza
 import penman as pn
-from networkx.algorithms.isomorphism import DiGraphMatcher
 from sklearn.metrics import precision_recall_fscore_support
 from tqdm import tqdm
-from tuw_nlp.grammar.text_to_4lang import TextTo4lang
 from tuw_nlp.graph.utils import (
     GraphFormulaMatcher,
     GraphFormulaPatternMatcher,
 )
-from tuw_nlp.text.pipeline import CachedStanzaPipeline
-
 from xpotato.dataset.utils import default_pn_to_graph, ud_to_graph, amr_pn_to_graph
 
 
@@ -28,29 +23,60 @@ class GraphExtractor:
         self.cache_dir = cache_dir
         self.cache_fn = cache_fn
         self.lang = lang
-        self.nlp = None
         self.matcher = None
-        self.amr_stog = None
+        
+        self.ud_parser = None
+        self.fl_parser = None
+        self.amr_parser = None
+        self.ucca_parser = None
+        self.sdp_parser = None
 
-    def init_amr(self):
-        if self.amr_stog == None:
-            import amrlib
-
-            self.amr_stog = amrlib.load_stog_model()
-
-    def init_nlp(self):
-        if self.nlp == None:
-            if self.lang == "en_bio":
-                nlp = stanza.Pipeline("en", package="craft")
-            else:
-                nlp = stanza.Pipeline(self.lang)
-            self.nlp = CachedStanzaPipeline(nlp, self.cache_fn)
+    def init_resources(self, graph_type):
+        if graph_type == "ud":
+            if self.ud_parser == None:
+                from tuw_nlp.grammar.text_to_ud import TextToUD
+                
+                self.ud_parser = TextToUD(lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir)
+            
+        elif graph_type == "fourlang":
+            if self.fl_parser == None:
+                from tuw_nlp.grammar.text_to_4lang import TextTo4lang
+                
+                self.fl_parser = TextTo4lang(lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir)
+            
+        elif graph_type == "amr":
+            if self.amr_parser == None:
+                if self.lang != "en":
+                    raise ValueError(f"Currently only english AMR is supported: {self.lang}")
+                from tuw_nlp.grammar.text_to_amr import TextToAMR
+                
+                self.amr_parser = TextToAMR()
+            
+        elif graph_type == "ucca":
+            if self.ucca_parser == None:
+                if self.lang != "en":
+                    raise ValueError(f"Currently only english UCCA is supported: {self.lang}")
+                from tuw_nlp.grammar.text_to_ucca import TextToUCCA
+                
+                self.ucca_parser = TextToUCCA()
+        
+        elif graph_type == "sdp":
+            if self.sdp_parser == None:
+                if self.lang != "en":
+                    raise ValueError(f"Currently only english SDP is supported: {self.lang}")
+                from tuw_nlp.grammar.text_to_sdp import TextToSDP
+                
+                self.sdp_parser = TextToSDP(lang=self.lang)
+                
+        else:
+            raise ValueError(f"Currently not supported: {graph_type}")
 
     def parse_iterable(self, iterable, graph_type="fourlang", lang=None):
         if lang:
             self.lang = lang
+        self.init_resources(graph_type)
         if graph_type == "fourlang":
-            with TextTo4lang(
+            with self.fl_parser(
                 lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir
             ) as tfl:
                 for sen in tqdm(iterable):
@@ -58,25 +84,35 @@ class GraphExtractor:
                     g = fl_graphs[0]
                     for n in fl_graphs[1:]:
                         raise ValueError(f"sentence should not be split up: {sen}!")
-                        g = nx.compose(g, n)
                     yield g
 
         elif graph_type == "ud":
-            self.init_nlp()
             for sen in tqdm(iterable):
-                doc = self.nlp(sen)
-                g, _ = ud_to_graph(doc.sentences[0])
-                for doc_sen in doc.sentences[1:]:
-                    n, _ = ud_to_graph(doc_sen)
-                    g = nx.compose(g, n)
+                ud_graphs = list(self.ud_parser(sen, ssplit=False))
+                g = ud_graphs[0]
+                for n in ud_graphs[1:]:
+                    raise ValueError(f"sentence should not be split up: {sen}!")
                 yield g
 
         elif graph_type == "amr":
-            self.init_amr()
             for sen in tqdm(iterable):
-                graphs = self.amr_stog.parse_sents([sen])
-                g, _ = amr_pn_to_graph(graphs[0])
+                g = self.amr_parser(sen)
+                
                 yield g
+                
+        elif graph_type == "ucca":
+            for sen in tqdm(iterable):
+                g = self.ucca_parser(sen)
+                
+                yield g
+        
+        elif graph_type == "sdp":
+            for sen in tqdm(iterable):
+                g = self.sdp_parser(sen)
+                
+                yield g
+        else:
+            raise ValueError(f"Currrently not supported: {graph_type}")
 
 
 class FeatureEvaluator:
