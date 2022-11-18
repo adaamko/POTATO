@@ -132,7 +132,14 @@ def get_sentences(
                     literal_eval(example.rationales)[target.capitalize()],
                     # LT and GT appear only around user or censored as well as an emoji,
                     # but that will not influence this negatively
-                    sorted([node for node in literal_eval(example.graph)["nodes"] if node["name"] not in ["LT", "GT"]], key=lambda x: x["id"])[1:],
+                    sorted(
+                        [
+                            node
+                            for node in literal_eval(example.graph)["nodes"]
+                            if node["name"] not in ["LT", "GT"]
+                        ],
+                        key=lambda x: x["id"],
+                    )[1:],
                 )
                 if rat == 1
             ],

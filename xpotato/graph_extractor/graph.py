@@ -4,6 +4,7 @@ import networkx as nx
 import json
 from typing import Dict, Union
 
+
 class PotatoGraph:
     def __init__(self, graph: Union[str, Dict, Graph, nx.DiGraph] = None) -> None:
         if type(graph) == str and check_if_str_is_penman(graph):
@@ -21,12 +22,12 @@ class PotatoGraph:
             self.graph = None
         else:
             raise Exception("Unknown graph type")
-        
+
     def __str__(self) -> str:
         if self.graph is None:
             return "Empty graph"
         else:
             return self.graph.to_penman()
-        
+
     def to_dict(self) -> dict:
         return self.graph.to_json()

@@ -24,7 +24,7 @@ class GraphExtractor:
         self.cache_fn = cache_fn
         self.lang = lang
         self.matcher = None
-        
+
         self.ud_parser = None
         self.fl_parser = None
         self.amr_parser = None
@@ -35,39 +35,49 @@ class GraphExtractor:
         if graph_type == "ud":
             if self.ud_parser == None:
                 from tuw_nlp.grammar.text_to_ud import TextToUD
-                
-                self.ud_parser = TextToUD(lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir)
-            
+
+                self.ud_parser = TextToUD(
+                    lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir
+                )
+
         elif graph_type == "fourlang":
             if self.fl_parser == None:
                 from tuw_nlp.grammar.text_to_4lang import TextTo4lang
-                
-                self.fl_parser = TextTo4lang(lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir)
-            
+
+                self.fl_parser = TextTo4lang(
+                    lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir
+                )
+
         elif graph_type == "amr":
             if self.amr_parser == None:
                 if self.lang != "en":
-                    raise ValueError(f"Currently only english AMR is supported: {self.lang}")
+                    raise ValueError(
+                        f"Currently only english AMR is supported: {self.lang}"
+                    )
                 from tuw_nlp.grammar.text_to_amr import TextToAMR
-                
+
                 self.amr_parser = TextToAMR()
-            
+
         elif graph_type == "ucca":
             if self.ucca_parser == None:
                 if self.lang != "en":
-                    raise ValueError(f"Currently only english UCCA is supported: {self.lang}")
+                    raise ValueError(
+                        f"Currently only english UCCA is supported: {self.lang}"
+                    )
                 from tuw_nlp.grammar.text_to_ucca import TextToUCCA
-                
+
                 self.ucca_parser = TextToUCCA()
-        
+
         elif graph_type == "sdp":
             if self.sdp_parser == None:
                 if self.lang != "en":
-                    raise ValueError(f"Currently only english SDP is supported: {self.lang}")
+                    raise ValueError(
+                        f"Currently only english SDP is supported: {self.lang}"
+                    )
                 from tuw_nlp.grammar.text_to_sdp import TextToSDP
-                
+
                 self.sdp_parser = TextToSDP(lang=self.lang)
-                
+
         else:
             raise ValueError(f"Currently not supported: {graph_type}")
 
@@ -97,19 +107,19 @@ class GraphExtractor:
         elif graph_type == "amr":
             for sen in tqdm(iterable):
                 g = self.amr_parser(sen)
-                
+
                 yield g
-                
+
         elif graph_type == "ucca":
             for sen in tqdm(iterable):
                 g = self.ucca_parser(sen)
-                
+
                 yield g
-        
+
         elif graph_type == "sdp":
             for sen in tqdm(iterable):
                 g = self.sdp_parser(sen)
-                
+
                 yield g
         else:
             raise ValueError(f"Currrently not supported: {graph_type}")
@@ -308,7 +318,11 @@ class FeatureEvaluator:
         return sorted(features_stat, key=rank, reverse=True)
 
     def train_feature(self, cl, feature, data, graph_format="ud"):
-        graph_matcher = GraphFormulaPatternMatcher([[[feature], [], []]], default_pn_to_graph, case_sensitive=self.case_sensitive)
+        graph_matcher = GraphFormulaPatternMatcher(
+            [[[feature], [], []]],
+            default_pn_to_graph,
+            case_sensitive=self.case_sensitive,
+        )
         feat_patt = graph_matcher.patts[0][0]
         if isinstance(feat_patt[0], tuple):
             if len(feat_patt[0][1]) == 2:
@@ -324,16 +338,28 @@ class FeatureEvaluator:
         trained_features = []
         with open(path, "w+") as f:
             for i, g in enumerate(graphs):
-                matches = [(i, subgraph) for (key, i, subgraph) in graph_matcher.match(g, return_subgraphs=True)]
+                matches = [
+                    (i, subgraph)
+                    for (key, i, subgraph) in graph_matcher.match(
+                        g, return_subgraphs=True
+                    )
+                ]
                 for patt_index, match in matches:
                     for graph in match:
                         nodes = []
                         for node_index, node in graph.nodes(data=True):
                             if not nodes:
-                                node_name = node['name']
-                                if node['mapping'] in patt1.nodes and patt1.nodes[node['mapping']]["name"] == ".*":
+                                node_name = node["name"]
+                                if (
+                                    node["mapping"] in patt1.nodes
+                                    and patt1.nodes[node["mapping"]]["name"] == ".*"
+                                ):
                                     nodes.append(node_name)
-                                if patt2 is not None and node['mapping'] in patt2.nodes and patt2.nodes[node['mapping']]["name"] == ".*":
+                                if (
+                                    patt2 is not None
+                                    and node["mapping"] in patt2.nodes
+                                    and patt2.nodes[node["mapping"]]["name"] == ".*"
+                                ):
                                     nodes.append(node_name)
                         if not nodes:
                             g2_to_g1 = {v: u for (u, v, _) in graph.edges(data=True)}

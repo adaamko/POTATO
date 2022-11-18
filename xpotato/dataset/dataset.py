@@ -104,7 +104,9 @@ class Dataset:
 
         return graph
 
-    def to_dataframe(self, as_penman: bool = False, as_json: bool = False) -> pd.DataFrame:
+    def to_dataframe(
+        self, as_penman: bool = False, as_json: bool = False
+    ) -> pd.DataFrame:
         df = pd.DataFrame(
             {
                 "text": [sample.text for sample in self._dataset],
@@ -113,8 +115,10 @@ class Dataset:
                     sample.get_label_id(self.label_vocab) for sample in self._dataset
                 ],
                 "graph": [
-                    str(sample.potato_graph) if as_penman 
-                    else sample.potato_graph.to_dict() if as_json
+                    str(sample.potato_graph)
+                    if as_penman
+                    else sample.potato_graph.to_dict()
+                    if as_json
                     else sample.potato_graph.graph.G
                     for sample in self._dataset
                 ],
@@ -134,7 +138,9 @@ class Dataset:
 
     def set_graphs(self, graphs: List[PotatoGraph]) -> None:
         for sample, potato_graph in zip(self._dataset, graphs):
-            potato_graph.graph.G.remove_edges_from(nx.selfloop_edges(potato_graph.graph.G))
+            potato_graph.graph.G.remove_edges_from(
+                nx.selfloop_edges(potato_graph.graph.G)
+            )
             sample.set_graph(potato_graph)
 
     def load_graphs(self, path: str, binary: bool = False) -> None:
@@ -156,11 +162,11 @@ class Dataset:
         df = self.to_dataframe(as_json=True)
         df.to_csv(path, index=False, sep="\t")
 
-    def save_graphs(self, path: str, type='dict') -> None:
+    def save_graphs(self, path: str, type="dict") -> None:
         with open(path, "wb") as f:
             for graph in self.graphs:
-                if type == 'dict':
-                   json.dump(graph.graph, f)
-                   f.write('\n')
-                elif type == 'penman':
-                   f.write(f"{str(graph)}\n")
+                if type == "dict":
+                    json.dump(graph.graph, f)
+                    f.write("\n")
+                elif type == "penman":
+                    f.write(f"{str(graph)}\n")

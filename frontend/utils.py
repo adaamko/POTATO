@@ -251,7 +251,9 @@ def save_after_modify(hand_made_rules, classes=None):
 
 
 def filter_label(df, label):
-    df["label"] = df.apply(lambda x: label if label in literal_eval(x["labels"]) else "NOT", axis=1)
+    df["label"] = df.apply(
+        lambda x: label if label in literal_eval(x["labels"]) else "NOT", axis=1
+    )
     df["label_id"] = df.apply(lambda x: 0 if x["label"] == "NOT" else 1, axis=1)
 
 

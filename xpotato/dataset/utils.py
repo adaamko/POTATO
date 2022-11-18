@@ -8,7 +8,10 @@ from tuw_nlp.graph.utils import preprocess_node_alto
 
 def save_dataframe(df: pd.DataFrame, path: str) -> None:
     df_to_save = df.copy()
-    graphs = [nx.cytoscape_data(g) if type(g) == nx.DiGraph else g for g in df["graph"].tolist()]
+    graphs = [
+        nx.cytoscape_data(g) if type(g) == nx.DiGraph else g
+        for g in df["graph"].tolist()
+    ]
     df_to_save["graph"] = graphs
     df_to_save.to_csv(path, index=False, sep="\t")
 
