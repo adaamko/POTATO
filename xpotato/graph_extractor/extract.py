@@ -108,19 +108,19 @@ class GraphExtractor:
             for sen in tqdm(iterable):
                 g = self.amr_parser(sen)
 
-                yield g
+                yield list(g)[0]
 
         elif graph_type == "ucca":
             for sen in tqdm(iterable):
                 g = self.ucca_parser(sen)
 
-                yield g
+                yield list(g)[0]
 
         elif graph_type == "sdp":
             for sen in tqdm(iterable):
                 g = self.sdp_parser(sen)
 
-                yield g
+                yield list(g)[0]
         else:
             raise ValueError(f"Currrently not supported: {graph_type}")
 
