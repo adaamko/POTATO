@@ -86,9 +86,7 @@ class GraphExtractor:
             self.lang = lang
         self.init_resources(graph_type)
         if graph_type == "fourlang":
-            with self.fl_parser(
-                lang=self.lang, nlp_cache=self.cache_fn, cache_dir=self.cache_dir
-            ) as tfl:
+            with self.fl_parser as tfl:
                 for sen in tqdm(iterable):
                     fl_graphs = list(tfl(sen, ssplit=False))
                     g = fl_graphs[0]

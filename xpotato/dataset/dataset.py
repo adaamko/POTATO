@@ -3,6 +3,7 @@ from re import I
 from typing import List, Tuple, Dict
 
 import networkx as nx
+from networkx.readwrite import json_graph
 import pandas as pd
 
 from tqdm import tqdm
@@ -36,7 +37,10 @@ class Dataset:
 
     @staticmethod
     def save_dataframe(df: pd.DataFrame, path: str) -> None:
-        graphs = [nx.cytoscape_data(graph) for graph in df["graph"].tolist()]
+        graphs = [
+            json.dumps(json_graph.adjacency_data(g)) if type(g) == nx.DiGraph else g
+            for g in df["graph"].tolist()
+        ]
         df["graph"] = graphs
         df.to_csv(path, index=False, sep="\t")
 
@@ -71,7 +75,6 @@ class Dataset:
         path: str = None,
         binary: bool = False,
     ) -> List[Sample]:
-        examples = list(examples)
         if examples:
             return [Sample(example, PotatoGraph()) for example in examples]
         elif path:
@@ -159,8 +162,8 @@ class Dataset:
         self.set_graphs(self.graphs)
 
     def save_dataset(self, path: str) -> None:
-        df = self.to_dataframe(as_json=True)
-        df.to_csv(path, index=False, sep="\t")
+        df = self.to_dataframe()
+        self.save_dataframe(df, path)
 
     def save_graphs(self, path: str, type="dict") -> None:
         with open(path, "wb") as f:

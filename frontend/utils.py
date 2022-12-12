@@ -18,6 +18,7 @@ from xpotato.graph_extractor.graph import PotatoGraph
 from xpotato.graph_extractor.extract import FeatureEvaluator, GraphExtractor
 from xpotato.models.trainer import GraphTrainer
 from xpotato.dataset.utils import default_pn_to_graph
+from xpotato.dataset.dataset import Dataset
 from xpotato.graph_extractor.rule import RuleSet, Rule
 from tuw_nlp.graph.utils import GraphFormulaPatternMatcher, graph_to_pn
 
@@ -259,15 +260,9 @@ def filter_label(df, label):
 
 @st.cache(allow_output_mutation=True)
 def read_df(path, label=None, binary=False):
-    if binary:
-        df = pd.read_pickle(path)
-    else:
-        df = pd.read_csv(path, sep="\t")
-        graphs = []
-        for graph in df["graph"]:
-            potato_graph = PotatoGraph(graph_str=graph)
-            graphs.append(potato_graph.graph)
-        df["graph"] = graphs
+    dataset = Dataset(path=path, binary=binary)
+    df = dataset.to_dataframe()
+
     if label is not None:
         filter_label(df, label)
     return df
@@ -277,9 +272,7 @@ def save_dataframe(data, path):
     if ".pickle" in path:
         data.to_pickle(path)
     else:
-        graphs = data["graph"]
-        data["graph"] = [graph_to_pn(graph) for graph in graphs]
-        data.to_csv(path, sep="\t", index=False)
+        Dataset.save_dataframe(data, path)
 
 
 def train_df(df, min_edge=0, rank=False):

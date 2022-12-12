@@ -31,3 +31,6 @@ class PotatoGraph:
 
     def to_dict(self) -> dict:
         return self.graph.to_json()
+
+    def prune(self) -> None:
+        self.graph.prune_graphs()
