@@ -1,12 +1,14 @@
-from typing import List, Dict
 import json
+import logging
+from argparse import ArgumentError, ArgumentParser
+from typing import Dict, List
+
 import numpy as np
 from pandas import DataFrame
-import logging
-from argparse import ArgumentParser, ArgumentError
 from sklearn.metrics import classification_report
-from xpotato.graph_extractor.extract import FeatureEvaluator
+
 from xpotato.dataset.explainable_dataset import ExplainableDataset
+from xpotato.graph_extractor.extract import FeatureEvaluator
 
 
 def print_classification_report(df: DataFrame, stats: Dict[str, List]):

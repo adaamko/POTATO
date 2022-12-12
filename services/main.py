@@ -1,16 +1,12 @@
-from xpotato.graph_extractor.extract import GraphExtractor
-from xpotato.graph_extractor.extract import FeatureEvaluator
-from xpotato.dataset.utils import default_pn_to_graph
-from tuw_nlp.graph.utils import (
-    GraphFormulaMatcher,
-)
-
 import json
 import os
 
 from fastapi import FastAPI
 from pydantic import BaseModel
+from tuw_nlp.graph.utils import GraphFormulaMatcher
 
+from xpotato.dataset.utils import default_pn_to_graph
+from xpotato.graph_extractor.extract import FeatureEvaluator, GraphExtractor
 
 FEATURE_PATH = os.getenv("FEATURE_PATH", None)
 GRAPH_FORMAT = os.getenv("GRAPH_FORMAT", None)

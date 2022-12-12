@@ -7,11 +7,9 @@ import pandas as pd
 import penman as pn
 from sklearn.metrics import precision_recall_fscore_support
 from tqdm import tqdm
-from tuw_nlp.graph.utils import (
-    GraphFormulaMatcher,
-    GraphFormulaPatternMatcher,
-)
-from xpotato.dataset.utils import default_pn_to_graph, ud_to_graph, amr_pn_to_graph
+from tuw_nlp.graph.utils import GraphFormulaMatcher, GraphFormulaPatternMatcher
+
+from xpotato.dataset.utils import amr_pn_to_graph, default_pn_to_graph, ud_to_graph
 
 
 class GraphExtractor:

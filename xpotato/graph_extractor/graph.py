@@ -1,8 +1,9 @@
-from tuw_nlp.graph.graph import Graph
-from tuw_nlp.graph.utils import check_if_str_is_penman
-import networkx as nx
 import json
 from typing import Dict, Union
+
+import networkx as nx
+from tuw_nlp.graph.graph import Graph
+from tuw_nlp.graph.utils import check_if_str_is_penman
 
 
 class PotatoGraph:

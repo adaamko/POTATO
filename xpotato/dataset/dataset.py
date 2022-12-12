@@ -1,13 +1,13 @@
 import json
 from re import I
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 
 import networkx as nx
-from networkx.readwrite import json_graph
 import pandas as pd
-
+from networkx.readwrite import json_graph
 from tqdm import tqdm
-from tuw_nlp.graph.utils import graph_to_pn, check_if_str_is_penman
+from tuw_nlp.graph.utils import check_if_str_is_penman, graph_to_pn
+
 from xpotato.dataset.sample import Sample
 from xpotato.graph_extractor.extract import GraphExtractor
 from xpotato.graph_extractor.graph import PotatoGraph

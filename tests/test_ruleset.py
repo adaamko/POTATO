@@ -1,8 +1,8 @@
+import os
+
 from xpotato.dataset.utils import default_pn_to_graph
 from xpotato.graph_extractor.extract import FeatureEvaluator
-from xpotato.graph_extractor.rule import RuleSet, Rule
-
-import os
+from xpotato.graph_extractor.rule import Rule, RuleSet
 
 dir_name = os.path.dirname(os.path.realpath(__file__))
 

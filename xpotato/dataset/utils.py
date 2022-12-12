@@ -1,10 +1,10 @@
+import json
 from collections import defaultdict
 
 import networkx as nx
-from networkx.readwrite import json_graph
 import pandas as pd
 import penman as pn
-import json
+from networkx.readwrite import json_graph
 from tuw_nlp.graph.utils import preprocess_node_alto
 
 

@@ -1,18 +1,16 @@
 import argparse
 import copy
+import json
 import os
 import time
-import json
-import streamlit as st
+
 import pandas as pd
 import penman
+import streamlit as st
 from graphviz import Source
-
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 from tuw_nlp.graph.utils import graph_to_pn
-
 from utils import (
-    train_df,
     add_rule_manually,
     annotate_df,
     extract_data_from_dataframe,
@@ -21,18 +19,19 @@ from utils import (
     init_evaluator,
     init_extractor,
     init_session_states,
+    match_texts,
     rank_and_suggest,
     read_df,
+    read_ruleset,
     rerun,
     rule_chooser,
-    save_ruleset,
-    read_ruleset,
     save_after_modify,
     save_dataframe,
-    match_texts,
+    save_ruleset,
     show_ml_feature,
     st_stdout,
     to_dot,
+    train_df,
 )
 
 

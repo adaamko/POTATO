@@ -1,6 +1,5 @@
 from setuptools import find_packages, setup
 
-
 setup(
     name="xpotato",
     version="0.1.4",

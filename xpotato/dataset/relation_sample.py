@@ -1,5 +1,7 @@
 from typing import Tuple
+
 import networkx as nx
+
 from xpotato.dataset.sample import Sample
 
 

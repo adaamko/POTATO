@@ -3,28 +3,26 @@ import json
 import re
 import sys
 from ast import literal_eval
-
 from collections import defaultdict
-from graphviz import Source
-import pandas as pd
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
-import streamlit as st
-import penman
-import torch
-from streamlit.report_thread import REPORT_CONTEXT_ATTR_NAME
-
-from xpotato.dataset.utils import default_pn_to_graph
-from xpotato.graph_extractor.graph import PotatoGraph
-from xpotato.graph_extractor.extract import FeatureEvaluator, GraphExtractor
-from xpotato.models.trainer import GraphTrainer
-from xpotato.dataset.utils import default_pn_to_graph
-from xpotato.dataset.dataset import Dataset
-from xpotato.graph_extractor.rule import RuleSet, Rule
-from tuw_nlp.graph.utils import GraphFormulaPatternMatcher, graph_to_pn
-
 from contextlib import contextmanager
 from io import StringIO
 from threading import current_thread
+
+import pandas as pd
+import penman
+import streamlit as st
+import torch
+from graphviz import Source
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
+from streamlit.report_thread import REPORT_CONTEXT_ATTR_NAME
+from tuw_nlp.graph.utils import GraphFormulaPatternMatcher, graph_to_pn
+
+from xpotato.dataset.dataset import Dataset
+from xpotato.dataset.utils import default_pn_to_graph
+from xpotato.graph_extractor.extract import FeatureEvaluator, GraphExtractor
+from xpotato.graph_extractor.graph import PotatoGraph
+from xpotato.graph_extractor.rule import Rule, RuleSet
+from xpotato.models.trainer import GraphTrainer
 
 
 def rerun():

@@ -1,8 +1,10 @@
-import numpy as np
 from collections import defaultdict
+
+import numpy as np
 from tuw_nlp.common.vocabulary import Vocabulary
 from tuw_nlp.graph.lexical import LexGraphs
 from tuw_nlp.graph.utils import graph_to_pn
+
 from xpotato.models.utils import tree_to_code
 
 
