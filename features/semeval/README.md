@@ -1,4 +1,4 @@
-# CrowdTruth data experiments
+# Semeval data experiments
 
 [Semeval](https://paperswithcode.com/sota/relation-extraction-on-semeval-2010-task-8) relation extraction dataset.
 
