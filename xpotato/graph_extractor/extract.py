@@ -28,6 +28,7 @@ class GraphExtractor:
         self.amr_parser = None
         self.ucca_parser = None
         self.sdp_parser = None
+        self.drs_parser = None
 
     def init_resources(self, graph_type):
         if graph_type == "ud":
@@ -75,6 +76,15 @@ class GraphExtractor:
                 from tuw_nlp.grammar.text_to_sdp import TextToSDP
 
                 self.sdp_parser = TextToSDP(lang=self.lang)
+        elif graph_type == "drs":
+            if self.drs_parser == None:
+                if self.lang != "en":
+                    raise ValueError(
+                        f"Currently only english DRS is supported: {self.lang}"
+                    )
+                from tuw_nlp.grammar.text_to_drs import TextToDRS
+
+                self.drs_parser = TextToDRS(lang=self.lang)
 
         else:
             raise ValueError(f"Currently not supported: {graph_type}")
@@ -115,6 +125,12 @@ class GraphExtractor:
         elif graph_type == "sdp":
             for sen in tqdm(iterable):
                 g = self.sdp_parser(sen)
+
+                yield list(g)[0]
+
+        elif graph_type == "drs":
+            for sen in tqdm(iterable):
+                g = self.drs_parser(sen)
 
                 yield list(g)[0]
         else:
