@@ -3,7 +3,7 @@ import os
 
 from fastapi import FastAPI
 from pydantic import BaseModel
-from tuw_nlp.graph.utils import GraphFormulaMatcher
+from tuw_nlp.graph.utils import GraphFormulaPatternMatcher
 
 from xpotato.dataset.utils import default_pn_to_graph
 from xpotato.graph_extractor.extract import FeatureEvaluator, GraphExtractor
@@ -63,7 +63,7 @@ def init_data():
     for k in FEATURES:
         for f in FEATURES[k]:
             feature_values.append(f)
-    MATCHER = GraphFormulaMatcher(feature_values, converter=default_pn_to_graph)
+    MATCHER = GraphFormulaPatternMatcher(feature_values, converter=default_pn_to_graph)
 
 
 @app.post("/")

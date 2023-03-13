@@ -7,7 +7,7 @@ import pandas as pd
 import penman as pn
 from sklearn.metrics import precision_recall_fscore_support
 from tqdm import tqdm
-from tuw_nlp.graph.utils import GraphFormulaMatcher, GraphFormulaPatternMatcher
+from tuw_nlp.graph.utils import GraphFormulaPatternMatcher
 
 from xpotato.dataset.utils import amr_pn_to_graph, default_pn_to_graph, ud_to_graph
 
@@ -168,7 +168,7 @@ class FeatureEvaluator:
             feature_to_marked_nodes[i] = feature[3]
             features[i] = feature[:3]
 
-        matcher = GraphFormulaMatcher(
+        matcher = GraphFormulaPatternMatcher(
             features, converter=default_pn_to_graph, case_sensitive=self.case_sensitive
         )
         feats = matcher.match(graph, return_subgraphs=True)
