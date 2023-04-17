@@ -123,7 +123,10 @@ def main():
         cat_stats = get_cat_stats(pred_labels, gold_labels)
 
         print_cat_stats(
-            cat_stats, tablefmt=args.table_format, floatfmt=args.float_format
+            cat_stats,
+            tablefmt=args.table_format,
+            floatfmt=args.float_format,
+            print_avgs=True,
         )
 
 
