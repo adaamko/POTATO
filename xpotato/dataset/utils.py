@@ -1,15 +1,19 @@
+import json
 from collections import defaultdict
 
 import networkx as nx
 import pandas as pd
 import penman as pn
+from networkx.readwrite import json_graph
 from tuw_nlp.graph.utils import preprocess_node_alto
-from tuw_nlp.graph.utils import graph_to_pn
 
 
 def save_dataframe(df: pd.DataFrame, path: str) -> None:
     df_to_save = df.copy()
-    graphs = [graph_to_pn(graph) for graph in df_to_save["graph"].tolist()]
+    graphs = [
+        json.dumps(json_graph.adjacency_data(g)) if type(g) == nx.DiGraph else g
+        for g in df["graph"].tolist()
+    ]
     df_to_save["graph"] = graphs
     df_to_save.to_csv(path, index=False, sep="\t")
 

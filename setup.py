@@ -1,8 +1,5 @@
 from setuptools import find_packages, setup
 
-
-
-
 setup(
     name="xpotato",
     version="0.1.4",
@@ -24,15 +21,15 @@ setup(
         "penman >= 1.2.1",
         "networkx == 2.6.3",
         "rank_bm25 == 0.2.1",
-        "streamlit == 1.3.1",
+        "streamlit == 1.15.0",
         "streamlit-aggrid == 0.2.3.post2",
         "scikit-criteria == 0.5",
-        "tuw-nlp == 0.0.9",
+        "tuw-nlp == 0.1.0",
         "amrlib == 0.6.0",
         "protobuf==3.20.0",
         "pytest >= 7.1.3",
         "fastapi",
-        "uvicorn[standard]"
+        "uvicorn[standard]",
     ],
     packages=find_packages(),
     classifiers=[

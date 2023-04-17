@@ -1,20 +1,21 @@
 import json
-import os
-import numpy as np
 import logging
-from collections import defaultdict
-from typing import List, Dict, Tuple
-from argparse import ArgumentParser, ArgumentError
+import os
+from argparse import ArgumentError, ArgumentParser
 from ast import literal_eval
+from collections import defaultdict
+from typing import Dict, List, Tuple
 
+import numpy as np
 import pandas as pd
 from networkx.readwrite import json_graph
 from tuw_nlp.text.preprocess.hatexplain import preprocess_hatexplain
+
 from xpotato.dataset.explainable_dataset import ExplainableDataset
+from xpotato.dataset.utils import save_dataframe
 from xpotato.graph_extractor.extract import GraphExtractor
 from xpotato.graph_extractor.graph import PotatoGraph
 from xpotato.models.trainer import GraphTrainer
-from xpotato.dataset.utils import save_dataframe
 
 
 def read_json(
@@ -132,7 +133,14 @@ def get_sentences(
                     literal_eval(example.rationales)[target.capitalize()],
                     # LT and GT appear only around user or censored as well as an emoji,
                     # but that will not influence this negatively
-                    sorted([node for node in literal_eval(example.graph)["nodes"] if node["name"] not in ["LT", "GT"]], key=lambda x: x["id"])[1:],
+                    sorted(
+                        [
+                            node
+                            for node in literal_eval(example.graph)["nodes"]
+                            if node["name"] not in ["LT", "GT"]
+                        ],
+                        key=lambda x: x["id"],
+                    )[1:],
                 )
                 if rat == 1
             ],

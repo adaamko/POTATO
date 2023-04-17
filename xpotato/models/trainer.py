@@ -1,20 +1,19 @@
 from collections import defaultdict
-from typing import Dict, List
-from typing import Union
 from math import log2, sqrt
-from rank_bm25 import BM25Okapi
+from typing import Dict, List, Union
 
 import eli5
 import pandas as pd
-from xpotato.graph_extractor.extract import GraphExtractor, FeatureEvaluator
-from xpotato.models.model import GraphModel
-from sklearn.linear_model import LogisticRegression
-from tqdm import tqdm
-
 import skcriteria as skc
+from rank_bm25 import BM25Okapi
 from skcriteria.madm import simple
 from skcriteria.pipeline import mkpipe
 from skcriteria.preprocessing import invert_objectives, scalers
+from sklearn.linear_model import LogisticRegression
+from tqdm import tqdm
+
+from xpotato.graph_extractor.extract import FeatureEvaluator, GraphExtractor
+from xpotato.models.model import GraphModel
 
 
 class GraphTrainer:

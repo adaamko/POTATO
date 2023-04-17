@@ -1,7 +1,8 @@
-from typing import Tuple, Dict
-import networkx as nx
-from xpotato.dataset.sample import Sample
+from typing import Dict, Tuple
 
+import networkx as nx
+
+from xpotato.dataset.sample import Sample
 from xpotato.graph_extractor.graph import PotatoGraph
 
 

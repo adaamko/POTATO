@@ -11,7 +11,6 @@ from xpotato.features.utils import get_features
 from xpotato.graph_extractor.extract import FeatureEvaluator
 from xpotato.graph_extractor.graph import PotatoGraph
 
-
 # TODO Adam: This is not the best place for these functions but I didn't want it to be in the frontend.utils
 # ------------------------------------------------------
 
