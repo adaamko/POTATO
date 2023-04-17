@@ -24,7 +24,7 @@ setup(
         "streamlit == 1.15.0",
         "streamlit-aggrid == 0.2.3.post2",
         "scikit-criteria == 0.5",
-        "tuw-nlp == 0.0.9",
+        "tuw-nlp == 0.1.0",
         "amrlib == 0.6.0",
         "protobuf==3.20.0",
         "pytest >= 7.1.3",
