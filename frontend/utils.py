@@ -14,7 +14,7 @@ import streamlit as st
 import torch
 from graphviz import Source
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
-from streamlit.report_thread import REPORT_CONTEXT_ATTR_NAME
+from streamlit.runtime.scriptrunner.script_run_context import SCRIPT_RUN_CONTEXT_ATTR_NAME
 from tuw_nlp.graph.utils import GraphFormulaPatternMatcher, graph_to_pn
 
 from xpotato.dataset.dataset import Dataset
@@ -29,10 +29,7 @@ def rerun():
     raise st.experimental_rerun()
 
 
-@st.cache(
-    hash_funcs={torch.nn.parameter.Parameter: lambda parameter: parameter.data.numpy()},
-    allow_output_mutation=True,
-)
+@st.cache_data
 def match_texts(text_input, extractor, graph_format):
     texts = text_input.split("\n")
     feature_values = []
@@ -68,7 +65,7 @@ def st_redirect(src, dst):
         old_write = src.write
 
         def new_write(b):
-            if getattr(current_thread(), REPORT_CONTEXT_ATTR_NAME, None):
+            if getattr(current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME, None):
                 buffer.write(b)
                 output_func(buffer.getvalue())
             else:
@@ -256,7 +253,7 @@ def filter_label(df, label):
     df["label_id"] = df.apply(lambda x: 0 if x["label"] == "NOT" else 1, axis=1)
 
 
-@st.cache(allow_output_mutation=True)
+@st.cache_resource
 def read_df(path, label=None, binary=False):
     dataset = Dataset(path=path, binary=binary)
     df = dataset.to_dataframe()
@@ -603,15 +600,12 @@ def rank_and_suggest(classes, data, evaluator):
 
 ###############################################################################
 # Init classes
-@st.cache()
+@st.cache_data
 def init_evaluator(case_sensitive=False):
     return FeatureEvaluator(case_sensitive=case_sensitive)
 
 
-@st.cache(
-    hash_funcs={torch.nn.parameter.Parameter: lambda parameter: parameter.data.numpy()},
-    allow_output_mutation=True,
-)
+@st.cache_data
 def init_extractor(lang, graph_format):
     extractor = GraphExtractor(lang=lang, cache_fn=f"{lang}_nlp_cache")
 
