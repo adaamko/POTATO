@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="xpotato",
-    version="0.1.5",
+    version="0.1.6",
     description="XAI human-in-the-loop information extraction framework",
     long_description=open("README.md", "r", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
@@ -21,7 +21,7 @@ setup(
         "penman >= 1.2.1",
         "networkx == 2.6.3",
         "rank_bm25 == 0.2.1",
-        "streamlit == 1.15.0",
+        "streamlit == 1.23.1",
         "streamlit-aggrid == 0.2.3.post2",
         "scikit-criteria == 0.5",
         "tuw-nlp == 0.1.0",
