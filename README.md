@@ -1,8 +1,4 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/adaamko/POTATO/dev/files/potato_logo.png" />
-</p>
-
-# POTATO: exPlainable infOrmation exTrAcTion framewOrk
+# 🥔 POTATO
 POTATO is a human-in-the-loop XAI framework for extracting and evaluating interpretable graph features for any classification problem in Natural Language Processing.
 
 ## Built systems
